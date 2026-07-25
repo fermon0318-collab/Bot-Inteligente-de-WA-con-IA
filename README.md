@@ -7,8 +7,10 @@ Sin build step — se abren los HTML y funcionan.
 |---|---|---|
 | Landing | `index.html` | Sitio de marketing: hero, características, cómo funciona, ROI, precios |
 | Panel | `dashboard.html` | SPA de administración con 16 secciones |
+| Privacidad | `privacidad.html` | Política de privacidad (borrador) |
+| Términos | `terminos.html` | Términos y condiciones (borrador) |
 
-Ambas comparten `assets/css/apolai.css`, el logo y la tipografía: son literalmente
+Todas comparten `assets/css/apolai.css`, el logo y la tipografía: son literalmente
 los mismos componentes, no dos interpretaciones de la misma marca.
 
 ![ApolAI](assets/img/apolai-logo.svg)
@@ -59,11 +61,15 @@ npm i -D playwright && node tools/render_logo.mjs
 ```
 index.html              Landing pública
 dashboard.html          Panel de administración (16 secciones)
+privacidad.html         Política de privacidad
+terminos.html           Términos y condiciones
 assets/css/
-  apolai.css            Sistema de diseño compartido por ambas páginas
+  apolai.css            Sistema de diseño compartido por todas las páginas
   landing.css           Solo landing: blobs, timeline, precios, reveal
+  legal.css             Solo legales: índice lateral, prosa, marcadores
 assets/js/
   landing.js            Navbar, menú móvil, modal de login, scroll y reveal
+  legal.js              Navbar, índice activo y scroll de las páginas legales
   mock.js               Datos de ejemplo — el punto a sustituir por la API real
   core.js               Helpers, navegación SPA, modales, toasts, loader, CSV, paginador
   dashboard.js          Estadísticas, resumen de ventas y 5 gráficos de Chart.js
@@ -100,7 +106,33 @@ publicar cifras inventadas como si fueran datos medidos de ApolAI sería publici
 engañosa. Sustitúyelas por resultados propios indicando periodo y muestra, o borra
 el bloque.
 
-También faltan por crear `privacidad.html` y `terminos.html`, enlazadas desde el footer.
+## Páginas legales
+
+`privacidad.html` y `terminos.html` están redactadas a partir de cómo funciona ApolAI
+de verdad: qué datos toca el bot, qué se envía a Meta y al proveedor de IA, qué pasa
+con los comprobantes de pago, y quién responde de qué frente a los contactos finales.
+
+**Son borradores, no asesoría legal.** Ambas llevan un aviso visible (`.legal-draft`)
+que hay que eliminar antes de publicar, y marcadores en amarillo (`.ph`) con los datos
+de tu empresa:
+
+| Marcador | Dónde |
+|---|---|
+| `[RAZON_SOCIAL]`, `[DOMICILIO_FISCAL]` | Ambas |
+| `[PAIS_JURISDICCION]`, `[CIUDAD_TRIBUNALES]` | Ambas / Términos |
+| `[PROVEEDOR_IA]`, `[PROVEEDOR_HOSTING]`, `[REGION_SERVIDORES]` | Privacidad |
+| `[DIAS_RETENCION]`, `[PLAZO_RESPUESTA_DERECHOS]` | Privacidad |
+| `[PLAZO_REEMBOLSO]`, `[LIMITE_CONVERSACIONES_REEMBOLSO]` | Términos |
+| `[DIAS_PREAVISO_PRECIO]`, `[SLA_DISPONIBILIDAD]` | Términos |
+
+Antes de publicar hay que revisarlas con un abogado de tu jurisdicción: las cláusulas
+de limitación de responsabilidad y de fuero tienen límites distintos en cada país y
+varias no son oponibles frente a consumidores.
+
+Dos coherencias que conviene no romper: el plazo de reembolso de `terminos.html` debe
+coincidir con el que anuncia el FAQ de `dashboard.html`, y el rol de encargado del
+tratamiento descrito en `privacidad.html` debe reflejarse en el contrato que firmes
+con tus clientes.
 
 ## Secciones del panel
 

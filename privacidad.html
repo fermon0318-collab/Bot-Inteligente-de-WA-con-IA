@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Política de Privacidad · ApolAI</title>
+<meta name="description" content="Cómo ApolAI trata los datos personales de sus clientes y de las personas que conversan con sus bots de WhatsApp." />
+<meta name="theme-color" content="#4F46E5" />
+<meta name="robots" content="index, follow" />
+
+<link rel="icon" type="image/svg+xml" href="assets/img/apolai-logo.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+      colors: {
+        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+        accent:{ 50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',300:'#c4b5fd',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95' },
+        plum:  { 50:'#faf5ff',100:'#f3e8ff',200:'#e9d5ff',300:'#d8b4fe',400:'#c084fc',500:'#a855f7',600:'#9333ea',700:'#7e22ce',800:'#6b21a8',900:'#581c87' },
+        ink: '#1e1b4b',
+      },
+    } },
+  };
+</script>
+
+<link rel="stylesheet" href="assets/css/apolai.css" />
+<link rel="stylesheet" href="assets/css/landing.css" />
+<link rel="stylesheet" href="assets/css/legal.css" />
+</head>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  BORRADOR — NO ES ASESORÍA LEGAL                                        ║
+  ║                                                                          ║
+  ║  Plantilla redactada a partir del funcionamiento real de ApolAI. Debe    ║
+  ║  revisarla un abogado con la normativa de tu jurisdicción antes de       ║
+  ║  publicarla (RGPD, LFPDPPP en México, Ley 1581 en Colombia, LGPD en      ║
+  ║  Brasil, etc. según dónde operes y dónde estén tus usuarios).            ║
+  ║                                                                          ║
+  ║  Marcadores a completar:                                                 ║
+  ║    [RAZON_SOCIAL] · [DOMICILIO_FISCAL] · [PAIS_JURISDICCION]             ║
+  ║    [SOPORTE_EMAIL] · [WHATSAPP_NUMBER] · [FECHA_VIGENCIA]                ║
+  ║    [PROVEEDOR_IA] · [PROVEEDOR_HOSTING] · [REGION_SERVIDORES]            ║
+  ║    [DIAS_RETENCION] · [PLAZO_RESPUESTA_DERECHOS]                         ║
+  ║                                                                          ║
+  ║  Antes de publicar, elimina también el bloque .legal-draft del cuerpo.   ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
+
+<body class="antialiased text-ink">
+
+<!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+<header id="navbar" class="fixed top-0 inset-x-0 z-50">
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 lg:h-[4.5rem]">
+      <a href="index.html" class="flex items-center gap-2.5 shrink-0">
+        <img src="assets/img/apolai-logo.svg" alt="ApolAI" class="w-10 h-10" />
+        <span class="text-xl font-extrabold brand-text tracking-tight">ApolAI</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="nav-link-top hidden sm:inline-block">
+          <i class="fa-solid fa-arrow-left mr-1"></i>Volver al inicio
+        </a>
+        <a href="terminos.html" class="nav-link-top hidden sm:inline-block">Términos</a>
+        <a href="dashboard.html" class="btn btn-gradient">
+          <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══════════════════════ ENCABEZADO ═══════════════════════ -->
+<section class="legal-hero">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <span class="section-eyebrow mb-4"><i class="fa-solid fa-shield-halved"></i>Legal</span>
+    <h1 class="text-3xl lg:text-5xl font-extrabold tracking-tight">Política de Privacidad</h1>
+    <p class="mt-4 text-ink/60 max-w-2xl leading-relaxed">
+      Cómo tratamos los datos personales de nuestros clientes y de las personas que conversan
+      con los bots que ellos operan con ApolAI.
+    </p>
+    <p class="mt-4 text-sm text-ink/45 font-semibold">
+      Última actualización: <span class="ph">[FECHA_VIGENCIA]</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CONTENIDO ═══════════════════════ -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+  <div class="grid lg:grid-cols-[16rem_1fr] gap-10">
+
+    <!-- Índice -->
+    <aside class="hidden lg:block">
+      <nav class="legal-toc" aria-label="Índice del documento">
+        <p>Contenido</p>
+        <a href="#responsable">1 · Quién es el responsable</a>
+        <a href="#roles">2 · Nuestro rol y el tuyo</a>
+        <a href="#datos">3 · Qué datos tratamos</a>
+        <a href="#finalidades">4 · Para qué los usamos</a>
+        <a href="#terceros">5 · Con quién los compartimos</a>
+        <a href="#transferencias">6 · Transferencias internacionales</a>
+        <a href="#conservacion">7 · Cuánto los conservamos</a>
+        <a href="#seguridad">8 · Cómo los protegemos</a>
+        <a href="#derechos">9 · Tus derechos</a>
+        <a href="#cookies">10 · Cookies y almacenamiento local</a>
+        <a href="#menores">11 · Menores de edad</a>
+        <a href="#cambios">12 · Cambios en esta política</a>
+        <a href="#contacto">13 · Contacto</a>
+      </nav>
+    </aside>
+
+    <article class="prose-legal max-w-3xl">
+
+      <!-- ELIMINAR ESTE BLOQUE ANTES DE PUBLICAR -->
+      <div class="legal-draft mb-10">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          <strong>Borrador pendiente de revisión legal.</strong> Este documento describe con
+          precisión cómo funciona ApolAI, pero no sustituye la revisión de un abogado con la
+          normativa aplicable en tu jurisdicción. Completa los campos marcados en amarillo y
+          elimina este aviso antes de publicar.
+        </div>
+      </div>
+
+      <section id="responsable">
+        <h2><span class="n">1</span>Quién es el responsable</h2>
+        <p>
+          El responsable del tratamiento de los datos descritos en esta política es
+          <span class="ph">[RAZON_SOCIAL]</span>, con domicilio en
+          <span class="ph">[DOMICILIO_FISCAL]</span>, en adelante «ApolAI», «nosotros».
+        </p>
+        <p>
+          Puedes contactarnos en cualquier momento escribiendo a
+          <a href="mailto:[SOPORTE_EMAIL]"><span class="ph">[SOPORTE_EMAIL]</span></a>.
+        </p>
+      </section>
+
+      <section id="roles">
+        <h2><span class="n">2</span>Nuestro rol y el tuyo</h2>
+        <p>
+          Esta distinción es importante porque determina quién responde ante quién, y conviene
+          que la tengas clara antes de seguir leyendo.
+        </p>
+        <h3>Cuando eres nuestro cliente</h3>
+        <p>
+          Respecto de <strong>tus datos de cuenta</strong> (tu nombre, tu correo, tu facturación,
+          tus credenciales de conexión), ApolAI actúa como <strong>responsable</strong>: decidimos
+          cómo y para qué los tratamos, dentro de lo que describe esta política.
+        </p>
+        <h3>Cuando tratamos datos de tus contactos</h3>
+        <p>
+          Respecto de las <strong>conversaciones y datos de las personas que escriben a tu
+          WhatsApp</strong>, ApolAI actúa como <strong>encargado del tratamiento</strong>: los
+          procesamos siguiendo tus instrucciones y por cuenta tuya. El responsable frente a esas
+          personas eres <strong>tú</strong>.
+        </p>
+        <div class="legal-note">
+          En la práctica esto significa que a ti te corresponde informar a tus contactos de que
+          conversan con un sistema automatizado, obtener las bases legales necesarias para
+          escribirles y atender las solicitudes de derechos que te dirijan. Nosotros te damos las
+          herramientas para responderlas (exportación, consulta y borrado desde el panel) y te
+          asistimos si lo necesitas.
+        </div>
+      </section>
+
+      <section id="datos">
+        <h2><span class="n">3</span>Qué datos tratamos</h2>
+
+        <h3>Datos de tu cuenta</h3>
+        <ul>
+          <li>Identificación y contacto: nombre, correo electrónico, teléfono, empresa.</li>
+          <li>Datos de facturación y del plan contratado, incluidas fechas de renovación.</li>
+          <li>Credenciales de integración: Access Token de Meta, Phone Number ID, Business Account ID, API Key del proveedor de IA, Pixel ID y Ad Account ID. Se almacenan cifradas.</li>
+          <li>Registros de acceso al panel: fecha, hora y dirección IP.</li>
+        </ul>
+
+        <h3>Datos generados por el uso del bot</h3>
+        <ul>
+          <li><strong>Mensajes</strong> intercambiados entre tus contactos y tu número: contenido, remitente, destinatario, fecha y hora, y estado de entrega.</li>
+          <li><strong>Números de teléfono y nombres de perfil</strong> de las personas que escriben.</li>
+          <li><strong>Archivos adjuntos</strong> que envíes o recibas, incluidos <strong>comprobantes de pago</strong>, de los que se extraen monto, fecha y referencia para validar la operación.</li>
+          <li><strong>Estado comercial</strong> de cada contacto: nuevo, pendiente, pagado o rechazado, y el importe asociado.</li>
+          <li><strong>Origen de la conversación</strong>: el anuncio o campaña desde el que llegó el contacto, cuando esa información está disponible.</li>
+        </ul>
+        <div class="legal-note">
+          Los comprobantes de pago pueden contener datos financieros de terceros. Trátalos con el
+          mismo cuidado que cualquier documento sensible y no los uses para finalidades distintas
+          de verificar la operación.
+        </div>
+
+        <h3>Datos técnicos del sitio</h3>
+        <ul>
+          <li>Tipo de navegador y dispositivo, idioma y páginas visitadas.</li>
+          <li>Preferencias guardadas localmente en tu navegador, como la moneda seleccionada en el panel.</li>
+        </ul>
+      </section>
+
+      <section id="finalidades">
+        <h2><span class="n">4</span>Para qué los usamos</h2>
+        <ul>
+          <li><strong>Prestar el servicio</strong>: recibir y enviar mensajes, ejecutar flujos, generar respuestas con IA y validar comprobantes. Base legal: ejecución del contrato contigo.</li>
+          <li><strong>Mostrarte métricas</strong> de conversión, ventas y rendimiento por anuncio. Base legal: ejecución del contrato.</li>
+          <li><strong>Reportar conversiones a Meta</strong>, si activas Conversions API. Base legal: tu instrucción expresa al activar la función.</li>
+          <li><strong>Facturar y cobrar</strong> el plan contratado. Base legal: ejecución del contrato y obligaciones fiscales.</li>
+          <li><strong>Dar soporte</strong> y responder a tus consultas. Base legal: ejecución del contrato.</li>
+          <li><strong>Mantener la seguridad</strong> del servicio, prevenir abusos y depurar fallos. Base legal: interés legítimo.</li>
+          <li><strong>Cumplir obligaciones legales</strong> cuando una autoridad competente nos lo requiera.</li>
+        </ul>
+        <p>
+          <strong>No vendemos datos personales</strong>, ni cedemos tus conversaciones a terceros
+          para su propia publicidad, ni usamos el contenido de tus chats para entrenar modelos de
+          inteligencia artificial.
+        </p>
+      </section>
+
+      <section id="terceros">
+        <h2><span class="n">5</span>Con quién los compartimos</h2>
+        <p>
+          Para funcionar, ApolAI se apoya en proveedores que actúan como subencargados. Cada uno
+          recibe únicamente los datos que necesita:
+        </p>
+        <ul>
+          <li><strong>Meta Platforms</strong> — transporta los mensajes de WhatsApp Cloud API. Si activas Conversions API, recibe además el evento de compra con su valor, moneda e identificadores del contacto en forma cifrada (hash).</li>
+          <li><strong><span class="ph">[PROVEEDOR_IA]</span></strong> — recibe el fragmento de conversación necesario para generar cada respuesta, junto con tu prompt base. No recibe tus credenciales ni tu base de contactos completa.</li>
+          <li><strong><span class="ph">[PROVEEDOR_HOSTING]</span></strong> — aloja la infraestructura y las bases de datos en <span class="ph">[REGION_SERVIDORES]</span>.</li>
+          <li><strong>Pasarela de pago</strong> — procesa el cobro de tu suscripción. No almacenamos números completos de tarjeta.</li>
+        </ul>
+        <p>
+          También podemos comunicar datos a autoridades cuando exista una obligación legal, y a
+          asesores profesionales sujetos a deber de confidencialidad.
+        </p>
+      </section>
+
+      <section id="transferencias">
+        <h2><span class="n">6</span>Transferencias internacionales</h2>
+        <p>
+          Algunos de los proveedores anteriores están ubicados fuera de
+          <span class="ph">[PAIS_JURISDICCION]</span>. Cuando eso implica una transferencia
+          internacional, nos apoyamos en los mecanismos que exige la normativa aplicable, como
+          cláusulas contractuales tipo o decisiones de adecuación.
+        </p>
+        <p>
+          Puedes solicitarnos información sobre las garantías concretas aplicadas a cada
+          proveedor escribiendo a
+          <a href="mailto:[SOPORTE_EMAIL]"><span class="ph">[SOPORTE_EMAIL]</span></a>.
+        </p>
+      </section>
+
+      <section id="conservacion">
+        <h2><span class="n">7</span>Cuánto los conservamos</h2>
+        <ul>
+          <li><strong>Conversaciones y archivos</strong>: mientras tu cuenta esté activa, y hasta <span class="ph">[DIAS_RETENCION]</span> días después de darla de baja, salvo que solicites su borrado antes.</li>
+          <li><strong>Datos de cuenta y facturación</strong>: durante el tiempo que exija la normativa fiscal y mercantil aplicable.</li>
+          <li><strong>Registros de seguridad</strong>: por el plazo necesario para investigar incidentes.</li>
+        </ul>
+        <p>
+          Transcurridos esos plazos, los datos se eliminan o se anonimizan de forma irreversible.
+          Puedes exportar tu histórico completo en cualquier momento desde la sección
+          <em>Reportes</em> del panel.
+        </p>
+      </section>
+
+      <section id="seguridad">
+        <h2><span class="n">8</span>Cómo los protegemos</h2>
+        <ul>
+          <li>Cifrado en tránsito (TLS) en todas las comunicaciones y cifrado en reposo de credenciales y conversaciones.</li>
+          <li>Acceso restringido por rol: cada persona de nuestro equipo accede solo a lo que necesita para su función.</li>
+          <li>Registro de accesos y cambios sobre datos de clientes.</li>
+          <li>Copias de seguridad periódicas y procedimientos de restauración probados.</li>
+        </ul>
+        <p>
+          Ningún sistema es infalible. Si se produjera una brecha de seguridad que afecte a tus
+          datos, te lo notificaremos sin dilación indebida y comunicaremos el incidente a la
+          autoridad de control cuando la normativa lo exija.
+        </p>
+      </section>
+
+      <section id="derechos">
+        <h2><span class="n">9</span>Tus derechos</h2>
+        <p>Puedes ejercer en cualquier momento los siguientes derechos:</p>
+        <ul>
+          <li><strong>Acceso</strong> — saber qué datos tuyos tratamos.</li>
+          <li><strong>Rectificación</strong> — corregir los que sean inexactos.</li>
+          <li><strong>Cancelación o supresión</strong> — pedir que los eliminemos.</li>
+          <li><strong>Oposición</strong> — oponerte a tratamientos basados en interés legítimo.</li>
+          <li><strong>Limitación</strong> — pedir que suspendamos el tratamiento mientras se resuelve una reclamación.</li>
+          <li><strong>Portabilidad</strong> — recibir tus datos en formato estructurado y de uso común.</li>
+        </ul>
+        <p>
+          Escríbenos a <a href="mailto:[SOPORTE_EMAIL]"><span class="ph">[SOPORTE_EMAIL]</span></a>
+          indicando qué derecho quieres ejercer. Responderemos en un plazo máximo de
+          <span class="ph">[PLAZO_RESPUESTA_DERECHOS]</span>. Podemos pedirte que acredites tu
+          identidad antes de atender la solicitud.
+        </p>
+        <p>
+          Si consideras que no hemos atendido correctamente tu solicitud, puedes presentar una
+          reclamación ante la autoridad de protección de datos de
+          <span class="ph">[PAIS_JURISDICCION]</span>.
+        </p>
+        <div class="legal-note">
+          Si eres una persona que conversó con el bot de uno de nuestros clientes, dirige tu
+          solicitud a ese negocio: es quien decide sobre esos datos. Si nos escribes a nosotros,
+          le trasladaremos tu petición.
+        </div>
+      </section>
+
+      <section id="cookies">
+        <h2><span class="n">10</span>Cookies y almacenamiento local</h2>
+        <p>
+          Este sitio no utiliza cookies publicitarias ni de seguimiento de terceros. Empleamos
+          únicamente almacenamiento técnico imprescindible:
+        </p>
+        <ul>
+          <li><strong>Sesión</strong> — mantenerte autenticado mientras usas el panel.</li>
+          <li><strong>Preferencias</strong> — recordar ajustes tuyos, como la moneda seleccionada.</li>
+        </ul>
+        <p>
+          Puedes borrar este almacenamiento desde la configuración de tu navegador, teniendo en
+          cuenta que cerrarás la sesión y perderás tus preferencias.
+        </p>
+      </section>
+
+      <section id="menores">
+        <h2><span class="n">11</span>Menores de edad</h2>
+        <p>
+          ApolAI es un servicio dirigido a empresas y profesionales. No está destinado a menores
+          de edad y no recogemos deliberadamente sus datos. Si detectas que un menor nos ha
+          facilitado información personal, escríbenos y la eliminaremos.
+        </p>
+      </section>
+
+      <section id="cambios">
+        <h2><span class="n">12</span>Cambios en esta política</h2>
+        <p>
+          Podemos actualizar esta política para reflejar cambios en el servicio o en la
+          normativa. Publicaremos siempre la versión vigente en esta página con su fecha de
+          actualización, y si el cambio es sustancial te avisaremos por correo electrónico con
+          antelación razonable.
+        </p>
+      </section>
+
+      <section id="contacto">
+        <h2><span class="n">13</span>Contacto</h2>
+        <p>Para cualquier duda sobre esta política o sobre el tratamiento de tus datos:</p>
+        <ul>
+          <li>Correo: <a href="mailto:[SOPORTE_EMAIL]"><span class="ph">[SOPORTE_EMAIL]</span></a></li>
+          <li>WhatsApp: <a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener"><span class="ph">[WHATSAPP_NUMBER]</span></a></li>
+          <li>Dirección: <span class="ph">[DOMICILIO_FISCAL]</span></li>
+        </ul>
+      </section>
+
+    </article>
+  </div>
+</main>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer class="bg-ink text-white/70">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <img src="assets/img/apolai-logo.svg" alt="" class="w-9 h-9" />
+        <span class="text-lg font-extrabold text-white">ApolAI</span>
+      </a>
+      <div class="flex flex-wrap items-center justify-center gap-5">
+        <a href="index.html" class="footer-link">Inicio</a>
+        <a href="terminos.html" class="footer-link">Términos y condiciones</a>
+        <a href="mailto:[SOPORTE_EMAIL]" class="footer-link">Soporte</a>
+      </div>
+    </div>
+    <div class="mt-8 pt-6 border-t border-white/10 text-sm text-center">
+      © <span id="footer-year">2026</span> ApolAI · Todos los derechos reservados
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/legal.js"></script>
+</body>
+</html>

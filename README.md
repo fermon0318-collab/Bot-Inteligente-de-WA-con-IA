@@ -17,6 +17,8 @@ los mismos componentes, no dos interpretaciones de la misma marca.
 
 ![ApolAI](assets/img/apolai-logo.svg)
 
+**Estado del proyecto y trabajo pendiente: [ROADMAP.md](ROADMAP.md)**
+
 ## Publicar
 
 La guía completa —dominio, VPS, DNS, credenciales de Google y Stripe, TLS— está

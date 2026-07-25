@@ -79,9 +79,6 @@ Añade tu correo en `BILLING_BYPASS_EMAILS` para entrar sin pagarte a ti mismo.
 
 ## 5. Meta — WhatsApp Cloud API
 
-⚠️ **Esto todavía no funciona: falta el código del webhook (bloque A).**
-Cuando exista, la conexión será:
-
 | Paso | Dónde |
 |---|---|
 | Crear app de tipo «Empresa» | developers.facebook.com |
@@ -91,15 +88,20 @@ Cuando exista, la conexión será:
 | Configurar webhook | URL `https://tudominio.com/webhook/whatsapp` + token de verificación |
 | Suscribir campos | `messages`, `message_status` |
 
-El token y los identificadores **los introduce cada cliente en el panel**
-(sección Cloud API), no van en el `.env`. El panel ya los guarda cifrados y
-tiene el botón «Obtener Data de Meta» que los recupera solo.
+El **token de verificación** lo genera ApolAI al crear cada cuenta y aparece en
+la sección Cloud API del panel: hay que copiarlo tal cual en Meta. El endpoint
+responde al `hub.challenge` y lo valida contra la cuenta correspondiente.
+
+El token de acceso y los identificadores **los introduce cada cliente en el
+panel**, no van en el `.env`. Se guardan cifrados, y el botón «Obtener Data de
+Meta» los recupera solo a partir del token.
 
 ## 6. Proveedor de IA
 
 Cada cliente pone su propia API Key en el panel (Configurar IA). No hay
-credencial global. El backend ya la guarda cifrada; **falta el código que la
-usa** (bloque A).
+credencial global: se guarda cifrada y el motor la usa para responder cuando
+ningún disparador coincide. Se reconocen modelos de Anthropic y de OpenAI por
+el nombre del modelo.
 
 ## 7. Meta Ads y Conversions API
 

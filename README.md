@@ -1,28 +1,72 @@
 # ApolAI
 
-Sitio de ApolAI: landing pública + panel de administración del bot de WhatsApp con IA.
-Sin build step — se abren los HTML y funcionan.
+Producto completo de ApolAI: landing pública, panel de administración, backend con
+autenticación de Google y suscripciones de Stripe, y despliegue con nginx.
 
 | Página | Archivo | Qué es |
 |---|---|---|
 | Landing | `index.html` | Sitio de marketing: hero, características, cómo funciona, ROI, precios |
-| Panel | `dashboard.html` | SPA de administración con 16 secciones |
+| Panel | `dashboard.html` | SPA de administración con 16 secciones (requiere sesión y suscripción) |
 | Privacidad | `privacidad.html` | Política de privacidad (borrador) |
 | Términos | `terminos.html` | Términos y condiciones (borrador) |
+| Backend | `server/` | Node + PostgreSQL: login con Google, cobros con Stripe y API del panel |
+| Despliegue | `deploy/` | nginx, systemd y script de instalación — ver [deploy/README.md](deploy/README.md) |
 
 Todas comparten `assets/css/apolai.css`, el logo y la tipografía: son literalmente
 los mismos componentes, no dos interpretaciones de la misma marca.
 
 ![ApolAI](assets/img/apolai-logo.svg)
 
-## Cómo ejecutarlo
+## Publicar
+
+La guía completa —dominio, VPS, DNS, credenciales de Google y Stripe, TLS— está
+en **[deploy/README.md](deploy/README.md)**. Resumen:
+
+```bash
+git clone <repo> /var/www/apolai && cd /var/www/apolai
+sudo bash deploy/deploy.sh tu-dominio.com
+```
+
+## Desarrollo local
+
+Solo el frontend (con datos de ejemplo, sin backend):
 
 ```bash
 npx http-server -p 8080     # o: python3 -m http.server 8080
 ```
 
-Y abrir <http://localhost:8080>. Requiere conexión a internet para las CDNs
-(Tailwind, Chart.js, Font Awesome, Google Fonts).
+Con backend completo:
+
+```bash
+cp .env.example server/.env     # y completa los valores
+cd server && npm install && npm run migrate && npm run dev
+```
+
+Requiere PostgreSQL 14+ y conexión a internet para las CDNs (Tailwind,
+Chart.js, Font Awesome, Google Fonts).
+
+## Arquitectura
+
+```
+navegador → nginx ─┬─ archivos estáticos (landing, panel, assets)
+                   └─ /api · /auth · /webhook → Node (127.0.0.1:3000) → PostgreSQL
+```
+
+nginx protege `dashboard.html` con `auth_request`: consulta a Node antes de
+entregar el HTML, así el panel no depende de que el JavaScript del navegador
+redirija. Sin sesión no se sirve el archivo.
+
+**Autenticación**: Google OAuth 2.0 con PKCE. La sesión vive en la base de
+datos y la cookie solo lleva su identificador firmado, de modo que cerrar
+sesión la invalida de verdad.
+
+**Cobros**: Stripe Checkout y Customer Portal alojados — los datos de tarjeta
+nunca tocan este servidor. El adaptador está aislado en `server/src/billing/`
+detrás de una interfaz de cuatro métodos: cambiar a Paddle o Lemon Squeezy es
+escribir otro archivo, no tocar el backend.
+
+**Credenciales de terceros** (token de Meta, API Key de IA) se guardan cifradas
+con AES-256-GCM y vuelven al panel siempre enmascaradas.
 
 ## Sistema de diseño
 
@@ -68,6 +112,7 @@ assets/css/
   landing.css           Solo landing: blobs, timeline, precios, reveal
   legal.css             Solo legales: índice lateral, prosa, marcadores
 assets/js/
+  session.js            Cliente de la API: sesión, cobros y portal de cliente
   landing.js            Navbar, menú móvil, modal de login, scroll y reveal
   legal.js              Navbar, índice activo y scroll de las páginas legales
   mock.js               Datos de ejemplo — el punto a sustituir por la API real
@@ -79,6 +124,20 @@ assets/js/
   automation.js         Archivos, flujos simples y avanzados, remarketing, disparadores
   settings.js           Pagos y acceso, configuración de IA, tutoriales, FAQ
   app.js                Arranque
+server/
+  src/config.js         Lectura y validación de las variables de entorno
+  src/db/               Pool, migrador y esquema SQL
+  src/lib/              Cifrado AES-256-GCM, firma HMAC y sesiones
+  src/middleware/       Sesión, control de acceso y límite de peticiones
+  src/routes/           OAuth de Google, cobros y API del panel
+  src/billing/          Adaptador de la pasarela (hoy Stripe)
+deploy/
+  nginx.conf            Sitio: TLS, CSP, auth_request, caché y proxy
+  apolai-headers.conf   Cabeceras de seguridad compartidas
+  apolai-proxy.conf     Cabeceras de proxy hacia Node
+  apolai.service        Unidad de systemd endurecida
+  deploy.sh             Instalación y despliegue idempotentes
+  README.md             Guía de publicación paso a paso
 tools/render_logo.mjs   Rasterizador del logo a PNG
 ```
 
@@ -96,7 +155,6 @@ grep -n "\[[A-Z_]\+\]" index.html
 | `[WHATSAPP_NUMBER]` | Número en formato internacional sin signos |
 | `[SOPORTE_EMAIL]` | Correo de soporte |
 | `[YOUTUBE_CHANNEL_URL]` | Canal de tutoriales |
-| `[LOGIN_URL]` | URL real de autenticación |
 | `[PRECIO_MENSUAL]` / `[PRECIO_ANUAL]` | Precios de cada plan |
 | `[DESCUENTO_ANUAL]` | Ahorro del plan anual |
 | `[MEJORA_1..3]` | Métricas de resultados |

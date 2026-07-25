@@ -55,7 +55,6 @@
   ║                          sin signos (ej. 5215512345678)                  ║
   ║  [SOPORTE_EMAIL]       · correo de soporte                              ║
   ║  [YOUTUBE_CHANNEL_URL] · canal de tutoriales                            ║
-  ║  [LOGIN_URL]           · URL real de autenticación                      ║
   ║  [PRECIO_MENSUAL]      · precio del plan mensual                        ║
   ║  [PRECIO_ANUAL]        · precio del plan anual                          ║
   ║                                                                          ║
@@ -508,9 +507,9 @@
             <p class="price-amount">[PRECIO_MENSUAL]</p>
             <p class="mt-1 text-sm text-ink/50 font-semibold">facturado cada mes</p>
           </div>
-          <a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener" class="btn btn-gradient w-full mt-6 !py-3">
-            <i class="fa-brands fa-whatsapp"></i> Empezar ahora
-          </a>
+          <button type="button" data-plan="monthly" class="btn btn-gradient w-full mt-6 !py-3">
+            <i class="fa-solid fa-credit-card"></i> Empezar ahora
+          </button>
           <p class="mt-3 text-center text-xs text-ink/45">Cancela cuando quieras, sin penalización</p>
           <div class="mt-7 space-y-3 border-t border-accent-100 pt-6">
             <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Conexión con API oficial de Meta</span></div>
@@ -538,9 +537,9 @@
             <p class="price-amount">[PRECIO_ANUAL]</p>
             <p class="mt-1 text-sm text-ink/50 font-semibold">facturado una vez al año</p>
           </div>
-          <a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener" class="btn btn-gradient w-full mt-6 !py-3">
-            <i class="fa-brands fa-whatsapp"></i> Quiero el plan anual
-          </a>
+          <button type="button" data-plan="yearly" class="btn btn-gradient w-full mt-6 !py-3">
+            <i class="fa-solid fa-credit-card"></i> Quiero el plan anual
+          </button>
           <p class="mt-3 text-center text-xs text-ink/45">Incluye prueba gratis de configuración guiada</p>
           <div class="mt-7 space-y-3 border-t border-accent-100 pt-6">
             <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm font-semibold">Todo lo del plan mensual</span></div>
@@ -653,8 +652,8 @@
     </div>
 
     <div class="modal-body text-center">
-      <a href="[LOGIN_URL]" class="btn btn-gradient w-full !py-3">
-        <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+      <a href="/auth/google?next=%2Fdashboard.html" id="login-google" class="btn btn-gradient w-full !py-3">
+        <i class="fa-brands fa-google"></i> Continuar con Google
       </a>
 
       <div class="flex items-center gap-3 my-5">
@@ -674,6 +673,7 @@
   </div>
 </div>
 
+<script src="assets/js/session.js"></script>
 <script src="assets/js/landing.js"></script>
 </body>
 </html>

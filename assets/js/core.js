@@ -325,8 +325,9 @@
       });
       if (ok) {
         showLoader('Cerrando sesión…');
-        // Sin backend todavía: se vuelve al sitio público
-        setTimeout(() => { location.href = 'index.html'; }, 900);
+        // Invalida la sesión en el servidor; si no hay backend, vuelve al inicio
+        if (App.session) App.session.logout();
+        else setTimeout(() => { location.href = 'index.html'; }, 900);
       }
     });
 

@@ -1,0 +1,44 @@
+# Servicio de ApolAI · /etc/systemd/system/apolai.service
+[Unit]
+Description=ApolAI · backend
+Documentation=https://github.com/fermon0318-collab/Bot-Inteligente-de-WA-con-IA
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=apolai
+Group=apolai
+WorkingDirectory=/var/www/apolai/server
+EnvironmentFile=/etc/apolai/apolai.env
+ExecStart=/usr/bin/node src/index.js
+
+Restart=always
+RestartSec=3
+# Si falla más de 5 veces en 60 s, systemd se detiene en vez de reiniciar en bucle
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=apolai
+
+# --- Endurecimiento ---------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+# Único directorio con permiso de escritura: los archivos que suben los clientes
+ReadWritePaths=/var/www/apolai/uploads
+
+[Install]
+WantedBy=multi-user.target

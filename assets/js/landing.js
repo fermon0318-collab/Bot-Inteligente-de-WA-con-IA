@@ -116,4 +116,93 @@
   /* --- Año del footer ------------------------------------------------------ */
   qs('#footer-year').textContent = new Date().getFullYear();
 
+  /* ========================================================================
+     Sesión y contratación
+     ===================================================================== */
+  const session = window.ApolAI && window.ApolAI.session;
+  if (!session) return;
+
+  /** Aviso discreto arriba del todo, para mensajes de vuelta del servidor. */
+  function banner(text, kind = 'info') {
+    const colors = {
+      info: 'bg-brand-50 border-brand-200 text-brand-800',
+      warn: 'bg-amber-50 border-amber-200 text-amber-800',
+      ok: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+      err: 'bg-red-50 border-red-200 text-red-700',
+    };
+    const el = document.createElement('div');
+    el.className = `fixed top-20 inset-x-0 z-40 mx-auto w-fit max-w-[92vw] rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-lg ${colors[kind]}`;
+    el.setAttribute('role', 'status');
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 6000);
+  }
+
+  const params = new URLSearchParams(location.search);
+
+  if (params.get('login') === 'required') banner('Inicia sesión para entrar a tu panel.', 'warn');
+  if (params.get('login') === 'error') banner('No pudimos completar el acceso. Inténtalo de nuevo.', 'err');
+  if (params.get('suscripcion') === 'requerida') banner('Necesitas una suscripción activa para usar el panel.', 'warn');
+  if (params.get('suscripcion') === 'cancelada') banner('Contratación cancelada. Puedes retomarla cuando quieras.', 'info');
+
+  /** Ajusta la interfaz a si hay sesión abierta o no. */
+  async function paintSession() {
+    let me = null;
+    try {
+      me = await session.currentUser();
+    } catch {
+      return; // backend caído: la landing sigue siendo útil como página estática
+    }
+
+    if (me) {
+      qsa('[data-open-login]').forEach((btn) => {
+        btn.innerHTML = '<i class="fa-solid fa-gauge-high"></i> Ir al panel';
+        btn.dataset.openLogin = '';
+        btn.addEventListener('click', (ev) => {
+          ev.stopImmediatePropagation();
+          window.location.href = '/dashboard.html';
+        }, true);
+      });
+
+      const nombre = me.user.name?.split(' ')[0] || '';
+      const link = qs('#login-modal a[href="dashboard.html"]');
+      if (link && nombre) link.textContent = `Continuar como ${nombre}`;
+    }
+
+    // Si venía de "contratar" y tuvo que pasar por Google, se retoma el plan
+    const plan = params.get('plan');
+    if (plan && me) {
+      history.replaceState(null, '', location.pathname + location.hash);
+      session.startCheckout(plan).catch((err) => banner(err.message, 'err'));
+    }
+  }
+
+  paintSession();
+
+  /* --- Botón de acceso: va a Google ---------------------------------------- */
+  const googleBtn = qs('#login-google');
+  if (googleBtn) {
+    googleBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      session.goToLogin('/dashboard.html');
+    });
+  }
+
+  /* --- Botones de plan ------------------------------------------------------ */
+  qsa('[data-plan]').forEach((btn) => {
+    btn.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Preparando…';
+      try {
+        await session.startCheckout(btn.dataset.plan);
+      } catch (err) {
+        banner(err.message || 'No pudimos iniciar la contratación.', 'err');
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    });
+  });
+
 })();

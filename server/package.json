@@ -1,0 +1,19 @@
+{
+  "name": "apolai-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend de ApolAI: autenticación con Google, suscripciones y API del panel",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "check": "node --check src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "stripe": "^17.5.0"
+  }
+}

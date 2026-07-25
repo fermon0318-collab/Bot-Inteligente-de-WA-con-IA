@@ -1,7 +1,15 @@
-# ApolAI · Panel de Control
+# ApolAI
 
-Dashboard de administración para un bot de WhatsApp con IA. SPA de una sola página,
-sin build step: se abre `index.html` y funciona.
+Sitio de ApolAI: landing pública + panel de administración del bot de WhatsApp con IA.
+Sin build step — se abren los HTML y funcionan.
+
+| Página | Archivo | Qué es |
+|---|---|---|
+| Landing | `index.html` | Sitio de marketing: hero, características, cómo funciona, ROI, precios |
+| Panel | `dashboard.html` | SPA de administración con 16 secciones |
+
+Ambas comparten `assets/css/apolai.css`, el logo y la tipografía: son literalmente
+los mismos componentes, no dos interpretaciones de la misma marca.
 
 ![ApolAI](assets/img/apolai-logo.svg)
 
@@ -49,9 +57,13 @@ npm i -D playwright && node tools/render_logo.mjs
 ## Estructura
 
 ```
-index.html              Markup de las 16 secciones
-assets/css/apolai.css   Tokens y componentes (glass, botones, switches, modales…)
+index.html              Landing pública
+dashboard.html          Panel de administración (16 secciones)
+assets/css/
+  apolai.css            Sistema de diseño compartido por ambas páginas
+  landing.css           Solo landing: blobs, timeline, precios, reveal
 assets/js/
+  landing.js            Navbar, menú móvil, modal de login, scroll y reveal
   mock.js               Datos de ejemplo — el punto a sustituir por la API real
   core.js               Helpers, navegación SPA, modales, toasts, loader, CSV, paginador
   dashboard.js          Estadísticas, resumen de ventas y 5 gráficos de Chart.js
@@ -64,7 +76,33 @@ assets/js/
 tools/render_logo.mjs   Rasterizador del logo a PNG
 ```
 
-## Secciones
+## Antes de publicar la landing
+
+`index.html` lleva marcadores que hay que sustituir por datos reales. Están
+listados en un comentario al inicio del archivo y se localizan con:
+
+```bash
+grep -n "\[[A-Z_]\+\]" index.html
+```
+
+| Marcador | Qué va ahí |
+|---|---|
+| `[WHATSAPP_NUMBER]` | Número en formato internacional sin signos |
+| `[SOPORTE_EMAIL]` | Correo de soporte |
+| `[YOUTUBE_CHANNEL_URL]` | Canal de tutoriales |
+| `[LOGIN_URL]` | URL real de autenticación |
+| `[PRECIO_MENSUAL]` / `[PRECIO_ANUAL]` | Precios de cada plan |
+| `[DESCUENTO_ANUAL]` | Ahorro del plan anual |
+| `[MEJORA_1..3]` | Métricas de resultados |
+
+Las tres métricas del bloque "Resultados esperables" son marcadores a propósito:
+publicar cifras inventadas como si fueran datos medidos de ApolAI sería publicidad
+engañosa. Sustitúyelas por resultados propios indicando periodo y muestra, o borra
+el bloque.
+
+También faltan por crear `privacidad.html` y `terminos.html`, enlazadas desde el footer.
+
+## Secciones del panel
 
 **Principal** — Dashboard · Cloud API · Bloqueo por País · Chat en Vivo ·
 Histórico Chats · Reportes · Métricas de Anuncios

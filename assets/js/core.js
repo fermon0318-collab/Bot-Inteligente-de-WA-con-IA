@@ -325,7 +325,8 @@
       });
       if (ok) {
         showLoader('Cerrando sesión…');
-        setTimeout(() => { hideLoader(); toast('Sesión cerrada. Vuelve pronto 👋', 'info'); }, 900);
+        // Sin backend todavía: se vuelve al sitio público
+        setTimeout(() => { location.href = 'index.html'; }, 900);
       }
     });
 

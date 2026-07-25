@@ -12,6 +12,7 @@ import { config } from '../config.js';
 import { many, one, query, transaction } from '../db/pool.js';
 import { decrypt, encrypt, mask } from '../lib/crypto.js';
 import { requireAuth, requireSubscription } from '../middleware/auth.js';
+import * as engine from '../services/engine.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -686,10 +687,57 @@ router.get('/conversations/:id/messages', async (req, res, next) => {
 
 router.put('/conversations/:id/ai', requireSubscription, async (req, res, next) => {
   try {
+    const enabled = Boolean(req.body?.enabled);
     await query(
-      'UPDATE contacts SET ai_enabled = $3 WHERE id = $1 AND account_id = $2',
-      [req.params.id, account(req), Boolean(req.body?.enabled)]
+      // Reactivar la IA levanta también la marca de automatización detenida:
+      // si no, el switch quedaría encendido sin que el bot volviera a responder.
+      `UPDATE contacts
+          SET ai_enabled = $3,
+              automation_off = CASE WHEN $3 THEN false ELSE automation_off END
+        WHERE id = $1 AND account_id = $2`,
+      [req.params.id, account(req), enabled]
     );
+    res.json({ ok: true, enabled });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Envío manual desde Chat en Vivo. Entra por la misma cola que el bot. */
+router.post('/conversations/:id/messages', requireSubscription, async (req, res, next) => {
+  try {
+    const body = String(req.body?.body || '').trim();
+    const mediaName = req.body?.mediaName || null;
+
+    if (!body && !mediaName) {
+      return res.status(400).json({ error: 'validation', message: 'El mensaje está vacío.' });
+    }
+
+    const result = await engine.sendManual({
+      accountId: account(req), contactId: req.params.id, body, mediaName,
+    });
+
+    if (result.error) return res.status(404).json({ error: result.error });
+
+    res.status(202).json({
+      ok: true,
+      queued: result.queued,
+      // Meta rechaza texto libre pasadas 24 h desde el último mensaje del
+      // contacto: se avisa antes de que el envío falle sin explicación.
+      outsideWindow: result.outsideWindow,
+      warning: result.outsideWindow
+        ? 'Han pasado más de 24 h desde el último mensaje del contacto. Meta solo permite plantillas aprobadas.'
+        : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Detiene flujos, remarketing e IA para un contacto y cancela lo encolado. */
+router.post('/conversations/:id/stop-automation', requireSubscription, async (req, res, next) => {
+  try {
+    await engine.stopAutomation({ accountId: account(req), contactId: req.params.id });
     res.json({ ok: true });
   } catch (err) {
     next(err);

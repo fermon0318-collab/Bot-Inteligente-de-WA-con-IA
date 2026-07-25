@@ -121,31 +121,36 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Base de datos y migraciones | ✅ 18 tablas |
 | API del panel | ✅ 40 endpoints |
 | Despliegue (nginx, systemd, TLS) | ✅ probado |
-| **Motor del bot** | ❌ no existe |
+| **Motor del bot** | ✅ webhook, flujos, IA y cola de envíos — probado |
 | **Panel conectado a la API** | ⚠️ solo sesión y cobros; los datos siguen siendo de ejemplo |
 
 ---
 
-## Bloque A · Motor del bot ← **el más importante**
+## Bloque A · Motor del bot ✅ terminado
 
-Sin esto ApolAI no es un bot: es un panel bonito. Todo lo demás depende de aquí.
+- [x] `GET /webhook/whatsapp` — verificación con el token de cada cuenta
+- [x] `POST /webhook/whatsapp` — recepción, con respuesta a Meta en ~13 ms
+  - [x] Cuenta resuelta por `phone_number_id`
+  - [x] Duplicados descartados por `wa_message_id` (Meta reintenta)
+  - [x] Bloqueo por país antes de gastar IA, con prefijo más largo primero
+  - [x] Contacto y mensaje registrados siempre, se responda o no
+  - [x] Origen del anuncio capturado del campo `referral`
+- [x] Envío vía Graph API: texto, archivo y plantilla
+- [x] Disparadores con normalización de acentos y prioridad al más específico
+- [x] Flujos simples (texto / archivo / pausa)
+- [x] Flujos avanzados: árbol que se detiene en cada condición y retoma con la
+      respuesta del contacto, con estado en base para sobrevivir reinicios
+- [x] IA con el prompt del cliente, historial de 12 mensajes y retraso configurable
+- [x] Ventana de 24 h: se avisa antes de que Meta rechace el envío
+- [x] Cola de salida con reintentos y espera creciente (30 s → 32 min)
+- [x] Estados de entrega: enviado, entregado, leído, fallido
+- [x] Detener automatización: cancela cola, flujos e IA de un contacto
 
-- [ ] `GET /webhook/whatsapp` — verificación del webhook (Meta manda `hub.challenge`)
-- [ ] `POST /webhook/whatsapp` — recepción de mensajes
-  - [ ] Resolver a qué cuenta pertenece el `phone_number_id`
-  - [ ] Descartar duplicados por `wa_message_id` (Meta reintenta)
-  - [ ] Aplicar bloqueo por país antes de gastar créditos
-  - [ ] Crear o actualizar el contacto y guardar el mensaje
-- [ ] Envío de mensajes vía Graph API (texto, archivo, plantilla)
-- [ ] Motor de disparadores: coincidencia de palabra clave → flujo, con
-      predeterminado si nada coincide
-- [ ] Ejecución de flujos simples (texto / archivo / pausa)
-- [ ] Ejecución de flujos avanzados (árbol con condiciones)
-- [ ] Llamada al proveedor de IA con el prompt base del cliente
-- [ ] Respeto de la ventana de 24 h de Meta (fuera de ella, solo plantillas)
-- [ ] Cola de reintentos para fallos de la Graph API
+**Archivos:** `server/src/services/{whatsapp,outbox,flows,ai,engine}.js` ·
+`server/src/routes/webhook.js` · migración `002_bot_engine.sql`
 
-**Depende de:** nada. **Bloquea:** todo lo demás.
+**Pendiente menor:** plantillas aprobadas para escribir fuera de la ventana de
+24 h (hoy se detecta y se avisa, pero no se envían).
 
 ## Bloque B · Cobros de los clientes finales
 
@@ -212,12 +217,12 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 
 ## Orden recomendado
 
-1. **Publicar lo que ya funciona** (partes 1.1 a 1.4). Tienes landing con
-   registro y cobro real: puedes empezar a vender antes de terminar el bot.
-2. **Bloque A** — sin él no hay producto.
-3. **Bloque C en paralelo** — es independiente y hace el panel creíble.
-4. **Bloque B** — la verificación de pagos es tu diferenciador frente a la
-   competencia.
+1. ~~Bloque A~~ ✅
+2. **Publicar y conectar un número real de WhatsApp.** El motor no se puede dar
+   por bueno hasta que haya hablado con Meta de verdad.
+3. **Bloque C** — el panel sigue mostrando datos de ejemplo aunque ya haya
+   conversaciones reales en la base.
+4. **Bloque B** — la verificación de pagos es tu diferenciador.
 5. **Bloques D, E y F** por valor comercial.
 6. **Bloque G** antes de tener volumen real.
 

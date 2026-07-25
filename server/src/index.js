@@ -13,6 +13,8 @@ import { attachSession, requireAuth, subscriptionAccess } from './middleware/aut
 import authRoutes from './routes/auth.js';
 import billingRoutes from './routes/billing.js';
 import apiRoutes from './routes/api.js';
+import webhookRoutes, { reprocessPending } from './routes/webhook.js';
+import { startWorker } from './services/outbox.js';
 
 const app = express();
 
@@ -44,6 +46,7 @@ app.get('/api/health', async (_req, res) => {
 /* --- Rutas ---------------------------------------------------------------- */
 app.use('/auth', authRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/webhook', webhookRoutes);
 app.use('/api', apiRoutes);
 
 /**
@@ -96,6 +99,12 @@ const server = app.listen(config.port, config.host, () => {
   console.log(`URL pública: ${config.publicUrl}`);
 });
 
+// Trabajador de la cola de salida: despacha lo que ya venció
+const stopOutbox = startWorker({ intervalMs: 3000 });
+
+// Si el proceso murió a mitad de un evento, aquí se recupera
+reprocessPending().catch((err) => console.error('[webhook] reproceso inicial:', err.message));
+
 // Limpieza de sesiones y estados OAuth caducados
 setInterval(() => {
   purgeExpired().catch((err) => console.error('[limpieza]', err.message));
@@ -105,6 +114,7 @@ purgeExpired().catch(() => {});
 
 function shutdown(signal) {
   console.log(`\n${signal} recibido, cerrando…`);
+  stopOutbox();
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);

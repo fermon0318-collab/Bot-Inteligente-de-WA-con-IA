@@ -17,7 +17,7 @@ los mismos componentes, no dos interpretaciones de la misma marca.
 
 ![ApolAI](assets/img/apolai-logo.svg)
 
-**Estado del proyecto y trabajo pendiente: [ROADMAP.md](ROADMAP.md)**
+**Estado del proyecto: [ROADMAP.md](ROADMAP.md)** · **Guías de implementación: [docs/](docs/README.md)**
 
 ## Publicar
 

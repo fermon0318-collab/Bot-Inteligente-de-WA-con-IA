@@ -4,6 +4,10 @@ Estado a fecha del último commit. Dos partes: **conectar** (credenciales y
 servicios externos, no requiere código) y **construir** (lo que falta por
 programar).
 
+> **Para implementarlo tú misma:** cada bloque pendiente tiene su guía paso a
+> paso con el código completo en **[docs/](docs/)**. Empieza por
+> [docs/README.md](docs/README.md), que explica el orden y el método de trabajo.
+
 ---
 
 # Parte 1 · Cómo conectar todo
@@ -156,6 +160,8 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 
 ## Bloque B · Cobros de los clientes finales
 
+📘 **Guía completa: [docs/bloque-b-pagos.md](docs/bloque-b-pagos.md)**
+
 - [ ] Descarga del adjunto desde la Graph API
 - [ ] Lectura del comprobante (OCR o modelo multimodal) → monto, fecha, referencia
 - [ ] Comparación con las reglas de acceso (monto + contexto)
@@ -166,6 +172,8 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 **Depende de:** bloque A.
 
 ## Bloque C · Panel con datos reales
+
+📘 **Guía completa: [docs/bloque-c-panel.md](docs/bloque-c-panel.md)**
 
 La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 
@@ -182,6 +190,8 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 
 ## Bloque D · Automatizaciones programadas
 
+📘 **Guía completa: [docs/bloque-d-remarketing.md](docs/bloque-d-remarketing.md)**
+
 - [ ] Trabajo periódico que detecta contactos sin conversión
 - [ ] Respeto de la franja horaria y la zona horaria del cliente
 - [ ] Ejecución de la secuencia de remarketing
@@ -190,6 +200,8 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 **Depende de:** bloque A.
 
 ## Bloque E · Métricas de anuncios
+
+📘 **Guía completa: [docs/bloque-e-metricas.md](docs/bloque-e-metricas.md)**
 
 - [ ] Lectura de gasto y campañas desde la Marketing API de Meta
 - [ ] `GET /api/ads` con el detalle por anuncio (no existe todavía)
@@ -200,6 +212,8 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 
 ## Bloque F · Archivos
 
+📘 **Guía completa: [docs/bloque-f-archivos.md](docs/bloque-f-archivos.md)**
+
 - [ ] `POST /api/media` — subida real (hoy solo hay listar y borrar)
 - [ ] Almacenamiento en disco o S3 con límite de tamaño y tipo
 - [ ] Subida a la Graph API para obtener el `media_id` reutilizable
@@ -207,6 +221,8 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 **Depende de:** nada.
 
 ## Bloque G · Endurecer para producción
+
+📘 **Guía completa: [docs/bloque-g-produccion.md](docs/bloque-g-produccion.md)**
 
 - [ ] Compilar Tailwind y quitar `'unsafe-eval'` de la CSP (ver `deploy/README.md`)
 - [ ] Copias de seguridad automáticas de PostgreSQL en cron

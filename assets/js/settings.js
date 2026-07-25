@@ -222,6 +222,22 @@
   /* ========================================================================
      FAQ
      ===================================================================== */
+  /* Convierte los marcadores [ASI] del texto en chips visibles, construyendo
+     nodos en lugar de inyectar HTML. */
+  function withPlaceholders(text) {
+    const frag = document.createDocumentFragment();
+    const re = /\[[A-Z0-9_]+\]/g;
+    let last = 0;
+    let match;
+    while ((match = re.exec(text)) !== null) {
+      if (match.index > last) frag.appendChild(document.createTextNode(text.slice(last, match.index)));
+      frag.appendChild(el('span', { class: 'ph', title: 'Pendiente de completar', text: match[0] }));
+      last = match.index + match[0].length;
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    return frag;
+  }
+
   function renderFaq(filter = '') {
     const list = qs('#faq-list');
     const term = filter.trim().toLowerCase();
@@ -232,7 +248,14 @@
     qs('#faq-empty').classList.toggle('hidden', items.length > 0);
 
     items.forEach((f, i) => {
-      const answer = el('div', { class: 'faq-a' }, el('div', { class: 'faq-a-inner', text: f.a }));
+      const inner = el('div', { class: 'faq-a-inner' }, el('p', {}, withPlaceholders(f.a)));
+      if (f.link) {
+        inner.appendChild(el('a', {
+          class: 'inline-flex items-center gap-1.5 mt-3 text-sm font-bold text-accent-600 hover:text-accent-700',
+          href: f.link.href,
+        }, [el('i', { class: 'fa-solid fa-arrow-up-right-from-square text-xs' }), el('span', { text: f.link.label })]));
+      }
+      const answer = el('div', { class: 'faq-a' }, inner);
       const btn = el('button', {
         type: 'button', class: 'faq-q', 'aria-expanded': 'false', id: `faq-q-${i}`,
       }, [

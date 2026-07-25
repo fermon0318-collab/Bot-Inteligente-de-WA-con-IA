@@ -591,6 +591,20 @@ table.data tbody tr:last-child td { border-bottom: none; }
 .terminal::-webkit-scrollbar { width: 7px; }
 .terminal::-webkit-scrollbar-thumb { background: rgba(196, 181, 253, 0.35); border-radius: 999px; }
 
+/* Marcador de dato pendiente de completar. Se usa tanto en las páginas legales
+   como en las respuestas del FAQ, para que un plazo sin decidir se vea. */
+.ph {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.35rem;
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
 .copyable { display: flex; gap: 0.5rem; align-items: stretch; }
 .copyable .input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 

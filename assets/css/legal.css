@@ -106,15 +106,4 @@
   font-size: 0.9rem;
 }
 
-/* Marcador de dato pendiente: visible sin romper la lectura */
-.ph {
-  display: inline-block;
-  padding: 0.05rem 0.4rem;
-  border-radius: 0.35rem;
-  background: #fef3c7;
-  border: 1px dashed #f59e0b;
-  color: #92400e;
-  font-weight: 700;
-  font-size: 0.85em;
-  white-space: nowrap;
-}
+/* El marcador .ph vive en apolai.css: también lo usa el FAQ del panel. */

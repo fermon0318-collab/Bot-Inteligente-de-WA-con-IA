@@ -129,8 +129,21 @@ Antes de publicar hay que revisarlas con un abogado de tu jurisdicción: las cl�
 de limitación de responsabilidad y de fuero tienen límites distintos en cada país y
 varias no son oponibles frente a consumidores.
 
-Dos coherencias que conviene no romper: el plazo de reembolso de `terminos.html` debe
-coincidir con el que anuncia el FAQ de `dashboard.html`, y el rol de encargado del
+### El FAQ del panel usa los mismos marcadores
+
+El FAQ de `dashboard.html` (definido en `assets/js/mock.js`) no repite cifras: usa
+`[PLAZO_REEMBOLSO]`, `[LIMITE_CONVERSACIONES_REEMBOLSO]` y `[DIAS_RETENCION]`, los
+mismos de las páginas legales, y enlaza a la cláusula correspondiente. Al decidir un
+plazo hay que sustituirlo en los tres sitios:
+
+```bash
+grep -rn "\[PLAZO_REEMBOLSO\]" terminos.html assets/js/mock.js
+```
+
+Cualquier marcador `[ASI]` dentro de una respuesta del FAQ se renderiza como chip
+ámbar, igual que en las legales, para que un plazo sin decidir se vea en pantalla.
+
+Queda una coherencia que el código no puede garantizar: el rol de encargado del
 tratamiento descrito en `privacidad.html` debe reflejarse en el contrato que firmes
 con tus clientes.
 

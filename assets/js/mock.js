@@ -356,10 +356,28 @@ window.ApolAI = window.ApolAI || {};
     { q: '¿Puedo intervenir una conversación que está llevando la IA?', a: 'Sí. En Chat en Vivo cada conversación tiene un switch de IA. Al apagarlo, el bot deja de responder a ese contacto y tú escribes directamente. El botón "Detener automatización" además cancela los flujos y el remarketing que estuvieran programados para esa persona.' },
     { q: '¿Cuándo se envía el remarketing?', a: 'Cuando pasa el tiempo que configuraste desde el primer contacto sin que haya conversión. Si ese momento cae fuera de tu franja horaria permitida, el mensaje se encola y sale al abrir la siguiente ventana, para no escribirle a nadie de madrugada.' },
     { q: '¿Qué hace exactamente la Conversions API?', a: 'Devuelve a Meta cada venta confirmada dentro de WhatsApp, algo que el píxel por sí solo no puede ver. Con esa señal el algoritmo aprende qué perfil compra de verdad y deja de optimizar hacia gente que solo abre conversación. Suele notarse en el costo por venta a partir de la segunda semana.' },
-    { q: '¿Por qué aparece el aviso de que Meta no entrega mis mensajes?', a: 'Significa que la calidad de tu número bajó, casi siempre por bloqueos o reportes de usuarios. Revisa el estado en Cloud API, baja el volumen de mensajes en frío y evita escribir fuera de la ventana de 24 horas sin plantilla aprobada. La calificación se recupera sola con buen comportamiento.' },
+    { q: '¿Por qué aparece el aviso de que Meta no entrega mis mensajes?', a: 'Significa que la calidad de tu número bajó, casi siempre por bloqueos o reportes de usuarios. Revisa el estado en Cloud API, baja el volumen de mensajes en frío y evita escribir fuera de la ventana de 24 horas sin plantilla aprobada. La calificación se recupera sola con buen comportamiento. Ten en cuenta que la decisión es de Meta: ninguna herramienta puede revertir una limitación o una suspensión de tu número.' },
     { q: '¿Para qué sirve el bloqueo por país?', a: 'Filtra por prefijo telefónico los mensajes que el bot ignorará por completo. Es la forma más simple de cortar spam masivo desde regiones donde no vendes, sin gastar créditos de IA ni ensuciar tus métricas de conversión.' },
-    { q: '¿Los datos de mis conversaciones se comparten con alguien?', a: 'No. Las conversaciones se almacenan cifradas en tu instancia y solo se envía a tu proveedor de IA el fragmento necesario para generar cada respuesta. Puedes exportar o borrar tu histórico completo desde Reportes en cualquier momento.' },
-    { q: '¿Tienen política de reembolso?', a: 'Sí, 14 días desde la contratación siempre que no hayas superado 1.000 conversaciones procesadas. Se solicita desde Pagos y Acceso o escribiendo a soporte, y se devuelve por el mismo medio de pago en un plazo de 5 a 10 días hábiles.' },
+    {
+      q: '¿Los datos de mis conversaciones se comparten con alguien?',
+      a: 'No se venden ni se ceden para publicidad de terceros, y el contenido de tus chats no se usa para entrenar modelos. Las conversaciones se guardan cifradas y a tu proveedor de IA solo viaja el fragmento necesario para generar cada respuesta. Si activas Conversions API, a Meta se le envía el evento de compra con su valor y moneda, no la conversación. Tras darte de baja conservamos tus datos [DIAS_RETENCION] días para que puedas recuperarlos, y después se eliminan.',
+      link: { href: 'privacidad.html', label: 'Leer la política de privacidad' },
+    },
+    {
+      q: '¿Quién es el responsable de los datos de mis contactos?',
+      a: 'Tú. Sobre los datos de tu cuenta ApolAI actúa como responsable, pero sobre las conversaciones de las personas que te escriben actúa como encargado del tratamiento: las procesa por cuenta tuya y siguiendo tus instrucciones. Eso significa que a ti te toca informar a tus contactos de que conversan con un sistema automatizado y atender las solicitudes de acceso o borrado que te dirijan. Desde Reportes puedes exportar o eliminar lo que necesites para responderlas.',
+      link: { href: 'privacidad.html#roles', label: 'Ver el detalle de los roles' },
+    },
+    {
+      q: '¿El precio incluye lo que cobran Meta y la IA?',
+      a: 'No. Tu plan de ApolAI cubre la plataforma. Aparte quedan lo que Meta te facture por las conversaciones de WhatsApp Cloud API y el consumo del proveedor de inteligencia artificial cuya API Key configures. Ambos te los cobran ellos directamente, con sus propias tarifas.',
+      link: { href: 'terminos.html#planes', label: 'Ver planes y facturación' },
+    },
+    {
+      q: '¿Tienen política de reembolso?',
+      a: 'Sí: [PLAZO_REEMBOLSO] días desde la contratación inicial, siempre que no hayas superado [LIMITE_CONVERSACIONES_REEMBOLSO] conversaciones procesadas. Se solicita escribiendo a soporte y se devuelve por el mismo medio de pago. Pasado ese plazo las cuotas ya abonadas no son reembolsables, sin perjuicio de los derechos que te reconozca la normativa de consumo de tu país.',
+      link: { href: 'terminos.html#reembolsos', label: 'Ver la cláusula completa' },
+    },
     { q: '¿Qué pasa si se cae mi servidor o Meta tiene una incidencia?', a: 'Los mensajes entrantes quedan en cola en Meta hasta 72 horas y ApolAI los procesa al reconectar. En la terminal de Cloud API verás el detalle de la reconexión y cuántos mensajes se recuperaron.' },
   ];
 

@@ -35,11 +35,15 @@ tinta `#1E1B4B`.
 
 **Tipografía**: Plus Jakarta Sans (UI) · JetBrains Mono (terminal y prompt).
 
-**Logo**: robot recreado en SVG — contorno `#6D28D9`, panel facial `#8B5CF6`,
-relleno de cabeza `#EEF2FF`. Los PNG (favicons y apple-touch-icon) se regeneran con:
+**Logo**: robot con placa de moneda, adaptado a la paleta morada conservando el
+trazado original. Contorno `#6D28D9`, panel facial `#8B5CF6`, sombreado `#DDD6FE`,
+relleno claro `#EEF2FF`.
+
+`assets/img/apolai-logo.svg` es la fuente de verdad. Si cambia la paleta, se edita
+ese archivo y se regeneran los PNG (favicons y apple-touch-icon):
 
 ```bash
-python3 tools/render_logo.py      # requiere Pillow
+npm i -D playwright && node tools/render_logo.mjs
 ```
 
 ## Estructura
@@ -57,7 +61,7 @@ assets/js/
   automation.js         Archivos, flujos simples y avanzados, remarketing, disparadores
   settings.js           Pagos y acceso, configuración de IA, tutoriales, FAQ
   app.js                Arranque
-tools/render_logo.py    Rasterizador del logo a PNG
+tools/render_logo.mjs   Rasterizador del logo a PNG
 ```
 
 ## Secciones

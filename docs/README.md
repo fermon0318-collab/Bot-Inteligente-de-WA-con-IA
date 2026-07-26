@@ -12,7 +12,7 @@ qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
 | — | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
 | — | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
 | — | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
-| 1 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
+| — | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | ✅ Implementado lo que no requiere un servidor real — ver `ROADMAP.md` § Bloque G para qué queda manual (monitorización, `rclone`, endurecer SSH) |
 
 > **Despliegue en Railway:** [deploy-railway.md](deploy-railway.md) — la ruta
 > activa mientras dure el plan gratuito, sin nginx.
@@ -110,6 +110,7 @@ server/src/
   db/migrations/        Esquema, en orden
   lib/crypto.js         encrypt · decrypt · mask · sign · unsign
   lib/session.js        Sesiones en base de datos
+  lib/alert.js          Aviso deduplicado de errores graves (Bloque G)
   middleware/auth.js    requireAuth · requireSubscription · rateLimit
   routes/
     auth.js             Google OAuth
@@ -128,6 +129,7 @@ server/src/
     remarketing.js      Trabajador periódico, franja horaria y envío (Bloque D)
     capi.js             Conversions API: cola y envío de eventos de compra (Bloque E)
     adsync.js           Sincronización de gasto con la Marketing API de Meta (Bloque E)
+  test/                 node --test · sin dependencias externas (Bloque G)
   billing/
     index.js            Interfaz de pasarela (perezosa: solo carga el adaptador activo)
     none.js             Adaptador por defecto — sin cobrar, mientras Wompi no esté

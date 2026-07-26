@@ -17,6 +17,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { config, ROOT } from './config.js';
 import { pool } from './db/pool.js';
+import { avisarError } from './lib/alert.js';
 import { purgeExpired } from './lib/session.js';
 import { attachSession, requireAuth, subscriptionAccess } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
@@ -40,7 +41,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.tailwindcss.com', 'https://cdn.jsdelivr.net'],
+      // Tailwind se compila localmente y no hay <script> inline en ningún
+      // HTML: script-src no necesita 'unsafe-inline' ni 'unsafe-eval'.
+      scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
       imgSrc: ["'self'", 'data:', 'https://lh3.googleusercontent.com', 'https://i.ytimg.com'],
@@ -154,6 +157,7 @@ app.use((err, req, res, _next) => {
 
   if (status >= 500) {
     console.error(`[error] ${req.method} ${req.originalUrl}:`, err.stack || err.message);
+    avisarError(`${req.method} ${req.originalUrl}`, err).catch(() => {});
   } else {
     console.warn(`[aviso] ${req.method} ${req.originalUrl}: ${err.message}`);
   }
@@ -214,4 +218,5 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 process.on('unhandledRejection', (reason) => {
   console.error('[promesa sin manejar]', reason);
+  avisarError('promesa sin manejar', reason instanceof Error ? reason : new Error(String(reason))).catch(() => {});
 });

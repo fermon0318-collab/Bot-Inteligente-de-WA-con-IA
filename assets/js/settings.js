@@ -172,6 +172,7 @@
     qs('#ai-model').value = ai.model;
     qs('#ai-delay').value = ai.delaySeconds;
     qs('#ai-delay-value').textContent = ai.delaySeconds;
+    qs('#ai-daily-limit').value = ai.dailyLimit;
     qs('#ai-prompt').value = ai.prompt;
     qs('#ai-key').value = '';
     qs('#ai-key').placeholder = ai.hasKey ? ai.keyMask : 'sk-…';
@@ -225,6 +226,7 @@
               enabled: enabled.checked,
               model: model.value,
               delaySeconds: Number(delay.value),
+              dailyLimit: Number(qs('#ai-daily-limit').value),
               prompt: prompt.value,
               ...(key ? { apiKey: key } : {}),
             },

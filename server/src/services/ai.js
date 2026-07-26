@@ -5,7 +5,7 @@
  * credencial global. Se soportan los dos formatos de API más extendidos.
  */
 
-import { many, one } from '../db/pool.js';
+import { many, one, query } from '../db/pool.js';
 import { decrypt } from '../lib/crypto.js';
 
 /** Cuántos mensajes previos se envían como contexto. */
@@ -50,7 +50,7 @@ function providerFor(model) {
 /** Configuración de IA de una cuenta, con la clave descifrada. */
 export async function aiConfig(accountId) {
   const row = await one(
-    `SELECT ai_enabled, ai_model, ai_key_enc, ai_delay_seconds, ai_prompt
+    `SELECT ai_enabled, ai_model, ai_key_enc, ai_delay_seconds, ai_prompt, ai_daily_limit
        FROM bot_settings WHERE account_id = $1`,
     [accountId]
   );
@@ -61,7 +61,31 @@ export async function aiConfig(accountId) {
     apiKey: decrypt(row.ai_key_enc),
     delaySeconds: row.ai_delay_seconds,
     prompt: row.ai_prompt,
+    dailyLimit: row.ai_daily_limit,
   };
+}
+
+/**
+ * Cuenta esta llamada contra el tope diario de la cuenta.
+ * Devuelve false si ya lo alcanzó — en ese caso no se debe llamar al proveedor.
+ */
+async function dentroDelLimite(accountId, limite) {
+  const uso = await one(
+    `INSERT INTO ai_usage (account_id, date, calls) VALUES ($1, current_date, 1)
+     ON CONFLICT (account_id, date) DO UPDATE SET calls = ai_usage.calls + 1
+     RETURNING calls`,
+    [accountId]
+  );
+  if (uso.calls <= limite) return true;
+
+  // Solo se avisa la primera vez que se cruza el tope en el día, no en cada mensaje
+  if (uso.calls === limite + 1) {
+    await query(
+      `INSERT INTO activity_log (account_id, level, message) VALUES ($1, 'warn', $2)`,
+      [accountId, `Límite diario de IA alcanzado (${limite} respuestas): la IA deja de responder hasta mañana`]
+    );
+  }
+  return false;
 }
 
 /**
@@ -73,6 +97,10 @@ export async function reply({ accountId, contactId, config }) {
   const cfg = config || (await aiConfig(accountId));
 
   if (!cfg?.enabled || !cfg.apiKey || !String(cfg.prompt || '').trim()) return null;
+
+  // El tope se cuenta antes de gastar en historial o en el proveedor: es lo
+  // que evita que un bucle mal configurado queme el presupuesto del cliente.
+  if (!(await dentroDelLimite(accountId, cfg.dailyLimit ?? 500))) return null;
 
   const history = await many(
     `SELECT direction, body FROM messages

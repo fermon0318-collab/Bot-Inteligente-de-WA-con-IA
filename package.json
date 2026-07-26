@@ -1,0 +1,12 @@
+{
+  "name": "elorai-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compilación de Tailwind para el sitio estático de Elorai (landing, panel y páginas legales)",
+  "scripts": {
+    "build:css": "tailwindcss -i tools/tailwind-input.css -o assets/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

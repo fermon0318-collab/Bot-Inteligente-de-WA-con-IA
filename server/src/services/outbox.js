@@ -12,6 +12,7 @@
  */
 
 import { many, one, query, transaction } from '../db/pool.js';
+import { avisarError } from '../lib/alert.js';
 import * as media from './media.js';
 import * as wa from './whatsapp.js';
 
@@ -210,6 +211,7 @@ export function startWorker({ intervalMs = 3000 } = {}) {
       }
     } catch (err) {
       console.error('[outbox] fallo del trabajador:', err.message);
+      avisarError('outbox.startWorker', err).catch(() => {});
     } finally {
       running = false;
     }

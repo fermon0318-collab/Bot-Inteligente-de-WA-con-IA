@@ -88,6 +88,7 @@ function publicSettings(row) {
       hasKey: Boolean(row.ai_key_enc),
       delaySeconds: row.ai_delay_seconds,
       prompt: row.ai_prompt,
+      dailyLimit: row.ai_daily_limit,
     },
     ads: {
       accountId: row.ads_account_id,
@@ -275,16 +276,17 @@ router.post('/settings/bot/:action(start|stop)', requireSubscription, async (req
 
 router.put('/settings/ai', requireSubscription, async (req, res, next) => {
   try {
-    const { enabled = true, model = 'claude-sonnet-5', apiKey, delaySeconds = 15, prompt = '' } = req.body || {};
+    const { enabled = true, model = 'claude-sonnet-5', apiKey, delaySeconds = 15, prompt = '', dailyLimit } = req.body || {};
     const delay = Math.min(30, Math.max(10, Number(delaySeconds) || 15));
+    const limite = Math.min(5000, Math.max(1, Number(dailyLimit) || 500));
 
     await query(
       `UPDATE bot_settings
           SET ai_enabled = $2, ai_model = $3,
               ai_key_enc = COALESCE($4, ai_key_enc),
-              ai_delay_seconds = $5, ai_prompt = $6, updated_at = now()
+              ai_delay_seconds = $5, ai_prompt = $6, ai_daily_limit = $7, updated_at = now()
         WHERE account_id = $1`,
-      [account(req), Boolean(enabled), String(model), apiKey ? encrypt(apiKey) : null, delay, String(prompt)]
+      [account(req), Boolean(enabled), String(model), apiKey ? encrypt(apiKey) : null, delay, String(prompt), limite]
     );
 
     await log(account(req), `Configuración de IA guardada (${model})`, 'ok');

@@ -28,7 +28,7 @@ die()  { printf '\n\033[31m✗ %s\033[0m\n\n' "$*" >&2; exit 1; }
 bold "Elorai → $DOMAIN"
 
 # --- 1. Paquetes del sistema ------------------------------------------------
-bold "1/8 · Paquetes del sistema"
+bold "1/9 · Paquetes del sistema"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq curl git ca-certificates gnupg nginx postgresql \
@@ -42,7 +42,7 @@ fi
 ok "Node $(node -v)"
 
 # --- 2. Usuario del servicio -----------------------------------------------
-bold "2/8 · Usuario del sistema"
+bold "2/9 · Usuario del sistema"
 if ! id elorai >/dev/null 2>&1; then
   useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin elorai
   ok "usuario 'elorai' creado"
@@ -51,7 +51,7 @@ else
 fi
 
 # --- 3. Base de datos -------------------------------------------------------
-bold "3/8 · Base de datos"
+bold "3/9 · Base de datos"
 systemctl enable --now postgresql >/dev/null 2>&1 || true
 
 if ! su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='elorai'\"" | grep -q 1; then
@@ -66,7 +66,7 @@ else
 fi
 
 # --- 4. Código --------------------------------------------------------------
-bold "4/8 · Código"
+bold "4/9 · Código"
 if [[ -d "$APP_DIR/.git" ]]; then
   git -C "$APP_DIR" fetch --quiet origin "$BRANCH"
   git -C "$APP_DIR" reset --hard --quiet "origin/$BRANCH"
@@ -83,8 +83,14 @@ npm --prefix "$APP_DIR/server" ci --omit=dev --silent 2>/dev/null \
 chown -R elorai:elorai "$APP_DIR"
 ok "dependencias instaladas"
 
+# Tailwind necesita su devDependency para compilar; por eso no lleva --omit=dev.
+# Sin este paso, el sitio se serviría con las clases de Tailwind sin estilos.
+npm --prefix "$APP_DIR" install --silent
+npm --prefix "$APP_DIR" run build:css --silent
+ok "Tailwind compilado"
+
 # --- 5. Variables de entorno ------------------------------------------------
-bold "5/8 · Configuración"
+bold "5/9 · Configuración"
 mkdir -p /etc/elorai
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -110,7 +116,7 @@ if grep -qE '^(GOOGLE_CLIENT_ID|STRIPE_SECRET_KEY)=$' "$ENV_FILE"; then
 fi
 
 # --- 6. Migraciones ---------------------------------------------------------
-bold "6/8 · Migraciones"
+bold "6/9 · Migraciones"
 if [[ "$PENDING_SECRETS" == "1" ]]; then
   warn "omitidas: faltan credenciales en $ENV_FILE"
 else
@@ -119,7 +125,7 @@ else
 fi
 
 # --- 7. Servicio ------------------------------------------------------------
-bold "7/8 · Servicio"
+bold "7/9 · Servicio"
 install -m 644 "$APP_DIR/deploy/elorai.service" /etc/systemd/system/elorai.service
 systemctl daemon-reload
 systemctl enable elorai >/dev/null 2>&1 || true
@@ -138,7 +144,7 @@ else
 fi
 
 # --- 8. nginx y TLS ---------------------------------------------------------
-bold "8/8 · nginx y certificado"
+bold "8/9 · nginx y certificado"
 mkdir -p /var/www/certbot /etc/nginx/snippets
 install -m 644 "$APP_DIR/deploy/elorai-proxy.conf" /etc/nginx/snippets/elorai-proxy.conf
 install -m 644 "$APP_DIR/deploy/elorai-headers.conf" /etc/nginx/snippets/elorai-headers.conf
@@ -188,6 +194,20 @@ ufw allow OpenSSH >/dev/null 2>&1 || true
 ufw allow 'Nginx Full' >/dev/null 2>&1 || true
 ufw --force enable >/dev/null 2>&1 || true
 ok "cortafuegos: solo SSH, HTTP y HTTPS"
+
+# --- 9. Copias de seguridad --------------------------------------------------
+bold "9/9 · Copias de seguridad"
+install -m 755 "$APP_DIR/deploy/elorai-backup.sh" /usr/local/bin/elorai-backup.sh
+install -m 644 "$APP_DIR/deploy/elorai-logrotate.conf" /etc/logrotate.d/elorai
+
+CRON_LINE="15 3 * * * /usr/local/bin/elorai-backup.sh >> /var/log/elorai-backup.log 2>&1"
+if ! crontab -l 2>/dev/null | grep -qF "elorai-backup.sh"; then
+  (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+  ok "copia diaria programada a las 03:15"
+else
+  ok "copia diaria ya programada"
+fi
+warn "las copias solo salen de este disco si configuras rclone — ver deploy/README.md § 8"
 
 # --- Resumen ----------------------------------------------------------------
 if [[ "$PENDING_SECRETS" == "1" ]]; then

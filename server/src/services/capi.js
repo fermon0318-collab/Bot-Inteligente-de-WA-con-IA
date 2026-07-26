@@ -7,6 +7,7 @@
 
 import { createHash } from 'node:crypto';
 import { many, one, query } from '../db/pool.js';
+import { avisarError } from '../lib/alert.js';
 import { decrypt } from '../lib/crypto.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
@@ -133,7 +134,10 @@ export async function flush({ limit = 20 } = {}) {
 
 export function startWorker({ intervalMs = 60_000 } = {}) {
   const timer = setInterval(() => {
-    flush().catch((err) => console.error('[capi]', err.message));
+    flush().catch((err) => {
+      console.error('[capi]', err.message);
+      avisarError('capi.startWorker', err).catch(() => {});
+    });
   }, intervalMs);
   timer.unref();
   return () => clearInterval(timer);

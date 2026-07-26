@@ -6,6 +6,7 @@
  */
 
 import { many, one, query } from '../db/pool.js';
+import { avisarError } from '../lib/alert.js';
 import { decrypt } from '../lib/crypto.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
@@ -76,7 +77,10 @@ export async function syncAll() {
 
 export function startWorker({ intervalMs = 3600_000 } = {}) {
   const timer = setInterval(() => {
-    syncAll().catch((err) => console.error('[ads]', err.message));
+    syncAll().catch((err) => {
+      console.error('[ads]', err.message);
+      avisarError('adsync.startWorker', err).catch(() => {});
+    });
   }, intervalMs);
   timer.unref();
   return () => clearInterval(timer);

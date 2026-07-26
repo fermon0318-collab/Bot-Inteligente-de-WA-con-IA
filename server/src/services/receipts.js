@@ -218,9 +218,29 @@ async function entregar({ accountId, contactId, reciboId, motivoAprobacion, regl
   }
 }
 
+/** Mientras haya un comprobante reciente de este contacto sin resolver hace
+ *  falta esperar: si no, alguien puede mandar cien fotos y se pagan cien
+ *  lecturas de IA por ellas. */
+const COOLDOWN_MINUTOS = 2;
+
 export async function processReceipt({ accountId, contactId, messageId, attachment }) {
   const cfg = await wa.accountConfig(accountId);
   if (!cfg?.token) return { status: 'error', reason: 'Cloud API sin configurar' };
+
+  const reciente = await one(
+    `SELECT id FROM payment_receipts
+      WHERE contact_id = $1 AND created_at > now() - make_interval(mins => $2)
+      ORDER BY created_at DESC LIMIT 1`,
+    [contactId, COOLDOWN_MINUTOS]
+  );
+  if (reciente) {
+    await query(
+      `INSERT INTO payment_receipts (account_id, contact_id, message_id, wa_media_id, mime_type, status, reason, processed_at)
+       VALUES ($1, $2, $3, $4, $5, 'rate_limited', 'Ya hay un comprobante reciente de este contacto en revisión', now())`,
+      [accountId, contactId, messageId, attachment.mediaId, attachment.mimeType || '']
+    );
+    return { status: 'rate_limited' };
+  }
 
   const ajustes = await one(
     'SELECT pay_message_ok, pay_message_invalid, pay_post_flow_id FROM bot_settings WHERE account_id = $1',

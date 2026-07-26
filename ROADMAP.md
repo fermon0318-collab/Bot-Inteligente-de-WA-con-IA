@@ -144,7 +144,7 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Autenticación con Google | ✅ funcionando (opcional al arrancar si aún no hay credenciales) |
 | Cobros | ✅ adaptador de Stripe listo · `none` por defecto mientras Wompi no esté · Wompi pendiente |
 | Protección del panel | ✅ nginx `auth_request` (Hetzner) y su equivalente en Express (Railway) |
-| Base de datos y migraciones | ✅ 23 tablas |
+| Base de datos y migraciones | ✅ 24 tablas |
 | API del panel | ✅ 46 endpoints |
 | **Métricas de anuncios y Conversions API (Bloque E)** | ✅ gasto real cruzado con ventas, conversiones reportadas a Meta |
 | **Remarketing (Bloque D)** | ✅ trabajador periódico, franja horaria, interruptor por cuenta |
@@ -153,6 +153,7 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | **Archivos (Bloque F)** | ✅ subida real, guardado en disco y a Meta |
 | **Verificación de pagos (Bloque B)** | ✅ lectura de comprobantes, reglas, entrega y revisión manual |
 | **Panel conectado a la API (Bloque C)** | ✅ completo, incluida Métricas de Anuncios (Bloque E) |
+| **Producción (Bloque G)** | ✅ CSP estricta, copias de seguridad, avisos de error, límites de abuso, pruebas automatizadas |
 
 ---
 
@@ -341,16 +342,77 @@ página completa.
 archivos no sobreviven a un redeploy (ver paso 5 de
 [docs/deploy-railway.md](docs/deploy-railway.md)).
 
-## Bloque G · Endurecer para producción
+## Bloque G · Endurecer para producción ✅ terminado (lo que se podía hacer sin servidor real)
 
 📘 **Guía completa: [docs/bloque-g-produccion.md](docs/bloque-g-produccion.md)**
 
-- [ ] Compilar Tailwind y quitar `'unsafe-eval'` de la CSP (ver `deploy/README.md`)
-- [ ] Copias de seguridad automáticas de PostgreSQL en cron
-- [ ] Monitorización de caídas (Uptime Kuma, Better Stack…)
-- [ ] Registro de errores agregado (Sentry o similar)
-- [ ] Límite de peticiones compartido si algún día hay más de una instancia
-- [ ] Pruebas automatizadas del motor del bot
+- [x] Compilar Tailwind y quitar `'unsafe-eval'` **y** `'unsafe-inline'` de la CSP
+- [x] Copias de seguridad automáticas de PostgreSQL en cron (con salida opcional
+      fuera del servidor vía `rclone`)
+- [x] Registro de errores agregado: aviso deduplicado (10 min por error) a un
+      webhook (Slack/Discord/lo que sea) para los fallos graves del servidor y
+      de cada trabajador en segundo plano
+- [x] Límite diario de respuestas de IA por cuenta, para que un uso
+      descontrolado no vacíe la tarjeta de nadie
+- [x] Límite de comprobantes de pago por contacto (1 cada 2 minutos), para que
+      no se pueda forzar a pagar por lecturas de IA mandando fotos en bucle
+- [x] Pruebas automatizadas del motor del bot (`node --test`, sin dependencias
+      externas)
+- [ ] Monitorización de caídas (Uptime Kuma, Better Stack…) — **manual**, hace
+      falta una cuenta real; ver `deploy/README.md`
+- [ ] Límite de peticiones compartido entre instancias — los límites nuevos
+      (IA, comprobantes) ya viven en PostgreSQL y por tanto son correctos con
+      varias instancias; el `rateLimit()` que ya existía para
+      `/auth/google` y `/billing/*` sigue en memoria (un solo proceso), tal
+      como su propio comentario en el código ya advertía — moverlo a Redis o
+      a `limit_req` de nginx solo hace falta si algún día hay más de una
+      instancia corriendo a la vez
+
+**Archivos:** `server/src/lib/alert.js` ·
+`server/src/db/migrations/007_limites.sql` ·
+`server/src/services/ai.js` (límite diario) ·
+`server/src/services/receipts.js` (cooldown por contacto) ·
+`server/src/index.js` y los cuatro trabajadores en segundo plano
+(`outbox`, `remarketing`, `capi`, `adsync`) — todos avisan por `alert.js` ·
+`deploy/elorai-backup.sh`, `deploy/elorai-logrotate.conf` ·
+`deploy/deploy.sh` (pasos 4 y 9) · `tools/tailwind-input.css` →
+`assets/css/tailwind.css` (compilado, committeado) ·
+`server/test/*.test.js` · `.env.example` (`ALERT_WEBHOOK`)
+
+**Un bug que corregí de paso:** `normalize()` en `flows.js` devolvía la
+cadena literal `"null"` cuando el texto de entrada era `null` (el valor por
+defecto de un parámetro solo actúa sobre `undefined`, nunca sobre `null`), lo
+que podía romper el matching de disparadores. Ahora usa `String(text ?? '')`.
+
+**Probado de extremo a extremo** contra una base real: se hicieron 5
+llamadas a `ai.reply()` con el límite diario puesto en 3, se confirmó que
+`ai_usage.calls` llega a 5 (todas cuentan) y que el aviso en `activity_log`
+sale exactamente una vez, al cruzar el límite. Para el cooldown de
+comprobantes: dos llamadas seguidas a `processReceipt()` para el mismo
+contacto, la segunda devuelve `rate_limited` sin intentar descargar el
+archivo ni llamar a la IA, y queda registrada como tal. Con Playwright: el
+error de consola `tailwind is not defined` que aparecía en todas las
+pruebas de los bloques anteriores (por no poder llegar al CDN) ya no
+aparece — el panel carga con la hoja compilada — y la CSP más estricta no
+bloquea nada que debiera cargar (Chart.js sigue permitido desde jsdelivr; lo
+único que falla son los propios CDNs externos por no tener salida de red en
+este entorno de pruebas, no por la CSP). 20/20 pruebas automatizadas en
+verde (`npm test` en `server/`).
+
+**Pendiente, y no se puede automatizar desde aquí** (todo documentado en
+`deploy/README.md` §§ 8-9 y en `docs/bloque-g-produccion.md`):
+- Dar de alta una cuenta de monitorización externa (Uptime Kuma propio o
+  Better Stack) y apuntarla a `/`.
+- Configurar `rclone` en el servidor real para que las copias salgan del
+  disco.
+- Endurecer el propio servidor (SSH sin contraseña, `unattended-upgrades`,
+  revisar puertos abiertos) — la sección 9 de `deploy/README.md` trae los
+  comandos, pero solo tienen sentido contra una máquina real.
+- Rotar los secretos según la tabla nueva de `deploy/README.md` § 9 cuando
+  toque (especialmente `ENCRYPTION_KEY`, que necesita una migración de
+  datos, no solo cambiar la variable).
+
+**Depende de:** todos los bloques anteriores (ya terminados).
 
 ---
 
@@ -362,11 +424,13 @@ archivos no sobreviven a un redeploy (ver paso 5 de
 4. ~~Bloque C~~ ✅
 5. ~~Bloque D~~ ✅
 6. ~~Bloque E~~ ✅
-7. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
+7. ~~Bloque G~~ ✅ (la parte que no requiere un servidor real ya está)
+8. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
    conectar un número real de WhatsApp.** El motor no se puede dar por bueno
    hasta que haya hablado con Meta de verdad — y hasta entonces, nada de lo
-   construido en los bloques B a E se ha visto en producción.
-8. **Bloque G** antes de tener volumen real.
+   construido en los bloques B a G se ha visto en producción.
+9. Completar el resto de Bloque G contra el servidor real: monitorización,
+   `rclone`, endurecer SSH — ver checklist en `deploy/README.md` §§ 8-9.
 
 ## Antes de abrir al público
 

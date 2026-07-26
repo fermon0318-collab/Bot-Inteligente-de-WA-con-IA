@@ -45,6 +45,15 @@ cosas — ya está preparado para eso, no hace falta tocar código.
 aplicado), así que ejecutarlo en cada arranque no hace daño y garantiza que la
 base nunca se quede desactualizada tras un `git push`.
 
+**Sobre el CSS de Tailwind:** con Root Directory en `server`, Railway nunca
+construye el `package.json` de la raíz — por eso `assets/css/tailwind.css`
+va compilado y comiteado al repositorio, no se genera en el despliegue. Si
+cambias clases de Tailwind en el HTML o en `assets/js/`, corre
+`npm run build:css` en tu máquina y sube el resultado junto con tu cambio, o
+el sitio se verá desactualizado hasta el siguiente commit que sí lo incluya.
+(En Hetzner esto no aplica: `deploy/deploy.sh` lo recompila solo en cada
+despliegue.)
+
 ---
 
 ## 3 · Variables de entorno

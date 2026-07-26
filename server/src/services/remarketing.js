@@ -8,6 +8,7 @@
  */
 
 import { many, query } from '../db/pool.js';
+import { avisarError } from '../lib/alert.js';
 import { enqueue } from './outbox.js';
 
 /**
@@ -161,6 +162,7 @@ export function startWorker({ intervalMs = 5 * 60 * 1000 } = {}) {
       if (n) console.log(`[remarketing] secuencia enviada a ${n} contacto(s)`);
     } catch (err) {
       console.error('[remarketing] fallo:', err.message);
+      avisarError('remarketing.startWorker', err).catch(() => {});
     } finally {
       corriendo = false;
     }

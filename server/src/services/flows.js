@@ -18,8 +18,11 @@ import { enqueue } from './outbox.js';
    ========================================================================== */
 
 /** Quita acentos y signos para que "informacion" case con "¿Información?". */
-export function normalize(text = '') {
-  return String(text)
+export function normalize(text) {
+  // El valor por defecto de un parámetro solo actúa sobre `undefined`, no
+  // sobre `null` — sin el `??` aquí, normalize(null) devolvía la cadena
+  // literal "null" en vez de una cadena vacía.
+  return String(text ?? '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')

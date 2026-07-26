@@ -202,18 +202,38 @@ systemctl restart elorai           # reiniciar
 sudo bash deploy/deploy.sh elorai.io   # desplegar cambios
 ```
 
-**Copias de seguridad.** Lo mínimo imprescindible, en cron diario:
+**Copias de seguridad.** `deploy.sh` ya instala `elorai-backup.sh` y programa
+un cron diario a las 03:15 (base de datos, `uploads/` y una copia de
+`elorai.env`, todo en `/var/backups/elorai`). Ver el § 8 de abajo para
+sacarlas del servidor y para probar la restauración — **una copia que nunca
+restauraste no es una copia**.
 
-```bash
-sudo -u postgres pg_dump elorai | gzip > /var/backups/elorai-$(date +%F).sql.gz
-```
-
-Guarda también `/etc/elorai/elorai.env` en un gestor de contraseñas. Contiene
-`ENCRYPTION_KEY`: **si lo pierdes, los tokens de Meta y las API Key de IA de tus
-clientes son irrecuperables** y tendrán que volver a introducirlas.
+Guarda también `/etc/elorai/elorai.env` en un gestor de contraseñas aparte.
+Contiene `ENCRYPTION_KEY`: **si lo pierdes, los tokens de Meta y las API Key
+de IA de tus clientes son irrecuperables** y tendrán que volver a
+introducirlas.
 
 **Renovación del certificado.** `certbot.timer` la hace sola. Verifica con
 `systemctl list-timers | grep certbot`.
+
+**Monitorización.** `GET /api/health` devuelve 503 si la base no responde —
+dalo de alta en un servicio gratuito ([Uptime Kuma](https://uptime.kuma.pet)
+autoalojado, o Better Stack) apuntando a `https://elorai.io/api/health`, y
+configúralo para avisarte por un canal que sí revises (no un correo que nadie
+lee a las 4 de la mañana). Además, de vez en cuando:
+
+```bash
+# Envíos atascados: si crece, algo va mal con Meta
+psql $DATABASE_URL -c "SELECT count(*) FROM outbox WHERE status='pending' AND scheduled_at < now() - interval '10 minutes';"
+# Eventos de WhatsApp sin procesar
+psql $DATABASE_URL -c "SELECT count(*) FROM wa_events WHERE processed_at IS NULL;"
+```
+
+**Aviso de errores graves.** Define `ALERT_WEBHOOK` en `elorai.env` con la URL
+de un webhook que acepte `POST {text}` (Slack, Discord, un relay a
+Telegram…) y los 500 del servidor y los fallos de los trabajadores de fondo
+te avisan solos, agrupados uno cada diez minutos como máximo por tipo de
+error. Sin definirla, esos mismos avisos se quedan en `journalctl -u elorai`.
 
 ---
 
@@ -223,26 +243,85 @@ clientes son irrecuperables** y tendrán que volver a introducirlas.
 - [ ] Completar y revisar legalmente `privacidad.html` y `terminos.html`
 - [ ] Publicar la pantalla de consentimiento de Google
 - [ ] Pasar Stripe de claves de prueba a producción
-- [ ] Compilar Tailwind (ver abajo)
+- [ ] Copias fuera del servidor configuradas (§ 8) y restauración probada una vez
+- [ ] Actualizaciones de seguridad automáticas y SSH sin contraseña (§ 9)
 
-### Compilar Tailwind
+### Tailwind ya está compilado
 
-En producción el CDN de Tailwind es lento y obliga a permitir `'unsafe-eval'`
-en la CSP. Para cerrarlo:
+Los cuatro HTML cargan `assets/css/tailwind.css` (compilado, sin CDN ni
+`'unsafe-eval'` en la CSP) en vez del `<script src="https://cdn.tailwindcss.com">`.
+`deploy.sh` lo recompila solo en cada despliegue — no hace falta tocar nada a
+mano. Si cambias clases de Tailwind en el HTML o en `assets/js/`, recuerda que
+el CSS servido no se actualiza hasta el siguiente despliegue (o corriendo
+`npm run build:css` a mano en local mientras desarrollas).
+
+---
+
+## 8 · Copias de seguridad: sácalas del servidor y prueba la restauración
+
+`deploy.sh` ya deja `elorai-backup.sh` instalado y programado a diario. Una
+copia en el mismo disco que la base no es una copia de verdad — sácala con
+[rclone](https://rclone.org) a cualquier almacenamiento (S3, un VPS distinto,
+Backblaze…):
 
 ```bash
-npx tailwindcss -i tools/tailwind-input.css -o assets/css/tailwind.css --minify
+sudo apt install rclone
+sudo rclone config          # configura tu destino una vez ("remoto")
 ```
 
-Después, en los cuatro HTML, sustituye el `<script src="https://cdn.tailwindcss.com">`
-y su bloque de configuración por:
+`elorai-backup.sh` detecta solo si ya hay un remoto configurado (`rclone
+listremotes`) y sube ahí lo del día — no hace falta tocar el script.
 
-```html
-<link rel="stylesheet" href="assets/css/tailwind.css" />
+**Prueba la restauración ahora, no cuando la necesites de verdad:**
+
+```bash
+sudo -u postgres createdb elorai_prueba
+gunzip -c /var/backups/elorai/db-FECHA.sql.gz | sudo -u postgres psql elorai_prueba
+sudo -u postgres psql elorai_prueba -c "SELECT count(*) FROM contacts;"
+sudo -u postgres dropdb elorai_prueba
 ```
 
-y quita `'unsafe-eval'` y `https://cdn.tailwindcss.com` de la CSP en
-`deploy/elorai-headers.conf`.
+---
+
+## 9 · Seguridad del servidor
+
+Repaso rápido, de vez en cuando:
+
+```bash
+ls -l /etc/elorai/elorai.env     # esperado: -rw-r----- root elorai
+sudo ss -tlnp | grep 5432        # PostgreSQL: solo 127.0.0.1, nunca 0.0.0.0
+sudo ss -tlnp | grep 3000        # Node: solo 127.0.0.1 (nginx hace de puerta)
+sudo ufw status                  # 22, 80, 443 y nada más — deploy.sh ya lo deja así
+```
+
+Actualizaciones de seguridad automáticas:
+
+```bash
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+```
+
+Acceso SSH solo con clave:
+
+```bash
+sudo nano /etc/ssh/sshd_config
+#   PasswordAuthentication no
+#   PermitRootLogin prohibit-password
+sudo systemctl restart ssh
+```
+
+**Rotación de secretos.** Ten pensado qué harías si se filtra algo:
+
+| Secreto | Cómo rotarlo | Consecuencia |
+|---|---|---|
+| `SESSION_SECRET` | Cambiar en `elorai.env` y reiniciar | Todos cierran sesión |
+| `STRIPE_SECRET_KEY` | Nueva clave en Stripe | Ninguna si actualizas a la vez |
+| `GOOGLE_CLIENT_SECRET` | Regenerar en Google Cloud | Ninguna |
+| `ENCRYPTION_KEY` | **Requiere descifrar y recifrar todo** | Sin un script de migración, se pierden los tokens de todos los clientes |
+
+Para `ENCRYPTION_KEY` en particular, escribe el script de migración **antes**
+de necesitarlo: lee cada credencial con la clave vieja y la reescribe con la
+nueva, dentro de una transacción.
 
 ---
 

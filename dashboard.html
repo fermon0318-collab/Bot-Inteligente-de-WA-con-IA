@@ -21,34 +21,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        },
-        colors: {
-          brand: {
-            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8',
-            500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81',
-          },
-          accent: {
-            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
-            500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
-          },
-          plum: {
-            50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc',
-            500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87',
-          },
-          ink: '#1e1b4b',
-        },
-      },
-    },
-  };
-</script>
+<link rel="stylesheet" href="assets/css/tailwind.css" />
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="assets/css/elorai.css" />
@@ -944,6 +917,11 @@
             <div>
               <label class="label" for="ai-model">Modelo</label>
               <select id="ai-model" class="select"></select>
+            </div>
+            <div>
+              <label class="label" for="ai-daily-limit">Tope diario de respuestas</label>
+              <input id="ai-daily-limit" type="number" min="1" max="5000" value="500" class="input" />
+              <p class="hint !mt-1">Protege tu presupuesto de IA: pasado este número de respuestas en el día, la IA deja de responder hasta mañana (los flujos y disparadores siguen funcionando).</p>
             </div>
           </div>
         </div>

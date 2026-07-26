@@ -13,17 +13,20 @@
  *   handleEvent(event)                                 → persiste el cambio
  */
 
-import * as stripe from './stripe.js';
+import * as none from './none.js';
 
-const providers = { stripe };
+const KNOWN = ['none', 'stripe'];
 
-const PROVIDER = process.env.BILLING_PROVIDER || 'stripe';
+const PROVIDER = process.env.BILLING_PROVIDER || 'none';
 
-export const billing = providers[PROVIDER];
-
-if (!billing) {
-  console.error(`✗ BILLING_PROVIDER="${PROVIDER}" no está implementado. Opciones: ${Object.keys(providers).join(', ')}`);
+if (!KNOWN.includes(PROVIDER)) {
+  console.error(`✗ BILLING_PROVIDER="${PROVIDER}" no está implementado. Opciones: ${KNOWN.join(', ')}`);
   process.exit(1);
 }
+
+// Se importa el adaptador de forma perezosa: stripe.js crea el cliente de
+// Stripe en cuanto se carga, así que cargarlo siempre rompería el arranque
+// en cuanto STRIPE_SECRET_KEY estuviera vacío, aunque no se vaya a usar.
+export const billing = PROVIDER === 'stripe' ? await import('./stripe.js') : none;
 
 export const providerName = PROVIDER;

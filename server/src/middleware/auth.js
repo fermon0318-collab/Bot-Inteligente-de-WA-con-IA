@@ -2,6 +2,7 @@
  * Middlewares de sesión, acceso y límite de peticiones.
  */
 
+import { providerName } from '../billing/index.js';
 import { config } from '../config.js';
 import { one } from '../db/pool.js';
 import { readSession } from '../lib/session.js';
@@ -43,6 +44,12 @@ const ACTIVE = new Set(['active', 'trialing']);
  */
 export async function subscriptionAccess(user) {
   if (config.bypassEmails.includes(user.email.toLowerCase())) {
+    return { allowed: true, subscription: { status: 'bypass', plan: null } };
+  }
+
+  // Sin pasarela configurada (BILLING_PROVIDER=none) el producto todavía no
+  // cobra a nadie: toda cuenta con sesión puede usar el panel.
+  if (providerName === 'none') {
     return { allowed: true, subscription: { status: 'bypass', plan: null } };
   }
 

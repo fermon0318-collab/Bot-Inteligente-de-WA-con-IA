@@ -1,12 +1,21 @@
 /**
  * Elorai — arranque del servidor.
  *
- * Escucha solo en 127.0.0.1: quien expone el servicio a internet es nginx, que
- * además termina TLS y sirve los archivos estáticos.
+ * Puede vivir detrás de nginx (Hetzner: nginx termina TLS, sirve los estáticos
+ * y solo reenvía /auth, /api y /webhook) o solo, publicado directamente por
+ * Railway (sin nginx: aquí mismo se sirven los archivos estáticos, la cabecera
+ * de seguridad y la compresión). Ambos casos conviven sin configuración
+ * adicional porque en el primero nginx nunca llega a reenviar a Node las
+ * rutas de estáticos ni "/", así que el código de abajo simplemente no se
+ * ejecuta ahí.
  */
 
+import compression from 'compression';
 import express from 'express';
-import { config } from './config.js';
+import helmet from 'helmet';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { config, ROOT } from './config.js';
 import { pool } from './db/pool.js';
 import { purgeExpired } from './lib/session.js';
 import { attachSession, requireAuth, subscriptionAccess } from './middleware/auth.js';
@@ -18,9 +27,30 @@ import { startWorker } from './services/outbox.js';
 
 const app = express();
 
-// nginx es el único que habla con este proceso: se confía en su X-Forwarded-*
+// Detrás de nginx o del proxy de borde de Railway: ambos anexan X-Forwarded-*
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+
+// La misma CSP que llevaba deploy/elorai-headers.conf para nginx — ver ese
+// archivo para el porqué de cada origen permitido.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.tailwindcss.com', 'https://cdn.jsdelivr.net'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
+      imgSrc: ["'self'", 'data:', 'https://lh3.googleusercontent.com', 'https://i.ytimg.com'],
+      frameSrc: ['https://www.youtube-nocookie.com'],
+      connectSrc: ["'self'"],
+      formAction: ["'self'", 'https://checkout.stripe.com', 'https://billing.stripe.com'],
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(compression());
 
 /* --- Webhook de cobros: cuerpo en crudo ----------------------------------
    Debe ir ANTES del parser de JSON. La firma de Stripe se calcula sobre los
@@ -70,6 +100,47 @@ app.get('/internal/auth', requireAuth, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+/* --- Panel protegido -------------------------------------------------------
+   Equivalente en Express de lo que hacía `auth_request` en nginx (ver
+   deploy/nginx.conf): sin esto, publicar directamente en Railway serviría
+   dashboard.html a cualquiera que conociera la URL, sesión o no.
+   ------------------------------------------------------------------------ */
+app.get('/dashboard.html', requireAuth, async (req, res, next) => {
+  try {
+    const { allowed } = await subscriptionAccess(req.user);
+    if (!allowed) return res.redirect('/#precios?suscripcion=requerida');
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(join(ROOT, 'dashboard.html'));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* --- Archivos estáticos -----------------------------------------------------
+   Solo lo que de verdad es público: assets/ y las páginas sueltas. Nunca se
+   monta ROOT entero, así server/, deploy/, docs/ y tools/ quedan fuera de
+   alcance sin necesidad de una lista de bloqueo.
+   ------------------------------------------------------------------------ */
+app.use('/assets', express.static(join(ROOT, 'assets'), {
+  maxAge: '7d',
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
+
+for (const page of ['index.html', 'privacidad.html', 'terminos.html']) {
+  const filePath = join(ROOT, page);
+  if (!existsSync(filePath)) continue;
+  app.get(`/${page}`, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(filePath);
+  });
+}
+app.get('/', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(join(ROOT, 'index.html'));
 });
 
 /* --- 404 y errores -------------------------------------------------------- */

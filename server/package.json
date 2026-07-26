@@ -12,7 +12,10 @@
     "check": "node --check src/index.js"
   },
   "dependencies": {
+    "compression": "^1.7.5",
     "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "multer": "^2.2.0",
     "pg": "^8.13.1",
     "stripe": "^17.5.0"
   }

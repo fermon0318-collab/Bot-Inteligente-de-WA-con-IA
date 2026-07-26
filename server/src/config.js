@@ -59,6 +59,15 @@ const optional = (name, fallback = '') => process.env[name] || fallback;
 const NODE_ENV = optional('NODE_ENV', 'development');
 const isProd = NODE_ENV === 'production';
 
+// Railway asigna un subdominio público antes de que exista un dominio propio;
+// se usa como respaldo para no obligar a fijar PUBLIC_URL a mano en el primer
+// despliegue. Fuera de Railway la variable simplemente no existe y no cambia nada.
+const railwayDomain = optional('RAILWAY_PUBLIC_DOMAIN', '');
+const publicUrlRaw = optional('PUBLIC_URL', '') || (railwayDomain ? `https://${railwayDomain}` : '');
+if (!publicUrlRaw) missing.push('PUBLIC_URL — ej. https://elorai.io (o define RAILWAY_PUBLIC_DOMAIN)');
+
+const BILLING_PROVIDER = optional('BILLING_PROVIDER', 'none');
+
 export const config = {
   env: NODE_ENV,
   isProd,
@@ -66,7 +75,7 @@ export const config = {
   host: optional('HOST', '127.0.0.1'),
 
   /** URL pública del sitio, sin barra final. Se usa para OAuth y Stripe. */
-  publicUrl: required('PUBLIC_URL', { hint: 'ej. https://elorai.io' }).replace(/\/$/, ''),
+  publicUrl: publicUrlRaw.replace(/\/$/, ''),
 
   db: {
     connectionString: required('DATABASE_URL', { hint: 'postgres://usuario:clave@host:5432/elorai' }),
@@ -81,18 +90,30 @@ export const config = {
   /** Clave AES-256-GCM para cifrar credenciales de terceros en la base. */
   encryptionKey: required('ENCRYPTION_KEY', { hint: 'openssl rand -hex 32 (64 caracteres hex)' }),
 
+  // Google y Stripe son opcionales al arrancar: mientras no estén configurados,
+  // /auth/google y /api/billing/* responden con un aviso claro en lugar de
+  // impedir que el resto del sitio (y el bot) funcione.
   google: {
-    clientId: required('GOOGLE_CLIENT_ID', { hint: 'Google Cloud Console → Credenciales' }),
-    clientSecret: required('GOOGLE_CLIENT_SECRET'),
+    clientId: optional('GOOGLE_CLIENT_ID'),
+    clientSecret: optional('GOOGLE_CLIENT_SECRET'),
+    get configured() { return Boolean(config.google.clientId && config.google.clientSecret); },
     // Debe coincidir carácter por carácter con la URI autorizada en Google
     get redirectUri() { return `${config.publicUrl}/auth/google/callback`; },
   },
 
   stripe: {
-    secretKey: required('STRIPE_SECRET_KEY', { hint: 'sk_live_… o sk_test_…' }),
-    webhookSecret: required('STRIPE_WEBHOOK_SECRET', { hint: 'whsec_… del endpoint del webhook' }),
-    priceMonthly: required('STRIPE_PRICE_MONTHLY', { hint: 'price_… del plan mensual' }),
-    priceYearly: required('STRIPE_PRICE_YEARLY', { hint: 'price_… del plan anual' }),
+    secretKey: BILLING_PROVIDER === 'stripe'
+      ? required('STRIPE_SECRET_KEY', { hint: 'sk_live_… o sk_test_…' })
+      : optional('STRIPE_SECRET_KEY'),
+    webhookSecret: BILLING_PROVIDER === 'stripe'
+      ? required('STRIPE_WEBHOOK_SECRET', { hint: 'whsec_… del endpoint del webhook' })
+      : optional('STRIPE_WEBHOOK_SECRET'),
+    priceMonthly: BILLING_PROVIDER === 'stripe'
+      ? required('STRIPE_PRICE_MONTHLY', { hint: 'price_… del plan mensual' })
+      : optional('STRIPE_PRICE_MONTHLY'),
+    priceYearly: BILLING_PROVIDER === 'stripe'
+      ? required('STRIPE_PRICE_YEARLY', { hint: 'price_… del plan anual' })
+      : optional('STRIPE_PRICE_YEARLY'),
     trialDays: Number(optional('STRIPE_TRIAL_DAYS', '0')),
   },
 

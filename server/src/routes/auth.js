@@ -35,6 +35,9 @@ function safeRedirect(target) {
 
 /* --- Inicio del flujo ---------------------------------------------------- */
 router.get('/google', rateLimit({ windowMs: 60_000, max: 20 }), async (req, res, next) => {
+  if (!config.google.configured) {
+    return res.redirect('/?login=error&reason=google_no_configurado');
+  }
   try {
     const state = randomId(24);
     const verifier = base64url(randomBytes(48));
@@ -65,6 +68,7 @@ router.get('/google', rateLimit({ windowMs: 60_000, max: 20 }), async (req, res,
 /* --- Vuelta de Google ---------------------------------------------------- */
 router.get('/google/callback', rateLimit({ windowMs: 60_000, max: 30 }), async (req, res, next) => {
   const fail = (reason) => res.redirect(`/?login=error&reason=${encodeURIComponent(reason)}`);
+  if (!config.google.configured) return fail('google_no_configurado');
 
   try {
     if (req.query.error) return fail(String(req.query.error));

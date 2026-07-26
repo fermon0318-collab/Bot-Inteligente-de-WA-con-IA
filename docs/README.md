@@ -8,11 +8,11 @@ qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
 | # | Bloque | Documento | Por qué en este orden |
 |---|---|---|---|
 | — | **F · Archivos** | [bloque-f-archivos.md](bloque-f-archivos.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
-| 1 | **B · Verificación de pagos** | [bloque-b-pagos.md](bloque-b-pagos.md) | Tu diferenciador frente a la competencia |
-| 2 | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | Independiente: puedes hacerlo cuando quieras |
-| 3 | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | Recupera ventas perdidas |
-| 4 | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | Depende de que B ya marque pagos |
-| 5 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
+| — | **B · Verificación de pagos** | [bloque-b-pagos.md](bloque-b-pagos.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
+| 1 | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | Independiente: puedes hacerlo cuando quieras |
+| 2 | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | Recupera ventas perdidas |
+| 3 | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | Depende de que B ya marque pagos |
+| 4 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
 
 > **Despliegue en Railway:** [deploy-railway.md](deploy-railway.md) — la ruta
 > activa mientras dure el plan gratuito, sin nginx.
@@ -124,6 +124,7 @@ server/src/
     engine.js           Orquestación del mensaje entrante
     storage.js          Archivos en disco (Bloque F)
     media.js            Alta de archivos + subida a Meta (Bloque F)
+    receipts.js         Lectura de comprobantes, reglas y entrega (Bloque B)
   billing/
     index.js            Interfaz de pasarela (perezosa: solo carga el adaptador activo)
     none.js             Adaptador por defecto — sin cobrar, mientras Wompi no esté
@@ -166,4 +167,8 @@ SELECT contact_id, node_path, status FROM flow_runs WHERE status = 'waiting';
 
 -- Lo que ve el cliente en la terminal del panel
 SELECT created_at, level, message FROM activity_log ORDER BY id DESC LIMIT 30;
+
+-- Comprobantes que necesitan revisión manual
+SELECT id, contact_id, amount, currency, reason, created_at FROM payment_receipts
+ WHERE status = 'manual_review' ORDER BY created_at DESC;
 ```

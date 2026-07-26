@@ -144,12 +144,13 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Autenticación con Google | ✅ funcionando (opcional al arrancar si aún no hay credenciales) |
 | Cobros | ✅ adaptador de Stripe listo · `none` por defecto mientras Wompi no esté · Wompi pendiente |
 | Protección del panel | ✅ nginx `auth_request` (Hetzner) y su equivalente en Express (Railway) |
-| Base de datos y migraciones | ✅ 19 tablas |
-| API del panel | ✅ 41 endpoints |
+| Base de datos y migraciones | ✅ 20 tablas |
+| API del panel | ✅ 43 endpoints |
 | Despliegue | ✅ Railway (sin nginx, ver [docs/deploy-railway.md](docs/deploy-railway.md)) y Hetzner+nginx probados |
 | **Motor del bot** | ✅ webhook, flujos, IA y cola de envíos — probado |
 | **Archivos (Bloque F)** | ✅ subida real, guardado en disco y a Meta |
-| **Panel conectado a la API** | ⚠️ solo sesión, cobros y archivos; el resto sigue siendo de ejemplo |
+| **Verificación de pagos (Bloque B)** | ✅ lectura de comprobantes, reglas, entrega y revisión manual |
+| **Panel conectado a la API** | ⚠️ solo sesión, cobros, archivos y comprobantes; el resto sigue siendo de ejemplo |
 
 ---
 
@@ -179,18 +180,42 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 **Pendiente menor:** plantillas aprobadas para escribir fuera de la ventana de
 24 h (hoy se detecta y se avisa, pero no se envían).
 
-## Bloque B · Cobros de los clientes finales
+## Bloque B · Cobros de los clientes finales ✅ terminado
 
-📘 **Guía completa: [docs/bloque-b-pagos.md](docs/bloque-b-pagos.md)**
+📘 **Guía original: [docs/bloque-b-pagos.md](docs/bloque-b-pagos.md)**
 
-- [ ] Descarga del adjunto desde la Graph API
-- [ ] Lectura del comprobante (OCR o modelo multimodal) → monto, fecha, referencia
-- [ ] Comparación con las reglas de acceso (monto + contexto)
-- [ ] Entrega automática del mensaje y los archivos del producto
-- [ ] Marcado del contacto como pagado y disparo del flujo post-pago
-- [ ] Respuestas rápidas de medios de pago por palabra clave
+- [x] Descarga del adjunto desde la Graph API
+- [x] Lectura del comprobante con el modelo multimodal que ya configuró el
+      cliente (Anthropic u OpenAI) → monto, moneda, referencia, fecha, banco
+- [x] Comparación con las reglas de acceso (monto con tolerancia + contexto
+      de la conversación reciente)
+- [x] Entrega automática del mensaje y los archivos del producto
+- [x] Marcado del contacto como pagado y disparo del flujo post-pago
+- [x] Respuestas rápidas de medios de pago por palabra clave
+- [x] Detección de referencia duplicada (mismo comprobante reenviado)
+- [x] Cola de revisión manual (`manual_review`) para comprobantes ilegibles o
+      sin proveedor de IA configurado, con aprobación desde `POST /api/receipts/:id/approve`
 
-**Depende de:** bloque A.
+**Archivos:** `server/src/services/receipts.js` ·
+`server/src/services/engine.js` (pasos 4.5 y 5.5 del pipeline) ·
+`server/src/routes/api.js` (`/receipts`) · migración `004_pagos.sql`
+
+**Probado de extremo a extremo** contra una base real: coincidencia de regla
+por monto+tolerancia+contexto, aprobación manual con entrega real (mensaje +
+archivo encolados, contacto marcado `paid`), doble aprobación rechazada
+(409), y fallo real de descarga contra la Graph API de Meta manejado sin
+degradar un contacto ya pagado.
+
+**Pendiente:** la lectura automática en sí (llamada al modelo multimodal) no
+se ha probado con una API Key real — sin ella, todo comprobante cae en
+`manual_review`, que es el comportamiento esperado y seguro por defecto.
+
+**Advertencia que ya aplica:** esto no sustituye la conciliación bancaria.
+Revisa `payment_receipts` contra tu estado de cuenta real, sobre todo con
+importes altos, y considera un umbral de monto por encima del cual todo vaya
+a revisión manual.
+
+**Depende de:** bloque A y bloque F (ya terminados).
 
 ## Bloque C · Panel con datos reales
 
@@ -267,12 +292,13 @@ archivos no sobreviven a un redeploy (ver paso 5 de
 
 1. ~~Bloque A~~ ✅
 2. ~~Bloque F~~ ✅
-3. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
+3. ~~Bloque B~~ ✅
+4. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
    conectar un número real de WhatsApp.** El motor no se puede dar por bueno
-   hasta que haya hablado con Meta de verdad.
-4. **Bloque C** — el panel sigue mostrando datos de ejemplo aunque ya haya
-   conversaciones reales en la base.
-5. **Bloque B** — la verificación de pagos es tu diferenciador.
+   hasta que haya hablado con Meta de verdad — y hasta entonces, la lectura
+   de comprobantes tampoco se ha visto en producción.
+5. **Bloque C** — el panel sigue mostrando datos de ejemplo aunque ya haya
+   conversaciones y pagos reales en la base.
 6. **Bloques D y E** por valor comercial.
 7. **Bloque G** antes de tener volumen real.
 

@@ -16,6 +16,7 @@ import { many, one, query } from '../db/pool.js';
 import * as ai from './ai.js';
 import * as flows from './flows.js';
 import { enqueue } from './outbox.js';
+import * as receipts from './receipts.js';
 import * as wa from './whatsapp.js';
 
 /** Escribe en la terminal de actividad del panel. */
@@ -175,10 +176,41 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
       .catch(() => {});
   }
 
+  /* 4.5 · ¿Adjuntó un comprobante de pago? */
+  if (attachment && ['image', 'document'].includes(attachment.kind)) {
+    if (contact.status === 'paid') {
+      result.actions.push('ya_estaba_pagado');
+    } else {
+      const veredicto = await receipts.processReceipt({
+        accountId, contactId: contact.id,
+        messageId: inserted.id, attachment,
+      });
+      result.actions.push(`comprobante:${veredicto.status}`);
+      // Un comprobante no sigue al resto del pipeline: ya se respondió
+      return result;
+    }
+  }
+
   /* 5 · ¿Había un flujo esperando respuesta? */
   const resumed = await flows.resumeFlow({ accountId, contactId: contact.id, text });
   if (resumed?.queued) {
     result.actions.push(`flujo_continuado:${resumed.queued}`);
+    return result;
+  }
+
+  /* 5.5 · Respuestas rápidas: "transferencia", "tarjeta"… */
+  const rapidas = await many(
+    'SELECT keyword, reply FROM quick_replies WHERE account_id = $1', [accountId]);
+
+  const textoNorm = flows.normalize(text);
+  const rapida = rapidas.find((q) => q.keyword && textoNorm.includes(flows.normalize(q.keyword)));
+
+  if (rapida?.reply) {
+    await enqueue({ accountId, contactId: contact.id, body: rapida.reply, origin: 'flow' });
+    await query(
+      `UPDATE contacts SET status = 'pending' WHERE id = $1 AND status = 'new'`,
+      [contact.id]);
+    result.actions.push(`respuesta_rapida:${rapida.keyword}`);
     return result;
   }
 

@@ -15,6 +15,7 @@ import { decrypt, encrypt, mask } from '../lib/crypto.js';
 import { requireAuth, requireSubscription } from '../middleware/auth.js';
 import * as engine from '../services/engine.js';
 import * as media from '../services/media.js';
+import * as receipts from '../services/receipts.js';
 import { ALLOWED, MAX_BYTES } from '../services/storage.js';
 
 const router = Router();
@@ -542,7 +543,7 @@ router.get('/payments', async (req, res, next) => {
   try {
     const [settings, rules, quick] = await Promise.all([
       one('SELECT pay_message_ok, pay_message_invalid, pay_post_flow_id FROM bot_settings WHERE account_id = $1', [account(req)]),
-      many('SELECT id, amount, context, message, files FROM access_rules WHERE account_id = $1 ORDER BY created_at', [account(req)]),
+      many('SELECT id, amount, context, message, files, currency, tolerance FROM access_rules WHERE account_id = $1 ORDER BY created_at', [account(req)]),
       many('SELECT id, keyword, reply FROM quick_replies WHERE account_id = $1 ORDER BY id', [account(req)]),
     ]);
     res.json({
@@ -576,10 +577,10 @@ router.put('/payments', requireSubscription, async (req, res, next) => {
       await client.query('DELETE FROM access_rules WHERE account_id = $1', [account(req)]);
       for (const rule of rules) {
         await client.query(
-          `INSERT INTO access_rules (account_id, amount, context, message, files)
-           VALUES ($1, $2, $3, $4, $5)`,
+          `INSERT INTO access_rules (account_id, amount, context, message, files, currency, tolerance)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [account(req), String(rule.amount), String(rule.context), String(rule.message),
-           JSON.stringify(rule.files || [])]
+           JSON.stringify(rule.files || []), String(rule.currency || 'MXN'), Number(rule.tolerance) || 0]
         );
       }
       await client.query('DELETE FROM quick_replies WHERE account_id = $1', [account(req)]);
@@ -594,6 +595,39 @@ router.put('/payments', requireSubscription, async (req, res, next) => {
 
     await log(account(req), 'Configuración de pagos y acceso guardada', 'ok');
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Comprobantes de pago recibidos, para la cola de revisión manual del panel. */
+router.get('/receipts', async (req, res, next) => {
+  try {
+    const rows = await many(
+      `SELECT r.id, r.amount, r.currency, r.reference, r.bank, r.status, r.reason,
+              r.confidence, r.created_at AS "at",
+              c.id AS "contactId", c.name, c.phone
+         FROM payment_receipts r JOIN contacts c ON c.id = r.contact_id
+        WHERE r.account_id = $1
+          AND ($2::text IS NULL OR r.status = $2)
+        ORDER BY r.created_at DESC LIMIT 100`,
+      [account(req), req.query.status || null]
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Aprobación manual: entrega el producto de la regla indicada. */
+router.post('/receipts/:id/approve', requireSubscription, async (req, res, next) => {
+  try {
+    const result = await receipts.approveManually({
+      accountId: account(req),
+      receiptId: req.params.id,
+      ruleId: req.body?.ruleId || null,
+    });
+    res.json(result);
   } catch (err) {
     next(err);
   }

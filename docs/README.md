@@ -9,10 +9,10 @@ qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
 |---|---|---|---|
 | — | **F · Archivos** | [bloque-f-archivos.md](bloque-f-archivos.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
 | — | **B · Verificación de pagos** | [bloque-b-pagos.md](bloque-b-pagos.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
-| 1 | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | Independiente: puedes hacerlo cuando quieras |
-| 2 | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | Recupera ventas perdidas |
-| 3 | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | Depende de que B ya marque pagos |
-| 4 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
+| — | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
+| 1 | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | Recupera ventas perdidas |
+| 2 | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | Depende de que B ya marque pagos |
+| 3 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
 
 > **Despliegue en Railway:** [deploy-railway.md](deploy-railway.md) — la ruta
 > activa mientras dure el plan gratuito, sin nginx.
@@ -130,7 +130,7 @@ server/src/
     none.js             Adaptador por defecto — sin cobrar, mientras Wompi no esté
     stripe.js           Adaptador
 
-assets/js/              Frontend del panel (aún con datos de ejemplo)
+assets/js/              Frontend del panel (conectado a la API; catalogs.js son los únicos datos estáticos que quedan)
 ```
 
 ## Funciones que vas a reutilizar

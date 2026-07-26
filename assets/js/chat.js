@@ -24,56 +24,61 @@
     const listBox = id('conversations');
     const msgBox = id('messages');
 
-    let data = cfg.data;
+    let data = [];
+    let total = 0;
     let current = null;
     let page = 1;
     const perPage = cfg.perPage || 0;
     let filter = '';
 
     /* --- Lista de conversaciones ---------------------------------------- */
+    async function cargarConversaciones() {
+      const rows = await App.session.api(
+        `/conversations?scope=${cfg.scope}&page=${page}&perPage=${perPage || 20}`);
+      data = rows.map((c) => ({
+        id: c.id, name: c.name || c.phone, phone: c.phone, status: c.status,
+        ad: c.adName, aiEnabled: c.aiEnabled, lastAt: c.lastAt,
+        preview: c.preview || '', messages: null,
+      }));
+      // El endpoint no devuelve el total exacto: se estima por si la página vino llena
+      total = page > 1 || rows.length === (perPage || 20) ? page * (perPage || 20) : rows.length;
+      renderList();
+    }
+
     function filtered() {
       const term = filter.trim().toLowerCase();
       if (!term) return data;
       return data.filter((c) =>
         c.name.toLowerCase().includes(term) ||
-        c.phone.replace(/\s/g, '').includes(term.replace(/\s/g, '')) ||
-        c.messages.some((m) => m.text.toLowerCase().includes(term)));
+        c.phone.replace(/\s/g, '').includes(term.replace(/\s/g, '')));
     }
 
     function renderList() {
       const rows = filtered();
-      const total = rows.length;
-      const pages = perPage ? Math.max(1, Math.ceil(total / perPage)) : 1;
-      if (page > pages) page = pages;
-      const slice = perPage ? rows.slice((page - 1) * perPage, page * perPage) : rows;
 
       listBox.innerHTML = '';
-      if (!slice.length) {
+      if (!rows.length) {
         listBox.appendChild(el('div', { class: 'empty-state', html: '<i class="fa-regular fa-comments"></i>Sin conversaciones.' }));
       }
 
-      slice.forEach((c) => {
-        const last = c.messages[c.messages.length - 1];
+      rows.forEach((c) => {
         const [label] = STATE_LABEL[c.status] || STATE_LABEL.new;
         const btn = el('button', {
           type: 'button',
           class: `conv-item ${current && current.id === c.id ? 'active' : ''}`,
           dataset: { id: c.id },
         }, [
-          el('span', { class: 'relative flex-none' }, [
-            el('span', { class: 'avatar', text: App.initials(c.name) }),
-            c.online ? el('span', { class: 'absolute bottom-0 right-0 dot dot-ok ring-2 ring-white' }) : null,
-          ]),
+          el('span', { class: 'relative flex-none' },
+            el('span', { class: 'avatar', text: App.initials(c.name) })),
           el('span', { class: 'min-w-0 flex-1' }, [
             el('span', { class: 'flex items-center gap-1.5' }, [
               el('span', { class: 'text-sm font-bold text-ink truncate flex-1', text: c.name }),
-              el('span', { class: 'text-[0.68rem] text-ink/40 flex-none', text: App.timeAgo(last.at) }),
+              el('span', { class: 'text-[0.68rem] text-ink/40 flex-none', text: App.timeAgo(c.lastAt) }),
             ]),
-            el('span', { class: 'block text-xs text-ink/55 truncate', text: last.text }),
+            el('span', { class: 'block text-xs text-ink/55 truncate', text: c.preview }),
             el('span', { class: 'flex items-center gap-1.5 mt-1' }, [
               el('span', { class: `badge ${c.status === 'paid' ? 'badge-ok' : c.status === 'pending' ? 'badge-warn' : c.status === 'rejected' ? 'badge-danger' : 'badge-muted'}`, text: label }),
               c.ad ? el('span', { class: 'badge badge-brand', html: '<i class="fa-solid fa-bullhorn"></i>Ad' }) : null,
-              c.unread ? el('span', { class: 'ml-auto badge badge-danger', text: String(c.unread) }) : null,
             ]),
           ]),
         ]);
@@ -81,16 +86,17 @@
         listBox.appendChild(btn);
       });
 
-      if (cfg.countEl) qs(cfg.countEl).textContent = total;
+      if (cfg.countEl) qs(cfg.countEl).textContent = rows.length;
       if (perPage && qs(`#${p}-pager`)) {
-        App.renderPager(qs(`#${p}-pager`), page, pages, (n) => { page = n; renderList(); });
+        const pages = Math.max(1, Math.ceil(total / perPage));
+        App.renderPager(qs(`#${p}-pager`), page, pages, (n) => { page = n; cargarConversaciones().catch((e) => App.toast(e.message, 'err')); });
       }
     }
 
     /* --- Mensajes -------------------------------------------------------- */
     function renderMessages() {
       msgBox.innerHTML = '';
-      if (!current) return;
+      if (!current || !current.messages) return;
       let lastDay = '';
       current.messages.forEach((m) => {
         const day = new Date(m.at).toDateString();
@@ -139,10 +145,9 @@
     }
 
     /* --- Selección ------------------------------------------------------- */
-    function select(convId) {
+    async function select(convId) {
       current = data.find((c) => c.id === convId) || null;
       if (!current) return;
-      current.unread = 0;
 
       id('welcome').classList.add('hidden');
       const active = id('active');
@@ -156,7 +161,15 @@
       renderHeader();
       renderMessages();
       renderList();
-      updateUnreadBadge();
+
+      // Los mensajes se piden al abrir, no antes: cargar todos sería absurdo
+      try {
+        current.messages = (await App.session.api(`/conversations/${convId}/messages`))
+          .map((m) => ({ from: m.direction, text: m.body, at: m.at }));
+        if (current && current.id === convId) renderMessages();
+      } catch (err) {
+        App.toast(`No se pudieron cargar los mensajes: ${err.message}`, 'err');
+      }
     }
 
     function goBackToList() {
@@ -166,27 +179,31 @@
 
     /* --- Envío de mensajes ----------------------------------------------- */
     function pushMessage(text, from) {
+      current.messages = current.messages || [];
       current.messages.push({ from, text, at: new Date().toISOString() });
       current.lastAt = current.messages[current.messages.length - 1].at;
       renderMessages();
       renderList();
     }
 
-    function send(ev) {
+    async function send(ev) {
       ev.preventDefault();
       if (!current) return;
       const input = id('input');
       const text = input.value.trim();
       if (!text) return;
-      pushMessage(text, 'out');
-      input.value = '';
 
-      // Respuesta simulada del contacto / IA
-      if (cfg.withAi && current.aiEnabled) {
-        setTimeout(() => {
-          if (!current) return;
-          pushMessage('Perfecto, quedo atento 🙌', 'in');
-        }, 1600);
+      input.value = '';
+      // Se pinta al momento y luego se confirma: el operador no espera a la red
+      pushMessage(text, 'out');
+
+      try {
+        const r = await App.session.api(`/conversations/${current.id}/messages`, {
+          method: 'POST', body: { body: text },
+        });
+        if (r.outsideWindow) App.toast(r.warning, 'warn', 8000);
+      } catch (err) {
+        App.toast(`No se pudo enviar: ${err.message}`, 'err');
       }
     }
 
@@ -216,12 +233,30 @@
       id('form').addEventListener('submit', send);
 
       id('attach').addEventListener('click', () => id('file-input').click());
-      id('file-input').addEventListener('change', (ev) => {
+      id('file-input').addEventListener('change', async (ev) => {
         const file = ev.target.files[0];
-        if (!file || !current) return;
-        pushMessage(`📎 ${file.name} (${App.fileSize(file.size)})`, 'out');
-        App.toast('Archivo enviado', 'ok');
         ev.target.value = '';
+        if (!file || !current) return;
+
+        App.toast(`Subiendo ${file.name}…`, 'info');
+        try {
+          const form = new FormData();
+          form.append('files', file);
+          const res = await fetch('/api/media', { method: 'POST', credentials: 'same-origin', body: form });
+          const uploaded = await res.json();
+          if (!res.ok) throw new Error(uploaded.message || 'No se pudo subir el archivo');
+          if (!uploaded.saved?.length) throw new Error(uploaded.rejected?.[0]?.reason || 'Archivo rechazado');
+
+          const name = uploaded.saved[0].name;
+          const r = await App.session.api(`/conversations/${current.id}/messages`, {
+            method: 'POST', body: { body: '', mediaName: name },
+          });
+          pushMessage(`📎 ${name}`, 'out');
+          if (r.outsideWindow) App.toast(r.warning, 'warn', 8000);
+          else App.toast('Archivo enviado', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       });
 
       id('mark-paid').addEventListener('click', async () => {
@@ -231,19 +266,31 @@
            <span class="text-red-600 font-semibold">Esta acción no se puede revertir.</span>`,
           { confirmText: 'Marcar como pagado', icon: 'fa-circle-check' });
         if (!ok) return;
-        current.status = 'paid';
-        renderHeader();
-        renderList();
-        pushMessage('¡Pago confirmado! 🎉 En un momento recibes tus accesos.', 'bot');
-        App.toast('Contacto marcado como pagado', 'ok');
+        try {
+          await App.session.api(`/contacts/${current.id}/paid`, { method: 'POST' });
+          current.status = 'paid';
+          renderHeader();
+          renderList();
+          App.toast('Contacto marcado como pagado', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       });
 
       if (cfg.withAi) {
-        id('ai-toggle').addEventListener('change', (ev) => {
+        id('ai-toggle').addEventListener('change', async (ev) => {
           if (!current) return;
-          current.aiEnabled = ev.target.checked;
-          App.toast(current.aiEnabled ? 'IA activada para este contacto' : 'IA desactivada: responderás manualmente',
-            current.aiEnabled ? 'ok' : 'warn');
+          try {
+            await App.session.api(`/conversations/${current.id}/ai`, {
+              method: 'PUT', body: { enabled: ev.target.checked },
+            });
+            current.aiEnabled = ev.target.checked;
+            App.toast(current.aiEnabled ? 'IA activada para este contacto' : 'IA desactivada: responderás manualmente',
+              current.aiEnabled ? 'ok' : 'warn');
+          } catch (err) {
+            ev.target.checked = !ev.target.checked;
+            App.toast(err.message, 'err');
+          }
         });
 
         id('stop-automation').addEventListener('click', async () => {
@@ -253,41 +300,55 @@
              Podrás reactivarla en cualquier momento con el switch de IA.`,
             { confirmText: 'Detener', danger: true, icon: 'fa-hand' });
           if (!ok) return;
-          current.aiEnabled = false;
-          id('ai-toggle').checked = false;
-          App.toast('Automatización detenida para este contacto', 'warn');
+          try {
+            await App.session.api(`/conversations/${current.id}/stop-automation`, { method: 'POST' });
+            current.aiEnabled = false;
+            id('ai-toggle').checked = false;
+            App.toast('Automatización detenida para este contacto', 'warn');
+          } catch (err) {
+            App.toast(err.message, 'err');
+          }
         });
       }
 
       let t;
       id('search').addEventListener('input', (ev) => {
         clearTimeout(t);
-        t = setTimeout(() => { filter = ev.target.value; page = 1; renderList(); }, 160);
+        t = setTimeout(() => { filter = ev.target.value; renderList(); }, 160);
       });
+    }
+
+    /** Recarga la lista y, si hay un chat abierto, sus mensajes — sin tocar el campo de texto. */
+    async function refrescar() {
+      const openId = current?.id;
+      await cargarConversaciones();
+      if (openId) {
+        const stillThere = data.find((c) => c.id === openId);
+        if (stillThere) {
+          current = stillThere;
+          current.messages = (await App.session.api(`/conversations/${openId}/messages`))
+            .map((m) => ({ from: m.direction, text: m.body, at: m.at }));
+          renderHeader();
+          renderMessages();
+        }
+      }
     }
 
     initEmoji();
     initActions();
-    renderList();
 
-    return { renderList, select, goBackToList, get current() { return current; } };
+    return { renderList, select, goBackToList, cargarConversaciones, refrescar, get current() { return current; } };
   }
 
-  function updateUnreadBadge() {
-    const total = App.LIVE_CHATS.reduce((s, c) => s + (c.unread || 0), 0);
-    const badge = qs('#nav-unread');
-    badge.textContent = total;
-    badge.classList.toggle('hidden', total === 0);
-  }
+  let liveTimer = null;
 
   function init() {
     App.livePanel = createChatPanel({
-      prefix: 'live', data: App.LIVE_CHATS, withAi: true, countEl: '#live-count',
+      prefix: 'live', scope: 'live', withAi: true, countEl: '#live-count',
     });
     App.histPanel = createChatPanel({
-      prefix: 'hist', data: App.HISTORY_CHATS, withAi: false, countEl: '#hist-count', perPage: 8,
+      prefix: 'hist', scope: 'history', withAi: false, countEl: '#hist-count', perPage: 8,
     });
-    updateUnreadBadge();
 
     // Al salir de la sección en móvil, se vuelve a la lista
     App.onView('live-chat', () => { if (window.innerWidth < 1024) App.livePanel.goBackToList(); });
@@ -295,5 +356,17 @@
   }
 
   App.chat = { init };
+
+  App.onView('live-chat', () => {
+    App.livePanel.cargarConversaciones().catch((e) => App.toast(e.message, 'err'));
+    clearInterval(liveTimer);
+    // Sin websockets, preguntar cada pocos segundos mientras la sección esté
+    // visible da una sensación de "vivo" sin sobrecargar el servidor.
+    liveTimer = setInterval(() => {
+      if (App.state.view !== 'live-chat') { clearInterval(liveTimer); return; }
+      App.livePanel.refrescar().catch(() => {});
+    }, 10_000);
+  });
+  App.onView('chat-history', () => App.histPanel.cargarConversaciones().catch((e) => App.toast(e.message, 'err')));
 
 })(window.Elorai);

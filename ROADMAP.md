@@ -145,12 +145,12 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Cobros | ✅ adaptador de Stripe listo · `none` por defecto mientras Wompi no esté · Wompi pendiente |
 | Protección del panel | ✅ nginx `auth_request` (Hetzner) y su equivalente en Express (Railway) |
 | Base de datos y migraciones | ✅ 20 tablas |
-| API del panel | ✅ 43 endpoints |
+| API del panel | ✅ 44 endpoints |
 | Despliegue | ✅ Railway (sin nginx, ver [docs/deploy-railway.md](docs/deploy-railway.md)) y Hetzner+nginx probados |
 | **Motor del bot** | ✅ webhook, flujos, IA y cola de envíos — probado |
 | **Archivos (Bloque F)** | ✅ subida real, guardado en disco y a Meta |
 | **Verificación de pagos (Bloque B)** | ✅ lectura de comprobantes, reglas, entrega y revisión manual |
-| **Panel conectado a la API** | ⚠️ solo sesión, cobros, archivos y comprobantes; el resto sigue siendo de ejemplo |
+| **Panel conectado a la API (Bloque C)** | ✅ todo excepto Métricas de Anuncios, que espera al Bloque E |
 
 ---
 
@@ -217,22 +217,38 @@ a revisión manual.
 
 **Depende de:** bloque A y bloque F (ya terminados).
 
-## Bloque C · Panel con datos reales
+## Bloque C · Panel con datos reales ✅ terminado
 
-📘 **Guía completa: [docs/bloque-c-panel.md](docs/bloque-c-panel.md)**
+📘 **Guía original: [docs/bloque-c-panel.md](docs/bloque-c-panel.md)**
 
-La API ya existe; falta que el frontend la use en lugar de `mock.js`.
+- [x] `dashboard.js` → `GET /api/stats` (tarjetas y 4 gráficos; se quitaron
+      "Recurrencia" y "Rendimiento por distribuidor", que no tienen endpoint
+      ni datos reales detrás — mejor sin la tarjeta que con una cifra inventada)
+- [x] `chat.js` → `GET /api/conversations` y `/messages` + envío real, con
+      subida de adjuntos real (Bloque F) y refresco cada 10 s solo en Chat en Vivo
+- [x] `reports.js` → `GET /api/contacts` con filtros y paginación en servidor
+- [x] `automation.js` → flujos, disparadores y remarketing desde la API
+      (los archivos ya hablaban con la API real desde el Bloque F)
+- [x] `settings.js` → pagos e IA desde la API (tutoriales y FAQ siguen en
+      `catalogs.js`: son contenido tuyo, no datos de usuario)
+- [x] `connect.js` → Cloud API y países desde la API
+- [x] Exportación CSV generada en el servidor (`GET /api/contacts/export.csv`)
+- [x] `mock.js` retirado; renombrado a `catalogs.js` con solo catálogos
+      estáticos (monedas, países, zonas horarias, modelos de IA, emojis,
+      tutoriales, FAQ, prompt de referencia, plantillas de flujo)
 
-- [ ] `dashboard.js` → `GET /api/stats` (tarjetas y 5 gráficos)
-- [ ] `chat.js` → `GET /api/conversations` y `/messages` + envío real
-- [ ] `reports.js` → `GET /api/contacts` con filtros y paginación en servidor
-- [ ] `automation.js` → flujos, disparadores y archivos desde la API
-- [ ] `settings.js` → pagos, IA y remarketing desde la API
-- [ ] `connect.js` → Cloud API y países desde la API
-- [ ] Exportación CSV desde el servidor (hoy se genera con datos de ejemplo)
-- [ ] Retirar `mock.js`
+**Se queda como mock, a propósito:** Métricas de Anuncios (`reports.js`,
+sección Ads) — no tiene endpoint todavía (Bloque E). En vez de datos
+inventados, `App.ADS` arranca vacío y la tabla muestra un estado vacío real.
 
-**Depende de:** nada (la API responde). Se puede hacer en paralelo al bloque A.
+**Probado con Playwright contra un servidor y una base real:** cada sección
+carga datos reales desde la cuenta de prueba (incluida una cuenta nueva, que
+muestra ceros sin errores), y dos escrituras completas por la UI (crear un
+disparador, guardar un mensaje de pagos) sobrevivieron a una recarga completa
+de la página — confirma que persisten en el servidor y no solo en memoria.
+
+**Depende de:** nada (la API respondía desde antes). Bloque F ya estaba
+terminado, así que Archivos no necesitó cambios en este bloque.
 
 ## Bloque D · Automatizaciones programadas
 
@@ -293,12 +309,11 @@ archivos no sobreviven a un redeploy (ver paso 5 de
 1. ~~Bloque A~~ ✅
 2. ~~Bloque F~~ ✅
 3. ~~Bloque B~~ ✅
-4. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
+4. ~~Bloque C~~ ✅
+5. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
    conectar un número real de WhatsApp.** El motor no se puede dar por bueno
-   hasta que haya hablado con Meta de verdad — y hasta entonces, la lectura
-   de comprobantes tampoco se ha visto en producción.
-5. **Bloque C** — el panel sigue mostrando datos de ejemplo aunque ya haya
-   conversaciones y pagos reales en la base.
+   hasta que haya hablado con Meta de verdad — y hasta entonces, ni la lectura
+   de comprobantes ni el panel se han visto en producción.
 6. **Bloques D y E** por valor comercial.
 7. **Bloque G** antes de tener volumen real.
 
@@ -306,7 +321,7 @@ archivos no sobreviven a un redeploy (ver paso 5 de
 
 - [ ] Sustituir los marcadores de `index.html` (`grep -n "\[[A-Z_]\+\]" index.html`)
 - [ ] Completar `privacidad.html` y `terminos.html` y hacerlos revisar por un abogado
-- [ ] Alinear `[PLAZO_REEMBOLSO]` en `terminos.html` y `assets/js/mock.js`
+- [ ] Alinear `[PLAZO_REEMBOLSO]` en `terminos.html` y `assets/js/catalogs.js`
 - [ ] Publicar la pantalla de consentimiento de Google
 - [ ] Pasar Stripe de claves de prueba a producción
 - [ ] Retirar `BILLING_BYPASS_EMAILS` de cuentas que no sean tuyas

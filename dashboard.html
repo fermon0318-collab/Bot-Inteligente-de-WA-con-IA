@@ -100,7 +100,7 @@
         <li><button class="nav-link active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></button></li>
         <li><button class="nav-link" data-view="cloud-api"><i class="fa-solid fa-cloud"></i><span>Cloud API</span></button></li>
         <li><button class="nav-link" data-view="countries"><i class="fa-solid fa-earth-americas"></i><span>Bloqueo por País</span></button></li>
-        <li><button class="nav-link" data-view="live-chat"><i class="fa-solid fa-comments"></i><span>Chat en Vivo</span><span class="nav-badge" id="nav-unread">3</span></button></li>
+        <li><button class="nav-link" data-view="live-chat"><i class="fa-solid fa-comments"></i><span>Chat en Vivo</span></button></li>
         <li><button class="nav-link" data-view="chat-history"><i class="fa-solid fa-clock-rotate-left"></i><span>Histórico Chats</span></button></li>
         <li><button class="nav-link" data-view="reports"><i class="fa-solid fa-file-lines"></i><span>Reportes</span></button></li>
         <li><button class="nav-link" data-view="ads"><i class="fa-solid fa-bullhorn"></i><span>Métricas de Anuncios</span></button></li>
@@ -226,7 +226,6 @@
         <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-user-clock"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Contactos hoy</p><p class="text-xl font-extrabold text-ink" id="stat-contacts-today">—</p></div></div></div>
         <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm warn"><i class="fa-solid fa-receipt"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Pendientes hoy</p><p class="text-xl font-extrabold text-ink" id="stat-pending-today">—</p></div></div></div>
         <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm ok"><i class="fa-solid fa-sack-dollar"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Ventas hoy</p><p class="text-xl font-extrabold text-ink" id="stat-sales-today">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-repeat"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Recurrencia</p><p class="text-xl font-extrabold text-ink" id="stat-recurrence">—</p></div></div></div>
       </div>
 
       <!-- Resumen de ventas -->
@@ -286,19 +285,6 @@
         </div>
       </div>
 
-      <!-- Rendimiento por distribuidor -->
-      <div class="card p-4 lg:p-5 mt-4 lg:mt-5">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-sitemap text-accent-600 mr-1.5"></i>Rendimiento por distribuidor / rama</h3>
-        <div class="grid lg:grid-cols-2 gap-5">
-          <div class="h-72"><canvas id="chart-branches"></canvas></div>
-          <div class="table-wrap self-start">
-            <table class="data">
-              <thead><tr><th>Distribuidor</th><th>Contactos</th><th>Ventas</th><th>Conv.</th><th>Ingresos</th></tr></thead>
-              <tbody id="branches-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- ═══════════════════ 2. CLOUD API ═══════════════════ -->
@@ -340,18 +326,11 @@
       <!-- Flujo semi-automático -->
       <div class="card p-4 lg:p-5 mt-4">
         <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-wand-magic-sparkles text-accent-600 mr-1.5"></i>Configuración semi-automática</h3>
-        <p class="hint !mt-0 mb-4">Ingresa tu Access Token y el teléfono; Elorai consulta Meta y completa el resto por ti.</p>
-        <div class="grid lg:grid-cols-2 gap-4">
-          <div>
-            <label class="label" for="auto-token">Access Token</label>
-            <input id="auto-token" type="password" class="input font-mono !text-xs" placeholder="EAAG…" autocomplete="off" />
-            <p class="error-msg" data-error-for="auto-token">Ingresa un Access Token válido.</p>
-          </div>
-          <div>
-            <label class="label" for="auto-phone">Número de teléfono</label>
-            <input id="auto-phone" type="tel" class="input" placeholder="+52 55 1234 5678" />
-            <p class="error-msg" data-error-for="auto-phone">Ingresa un teléfono con al menos 10 dígitos.</p>
-          </div>
+        <p class="hint !mt-0 mb-4">Ingresa tu Access Token; Elorai consulta Meta y completa el resto por ti.</p>
+        <div>
+          <label class="label" for="auto-token">Access Token</label>
+          <input id="auto-token" type="password" class="input font-mono !text-xs" placeholder="EAAG…" autocomplete="off" />
+          <p class="error-msg" data-error-for="auto-token">Ingresa un Access Token válido.</p>
         </div>
         <button id="fetch-meta-btn" type="button" class="btn btn-gradient mt-4"><i class="fa-solid fa-cloud-arrow-down"></i> Obtener Data de Meta</button>
 
@@ -875,7 +854,7 @@
         <p class="hint !mt-0 mb-3"><i class="fa-solid fa-circle-info text-accent-500"></i> El disparador marcado como <strong>predeterminado</strong> se usa cuando ningún otro coincide con el mensaje del contacto.</p>
         <div id="trig-list" class="space-y-2"></div>
         <div id="trig-empty" class="empty-state hidden"><i class="fa-solid fa-bolt"></i>No hay disparadores configurados.</div>
-        <button id="trig-save" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
+        <button id="trig-save" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-rotate"></i> Actualizar</button>
       </div>
     </section>
 
@@ -1064,7 +1043,7 @@
 </div>
 
 <script src="assets/js/session.js"></script>
-<script src="assets/js/mock.js"></script>
+<script src="assets/js/catalogs.js"></script>
 <script src="assets/js/core.js"></script>
 <script src="assets/js/dashboard.js"></script>
 <script src="assets/js/connect.js"></script>

@@ -7,6 +7,11 @@
 
   const { qs, el, money, num } = App;
 
+  // Bloque E (Métricas y Conversions API) todavía no tiene endpoint: arranca
+  // vacío en vez de mostrar cifras de ejemplo que un cliente podría confundir
+  // con su rendimiento real.
+  App.ADS = [];
+
   const STATUS_META = {
     paid: ['Pagado', 'badge-ok'],
     pending: ['Pendiente', 'badge-warn'],
@@ -17,42 +22,41 @@
   /* ========================================================================
      Reportes
      ===================================================================== */
-  const reports = { page: 1, perPage: 10, rows: [] };
+  const reports = { page: 1, perPage: 10, total: 0, rows: [] };
+
+  async function cargarContactos() {
+    const params = new URLSearchParams({ page: reports.page, perPage: reports.perPage });
+    const telefono = qs('#rep-phone').value.trim();
+    if (telefono) params.set('phone', telefono);
+    if (qs('#rep-status').value) params.set('status', qs('#rep-status').value);
+    if (qs('#rep-from').value) params.set('from', qs('#rep-from').value);
+    if (qs('#rep-to').value) params.set('to', qs('#rep-to').value);
+
+    const data = await App.session.api(`/contacts?${params}`);
+    reports.rows = data.rows;
+    reports.total = data.total;
+    renderReports();
+  }
 
   function applyFilters() {
-    const phone = qs('#rep-phone').value.trim().replace(/\D/g, '');
-    const status = qs('#rep-status').value;
-    const from = qs('#rep-from').value ? new Date(qs('#rep-from').value + 'T00:00:00') : null;
-    const to = qs('#rep-to').value ? new Date(qs('#rep-to').value + 'T23:59:59') : null;
-
-    reports.rows = App.CONTACTS.filter((c) => {
-      if (phone && !c.phone.replace(/\D/g, '').includes(phone)) return false;
-      if (status && c.status !== status) return false;
-      const d = new Date(c.lastContact);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
     reports.page = 1;
-    renderReports();
+    cargarContactos().catch((e) => App.toast(e.message, 'err'));
   }
 
   function renderReports() {
     const tbody = qs('#rep-tbody');
-    const total = reports.rows.length;
+    const total = reports.total;
     const pages = Math.max(1, Math.ceil(total / reports.perPage));
-    if (reports.page > pages) reports.page = pages;
     const start = (reports.page - 1) * reports.perPage;
-    const slice = reports.rows.slice(start, start + reports.perPage);
 
     tbody.innerHTML = '';
-    if (!slice.length) {
+    if (!reports.rows.length) {
       tbody.appendChild(el('tr', {}, el('td', { colspan: '7' },
         el('div', { class: 'empty-state', html: '<i class="fa-regular fa-folder-open"></i>Ningún contacto coincide con los filtros.' }))));
     }
 
-    slice.forEach((c) => {
-      const [label, cls] = STATUS_META[c.status];
+    reports.rows.forEach((c) => {
+      const [label, cls] = STATUS_META[c.status] || STATUS_META.new;
       const payBtn = el('button', {
         type: 'button',
         class: `btn btn-sm ${c.status === 'paid' ? 'btn-ghost' : 'btn-success'}`,
@@ -65,8 +69,8 @@
 
       tbody.appendChild(el('tr', {}, [
         el('td', {}, el('div', { class: 'flex items-center gap-2' }, [
-          el('span', { class: 'avatar !w-8 !h-8 !text-[0.7rem]', text: App.initials(c.name) }),
-          el('span', { class: 'font-semibold text-ink', text: c.name }),
+          el('span', { class: 'avatar !w-8 !h-8 !text-[0.7rem]', text: App.initials(c.name || c.phone) }),
+          el('span', { class: 'font-semibold text-ink', text: c.name || c.phone }),
         ])),
         el('td', { class: 'font-mono text-xs', text: c.phone }),
         el('td', {}, el('span', { class: `badge ${cls}`, text: label })),
@@ -81,37 +85,25 @@
     qs('#rep-range').textContent = total
       ? `Mostrando ${start + 1}–${Math.min(start + reports.perPage, total)} de ${num(total)}`
       : 'Sin resultados';
-    App.renderPager(qs('#rep-pager'), reports.page, pages, (n) => { reports.page = n; renderReports(); });
+    App.renderPager(qs('#rep-pager'), reports.page, pages, (n) => { reports.page = n; cargarContactos(); });
   }
 
   async function markPaid(contact) {
     const ok = await App.confirmModal('Marcar como pagado',
-      `Vas a marcar a <strong>${App.escapeHtml(contact.name)}</strong> (${contact.phone}) como pagado.<br><br>
+      `Vas a marcar a <strong>${App.escapeHtml(contact.name || contact.phone)}</strong> (${contact.phone}) como pagado.<br><br>
        <span class="text-red-600 font-semibold">Esta acción es irreversible</span> y disparará la entrega automática del producto.`,
       { confirmText: 'Sí, marcar como pagado', icon: 'fa-circle-check' });
     if (!ok) return;
-    contact.status = 'paid';
-    if (!contact.amount) contact.amount = 89;
-    renderReports();
-    App.toast(`${contact.name} marcado como pagado`, 'ok');
-  }
-
-  function exportContacts(kind) {
-    const map = { all: null, paid: 'paid', pending: 'pending', rejected: 'rejected' };
-    const status = map[kind];
-    const rows = App.CONTACTS.filter((c) => !status || c.status === status);
-    if (!rows.length) { App.toast('No hay contactos para exportar', 'warn'); return; }
-    const header = ['Nombre', 'Teléfono', 'Estado', 'Origen', 'Último contacto', `Monto (${App.state.currency})`];
-    const body = rows.map((c) => [
-      c.name, c.phone, STATUS_META[c.status][0], c.source,
-      App.dateShort(c.lastContact), c.amount ? money(c.amount).replace(/[^\d.,-]/g, '') : '0',
-    ]);
-    App.downloadCsv(`elorai-contactos-${kind}-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
-    App.toast(`${rows.length} contactos exportados`, 'ok');
+    try {
+      await App.session.api(`/contacts/${contact.id}/paid`, { method: 'POST' });
+      await cargarContactos();
+      App.toast(`${contact.name || contact.phone} marcado como pagado`, 'ok');
+    } catch (err) {
+      App.toast(err.message, 'err');
+    }
   }
 
   function initReports() {
-    reports.rows = App.CONTACTS.slice();
     renderReports();
 
     qs('#rep-apply').addEventListener('click', applyFilters);
@@ -122,7 +114,12 @@
       App.toast('Filtros restablecidos', 'info', 2000);
     });
     qs('#rep-phone').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') applyFilters(); });
-    App.qsa('[data-export]').forEach((b) => b.addEventListener('click', () => exportContacts(b.dataset.export)));
+
+    // La exportación se genera en el servidor: sin límite de 100 filas por página
+    App.qsa('[data-export]').forEach((b) => b.addEventListener('click', () => {
+      const status = { all: '', paid: 'paid', pending: 'pending', rejected: 'rejected' }[b.dataset.export];
+      window.location.href = `/api/contacts/export.csv${status ? `?status=${status}` : ''}`;
+    }));
 
     document.addEventListener('elorai:currency', renderReports);
   }
@@ -143,6 +140,11 @@
     const rows = adsRows();
     const tbody = qs('#ads-tbody');
     tbody.innerHTML = '';
+
+    if (!rows.length) {
+      tbody.appendChild(el('tr', {}, el('td', { colspan: '10' },
+        el('div', { class: 'empty-state', html: '<i class="fa-regular fa-chart-bar"></i>Todavía no hay métricas de anuncios. Conecta Meta Ads arriba para verlas aquí.' }))));
+    }
 
     rows.forEach((a) => {
       tbody.appendChild(el('tr', {}, [
@@ -246,5 +248,7 @@
   }
 
   App.reports = { init() { initReports(); initAds(); } };
+
+  App.onView('reports', () => cargarContactos().catch((e) => App.toast(e.message, 'err')));
 
 })(window.Elorai);

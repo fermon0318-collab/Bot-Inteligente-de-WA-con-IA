@@ -117,9 +117,9 @@ assets/js/
   session.js            Cliente de la API: sesión, cobros y portal de cliente
   landing.js            Navbar, menú móvil, modal de login, scroll y reveal
   legal.js              Navbar, índice activo y scroll de las páginas legales
-  mock.js               Datos de ejemplo — el punto a sustituir por la API real
+  catalogs.js           Catálogos estáticos: monedas, países, zonas horarias, modelos de IA, emojis, tutoriales, FAQ
   core.js               Helpers, navegación SPA, modales, toasts, loader, CSV, paginador
-  dashboard.js          Estadísticas, resumen de ventas y 5 gráficos de Chart.js
+  dashboard.js          Estadísticas, resumen de ventas y 4 gráficos de Chart.js
   connect.js            Cloud API (webhook, alta semi-automática, logs) y bloqueo por país
   chat.js               Motor de chat compartido por Chat en Vivo e Histórico
   reports.js            Reportes de contactos y métricas de anuncios
@@ -191,13 +191,13 @@ varias no son oponibles frente a consumidores.
 
 ### El FAQ del panel usa los mismos marcadores
 
-El FAQ de `dashboard.html` (definido en `assets/js/mock.js`) no repite cifras: usa
+El FAQ de `dashboard.html` (definido en `assets/js/catalogs.js`) no repite cifras: usa
 `[PLAZO_REEMBOLSO]`, `[LIMITE_CONVERSACIONES_REEMBOLSO]` y `[DIAS_RETENCION]`, los
 mismos de las páginas legales, y enlaza a la cláusula correspondiente. Al decidir un
 plazo hay que sustituirlo en los tres sitios:
 
 ```bash
-grep -rn "\[PLAZO_REEMBOLSO\]" terminos.html assets/js/mock.js
+grep -rn "\[PLAZO_REEMBOLSO\]" terminos.html assets/js/catalogs.js
 ```
 
 Cualquier marcador `[ASI]` dentro de una respuesta del FAQ se renderiza como chip
@@ -214,22 +214,23 @@ Histórico Chats · Reportes · Métricas de Anuncios
 **Automatización** — Archivos · Flujos Simples · Flujos Avanzados · Remarketing · Disparadores
 **Configuración** — Pagos y Acceso · Configurar IA · Tutoriales · Preguntas Frecuentes
 
-Cada sección es funcional con datos simulados: navegación sin recarga, formularios
-con validación, modales de confirmación, gráficos, tablas paginadas, acordeón,
-drag & drop de archivos, editor de árbol con zoom y sidebar colapsable en móvil.
+Cada sección habla con la API real: navegación sin recarga, formularios con
+validación, modales de confirmación, gráficos, tablas paginadas en el servidor,
+acordeón, subida real de archivos, editor de árbol con zoom y sidebar
+colapsable en móvil.
 
-## Conectar un backend
+La única sección que todavía no tiene backend es **Métricas de Anuncios**
+(depende del Bloque E, Conversions API): arranca vacía en vez de mostrar
+cifras inventadas.
 
-Todo el estado vive en `assets/js/mock.js`; los módulos solo lo leen y lo mutan.
-Para conectar la API real:
+## Cómo habla el panel con el backend
 
-1. Reemplaza cada colección de `mock.js` por un `fetch` al endpoint equivalente.
-2. Sustituye `App.fakeRequest(ms)` (en `core.js`) por la llamada HTTP real —
-   es el único punto donde se simula latencia, y ya está envuelto en `App.withBusy`,
-   que se encarga del estado de carga de cada botón.
-3. Los inputs y botones tienen IDs estables y descriptivos (`#api-token`,
-   `#capi-pixel`, `#rep-tbody`, `#trig-form`…) para engancharlos sin tocar el markup.
+Cada módulo de `assets/js/` (`connect.js`, `settings.js`, `automation.js`,
+`reports.js`, `dashboard.js`, `chat.js`) sigue el mismo patrón: `App.onView(seccion,
+fn)` registra qué cargar al entrar a cada vista, y `App.session.api(ruta, opciones)`
+(en `session.js`) hace el `fetch` con la cookie de sesión, lanzando un error con
+`.message` legible si el servidor responde mal.
 
 Utilidades disponibles en `window.Elorai`: `toast`, `modal`, `confirmModal`,
 `promptModal`, `validate`, `downloadCsv`, `renderPager`, `money`, `navigate`,
-`setConnection`, `setBotState`, `onView`.
+`setConnection`, `setBotState`, `onView`, `session.api`.

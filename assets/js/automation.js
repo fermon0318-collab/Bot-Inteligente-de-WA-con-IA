@@ -7,6 +7,14 @@
 
   const { qs, qsa, el } = App;
 
+  // Estado de la sección: arranca vacío y cargarFlujos()/loadMedia()/etc. lo
+  // llenan con datos reales al arrancar o al entrar a cada vista.
+  App.MEDIA = [];
+  App.SIMPLE_FLOWS = [];
+  App.ADVANCED_FLOWS = [];
+  App.TRIGGERS = { simple: [], advanced: [] };
+  App.REMARKETING = { hours: 24, minutes: 0, start: '09:00', end: '21:00', tz: 'America/Mexico_City', steps: [] };
+
   /* ========================================================================
      Editor de pasos (compartido por Flujos Simples y Remarketing)
      ===================================================================== */
@@ -188,12 +196,40 @@
   let sfCurrent = null;
   let sfEditor = null;
 
+  function contarNodos(node) {
+    if (!node) return 0;
+    return 1 + (node.children || []).reduce((s, c) => s + contarNodos(c), 0);
+  }
+
+  /** Flujos (simples y avanzados): usados también por triggers/pagos/remarketing. */
+  async function cargarFlujos() {
+    const [simples, avanzados] = await Promise.all([
+      App.session.api('/flows?kind=simple'),
+      App.session.api('/flows?kind=advanced'),
+    ]);
+
+    App.SIMPLE_FLOWS.length = 0;
+    App.SIMPLE_FLOWS.push(...simples.map((f) => ({
+      id: f.id, name: f.name, steps: f.steps || [],
+    })));
+
+    App.ADVANCED_FLOWS.length = 0;
+    App.ADVANCED_FLOWS.push(...avanzados.map((f) => ({
+      id: f.id, name: f.name, tree: f.tree,
+      updated: String(f.updated_at).slice(0, 10),
+      nodes: contarNodos(f.tree),
+    })));
+
+    refreshFlowSelects();
+  }
+
   function refreshFlowSelects() {
     const sel = qs('#sf-select');
     const keep = sel.value;
     sel.innerHTML = '';
     App.SIMPLE_FLOWS.forEach((f) => sel.appendChild(el('option', { value: f.id, text: f.name })));
     if (App.SIMPLE_FLOWS.some((f) => f.id === keep)) sel.value = keep;
+    if (sfCurrent && !App.SIMPLE_FLOWS.some((f) => f.id === sfCurrent.id)) loadSimpleFlow(App.SIMPLE_FLOWS[0]?.id);
 
     App.fillFlowSelect(qs('#trig-flow'));
     App.fillFlowSelect(qs('#pay-postflow'), true);
@@ -219,11 +255,14 @@
     qs('#sf-new').addEventListener('click', async () => {
       const name = await App.promptModal('Crear flujo simple', 'Nombre del flujo', '', { placeholder: 'Ej. Recordatorio de pago' });
       if (!name) return;
-      const flow = { id: 'sf_' + Date.now(), name, steps: [] };
-      App.SIMPLE_FLOWS.push(flow);
-      refreshFlowSelects();
-      loadSimpleFlow(flow.id);
-      App.toast(`Flujo "${name}" creado`, 'ok');
+      try {
+        const flow = await App.session.api('/flows', { method: 'POST', body: { kind: 'simple', name, steps: [] } });
+        await cargarFlujos();
+        loadSimpleFlow(flow.id);
+        App.toast(`Flujo "${name}" creado`, 'ok');
+      } catch (err) {
+        App.toast(err.message, 'err');
+      }
     });
 
     qs('#sf-delete').addEventListener('click', async () => {
@@ -232,11 +271,14 @@
         `Se eliminará el flujo <strong>${App.escapeHtml(sfCurrent.name)}</strong> y sus ${sfCurrent.steps.length} paso(s). Los disparadores que lo usen quedarán sin destino.`,
         { confirmText: 'Eliminar', danger: true, icon: 'fa-trash' });
       if (!ok) return;
-      const i = App.SIMPLE_FLOWS.indexOf(sfCurrent);
-      App.SIMPLE_FLOWS.splice(i, 1);
-      refreshFlowSelects();
-      loadSimpleFlow(App.SIMPLE_FLOWS[0] && App.SIMPLE_FLOWS[0].id);
-      App.toast('Flujo eliminado', 'ok');
+      try {
+        await App.session.api(`/flows/${sfCurrent.id}`, { method: 'DELETE' });
+        await cargarFlujos();
+        loadSimpleFlow(App.SIMPLE_FLOWS[0] && App.SIMPLE_FLOWS[0].id);
+        App.toast('Flujo eliminado', 'ok');
+      } catch (err) {
+        App.toast(err.message, 'err');
+      }
     });
 
     qs('#sf-save').addEventListener('click', (ev) => {
@@ -244,8 +286,14 @@
       const invalid = sfCurrent.steps.find((s) => !String(s.value || '').trim());
       if (invalid) { App.toast('Hay pasos vacíos: complétalos antes de guardar', 'err'); return; }
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(700);
-        App.toast(`Flujo "${sfCurrent.name}" guardado`, 'ok');
+        try {
+          await App.session.api(`/flows/${sfCurrent.id}`, {
+            method: 'PUT', body: { name: sfCurrent.name, steps: sfCurrent.steps },
+          });
+          App.toast(`Flujo "${sfCurrent.name}" guardado`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -352,18 +400,19 @@
   async function createAdvancedFlow() {
     const name = await App.promptModal('Crear flujo avanzado', 'Nombre del flujo', '', { placeholder: 'Ej. Recuperación de carrito' });
     if (!name) return;
-    const flow = {
-      id: 'af_' + Date.now(), name, updated: new Date().toISOString().slice(0, 10), nodes: 2,
-      tree: {
-        kind: 'start', title: 'Inicio', text: 'Punto de entrada del flujo',
-        children: [{ kind: 'message', title: 'Primer mensaje', text: 'Edita este nodo para escribir tu mensaje', children: [] }],
-      },
+    const tree = {
+      kind: 'start', title: 'Inicio', text: 'Punto de entrada del flujo',
+      children: [{ kind: 'message', title: 'Primer mensaje', text: 'Edita este nodo para escribir tu mensaje', children: [] }],
     };
-    App.ADVANCED_FLOWS.push(flow);
-    refreshFlowSelects();
-    renderGallery(qs('#af-search').value);
-    openEditor(flow.id);
-    App.toast(`Flujo "${name}" creado`, 'ok');
+    try {
+      const flow = await App.session.api('/flows', { method: 'POST', body: { kind: 'advanced', name, tree } });
+      await cargarFlujos();
+      renderGallery(qs('#af-search').value);
+      openEditor(flow.id);
+      App.toast(`Flujo "${name}" creado`, 'ok');
+    } catch (err) {
+      App.toast(err.message, 'err');
+    }
   }
 
   async function loadTemplate() {
@@ -376,27 +425,28 @@
     });
     if (!chosen) return;
     const tpl = App.FLOW_TEMPLATES.find((t) => t.id === chosen);
-    const flow = {
-      id: 'af_' + Date.now(), name: tpl.name, updated: new Date().toISOString().slice(0, 10), nodes: 5,
-      tree: {
-        kind: 'start', title: 'Inicio', text: tpl.desc,
+    const tree = {
+      kind: 'start', title: 'Inicio', text: tpl.desc,
+      children: [{
+        kind: 'message', title: 'Saludo', text: 'Mensaje inicial del template',
         children: [{
-          kind: 'message', title: 'Saludo', text: 'Mensaje inicial del template',
-          children: [{
-            kind: 'condition', title: 'Bifurcación', text: 'Define aquí tus condiciones',
-            children: [
-              { kind: 'message', title: 'Rama A', text: 'Respuesta para la primera opción', children: [] },
-              { kind: 'message', title: 'Rama B', text: 'Respuesta para la segunda opción', children: [] },
-            ],
-          }],
+          kind: 'condition', title: 'Bifurcación', text: 'Define aquí tus condiciones',
+          children: [
+            { kind: 'message', title: 'Rama A', text: 'Respuesta para la primera opción', children: [] },
+            { kind: 'message', title: 'Rama B', text: 'Respuesta para la segunda opción', children: [] },
+          ],
         }],
-      },
+      }],
     };
-    App.ADVANCED_FLOWS.push(flow);
-    refreshFlowSelects();
-    renderGallery();
-    openEditor(flow.id);
-    App.toast(`Template "${tpl.name}" cargado`, 'ok');
+    try {
+      const flow = await App.session.api('/flows', { method: 'POST', body: { kind: 'advanced', name: tpl.name, tree } });
+      await cargarFlujos();
+      renderGallery();
+      openEditor(flow.id);
+      App.toast(`Template "${tpl.name}" cargado`, 'ok');
+    } catch (err) {
+      App.toast(err.message, 'err');
+    }
   }
 
   function initAdvancedFlows() {
@@ -426,20 +476,31 @@
       if (!afCurrent) return;
       const name = await App.promptModal('Renombrar flujo', 'Nuevo nombre', afCurrent.name);
       if (!name) return;
-      afCurrent.name = name;
-      qs('#af-title').textContent = name;
-      refreshFlowSelects();
-      renderGallery(qs('#af-search').value);
-      App.toast('Flujo renombrado', 'ok');
+      try {
+        await App.session.api(`/flows/${afCurrent.id}`, { method: 'PUT', body: { name } });
+        afCurrent.name = name;
+        qs('#af-title').textContent = name;
+        refreshFlowSelects();
+        renderGallery(qs('#af-search').value);
+        App.toast('Flujo renombrado', 'ok');
+      } catch (err) {
+        App.toast(err.message, 'err');
+      }
     });
 
     qs('#af-save').addEventListener('click', (ev) => {
       if (!afCurrent) return;
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(700);
-        afCurrent.updated = new Date().toISOString().slice(0, 10);
-        renderGallery(qs('#af-search').value);
-        App.toast(`Flujo "${afCurrent.name}" guardado`, 'ok');
+        try {
+          const saved = await App.session.api(`/flows/${afCurrent.id}`, {
+            method: 'PUT', body: { tree: afCurrent.tree },
+          });
+          afCurrent.updated = String(saved.updated_at).slice(0, 10);
+          renderGallery(qs('#af-search').value);
+          App.toast(`Flujo "${afCurrent.name}" guardado`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -447,6 +508,32 @@
   /* ========================================================================
      Remarketing
      ===================================================================== */
+  let rmEditor = null;
+
+  async function cargarRemarketing() {
+    const [settings, steps] = await Promise.all([
+      App.session.api('/settings'),
+      App.session.api('/remarketing/steps'),
+    ]);
+    const cfg = App.REMARKETING;
+    Object.assign(cfg, {
+      hours: settings.remarketing.hours,
+      minutes: settings.remarketing.minutes,
+      start: settings.remarketing.windowStart,
+      end: settings.remarketing.windowEnd,
+      tz: settings.remarketing.timezone,
+    });
+    cfg.steps.length = 0;
+    cfg.steps.push(...steps);
+
+    qs('#rm-tz').value = cfg.tz;
+    qs('#rm-hours').value = cfg.hours;
+    qs('#rm-minutes').value = cfg.minutes;
+    qs('#rm-start').value = cfg.start;
+    qs('#rm-end').value = cfg.end;
+    rmEditor.render();
+  }
+
   function initRemarketing() {
     const cfg = App.REMARKETING;
     const tz = qs('#rm-tz');
@@ -457,9 +544,9 @@
     qs('#rm-start').value = cfg.start;
     qs('#rm-end').value = cfg.end;
 
-    const editor = createStepEditor('#rm-steps', '#rm-empty', () => cfg.steps);
-    editor.render();
-    qsa('[data-rm-add]').forEach((b) => b.addEventListener('click', () => editor.add(b.dataset.rmAdd)));
+    rmEditor = createStepEditor('#rm-steps', '#rm-empty', () => cfg.steps);
+    rmEditor.render();
+    qsa('[data-rm-add]').forEach((b) => b.addEventListener('click', () => rmEditor.add(b.dataset.rmAdd)));
 
     qs('#rm-save').addEventListener('click', (ev) => {
       const hours = parseInt(qs('#rm-hours').value, 10) || 0;
@@ -478,13 +565,21 @@
       if (!cfg.steps.length) { App.toast('Agrega al menos un paso a la secuencia', 'err'); return; }
       if (cfg.steps.some((s) => !String(s.value || '').trim())) { App.toast('Hay pasos vacíos: complétalos antes de guardar', 'err'); return; }
 
-      Object.assign(cfg, {
-        hours, minutes,
-        start: qs('#rm-start').value, end: qs('#rm-end').value, tz: tz.value,
-      });
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(750);
-        App.toast(`Remarketing configurado a ${hours}h ${minutes}min del primer contacto`, 'ok');
+        try {
+          await App.session.api('/settings/remarketing', {
+            method: 'PUT',
+            body: {
+              hours, minutes,
+              windowStart: qs('#rm-start').value, windowEnd: qs('#rm-end').value,
+              timezone: tz.value, steps: cfg.steps,
+            },
+          });
+          Object.assign(cfg, { hours, minutes, start: qs('#rm-start').value, end: qs('#rm-end').value, tz: tz.value });
+          App.toast(`Remarketing configurado a ${hours}h ${minutes}min del primer contacto`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -510,11 +605,14 @@
         class: `btn btn-sm ${t.isDefault ? 'btn-gradient' : 'btn-ghost'}`,
         html: `<i class="fa-solid fa-star"></i> ${t.isDefault ? 'Predeterminado' : 'Hacer predeterminado'}`,
       });
-      defBtn.addEventListener('click', () => {
-        items.forEach((x) => { x.isDefault = false; });
-        t.isDefault = true;
-        renderTriggers();
-        App.toast(`"${t.keyword}" es ahora el disparador predeterminado`, 'ok');
+      defBtn.addEventListener('click', async () => {
+        try {
+          await App.session.api(`/triggers/${t.id}/default`, { method: 'POST' });
+          await cargarDisparadores();
+          App.toast(`"${t.keyword}" es ahora el disparador predeterminado`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       });
 
       const del = el('button', { type: 'button', class: 'btn btn-ghost btn-sm !text-red-600', html: '<i class="fa-solid fa-trash"></i>', 'aria-label': 'Eliminar disparador' });
@@ -523,9 +621,13 @@
           `Se eliminará el disparador <strong>"${App.escapeHtml(t.keyword)}"</strong>.`,
           { confirmText: 'Eliminar', danger: true, icon: 'fa-trash' });
         if (!ok) return;
-        items.splice(items.indexOf(t), 1);
-        renderTriggers();
-        App.toast('Disparador eliminado', 'ok');
+        try {
+          await App.session.api(`/triggers/${t.id}`, { method: 'DELETE' });
+          await cargarDisparadores();
+          App.toast('Disparador eliminado', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       });
 
       list.appendChild(el('div', { class: 'step-card !items-center' }, [
@@ -539,6 +641,14 @@
     });
   }
 
+  async function cargarDisparadores() {
+    const rows = await App.session.api(`/triggers?kind=${trigTab}`);
+    App.TRIGGERS[trigTab] = rows.map((t) => ({
+      id: t.id, keyword: t.keyword, flow: t.flowId, isDefault: t.isDefault,
+    }));
+    renderTriggers();
+  }
+
   function initTriggers() {
     renderTriggers();
 
@@ -546,34 +656,36 @@
       trigTab = btn.dataset.trigTab;
       qs('#trig-tab-simple').className = `btn ${trigTab === 'simple' ? 'btn-soft' : 'btn-ghost'}`;
       qs('#trig-tab-advanced').className = `btn ${trigTab === 'advanced' ? 'btn-soft' : 'btn-ghost'}`;
-      renderTriggers();
+      cargarDisparadores().catch((e) => App.toast(e.message, 'err'));
     }));
 
-    qs('#trig-form').addEventListener('submit', (ev) => {
+    qs('#trig-form').addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const input = qs('#trig-keyword');
       const keyword = input.value.trim();
       if (!App.validate([{ input, test: App.notEmpty }])) return;
 
-      if (trigList().some((t) => t.keyword.toLowerCase() === keyword.toLowerCase())) {
-        App.setError(input, true, 'Ya existe un disparador con esa palabra clave.');
-        App.toast('Esa palabra clave ya está en uso', 'err');
-        return;
+      try {
+        await App.session.api('/triggers', {
+          method: 'POST',
+          body: { kind: trigTab, keyword, flowId: qs('#trig-flow').value },
+        });
+        input.value = '';
+        await cargarDisparadores();
+        App.toast(`Disparador "${keyword}" agregado`, 'ok');
+      } catch (err) {
+        App.setError(input, true, err.message);
+        App.toast(err.message, 'err');
       }
-      trigList().push({
-        id: 'tg_' + Date.now(), keyword, flow: qs('#trig-flow').value,
-        isDefault: trigList().length === 0,
-      });
-      input.value = '';
-      renderTriggers();
-      App.toast(`Disparador "${keyword}" agregado`, 'ok');
     });
 
+    // Cada acción (agregar, predeterminar, borrar) ya persiste al instante;
+    // este botón solo refresca por si el estado quedó desactualizado.
     qs('#trig-save').addEventListener('click', (ev) => {
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(700);
-        App.toast('Disparadores guardados', 'ok');
-      }, 'Guardando…');
+        await cargarDisparadores().catch((e) => App.toast(e.message, 'err'));
+        App.toast('Disparadores actualizados', 'ok');
+      }, 'Actualizando…');
     });
   }
 
@@ -584,9 +696,17 @@
       initAdvancedFlows();
       initRemarketing();
       initTriggers();
+      // Los flujos alimentan los selectores de disparadores, pagos y
+      // remarketing, así que se cargan una vez al arrancar y no por sección.
+      cargarFlujos().catch((e) => App.toast(e.message, 'err'));
     },
     createStepEditor,
     refreshFlowSelects,
   };
+
+  App.onView('flows-simple', () => cargarFlujos().catch((e) => App.toast(e.message, 'err')));
+  App.onView('flows-advanced', () => cargarFlujos().catch((e) => App.toast(e.message, 'err')));
+  App.onView('remarketing', () => cargarRemarketing().catch((e) => App.toast(e.message, 'err')));
+  App.onView('triggers', () => cargarDisparadores().catch((e) => App.toast(e.message, 'err')));
 
 })(window.Elorai);

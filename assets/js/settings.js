@@ -7,6 +7,10 @@
 
   const { qs, qsa, el } = App;
 
+  // Arranca vacío; cargarPagos() lo llena al entrar a la sección.
+  App.PAY_RULES = [];
+  App.PAY_QUICK = [];
+
   /* ========================================================================
      Pagos y acceso
      ===================================================================== */
@@ -104,6 +108,19 @@
     });
   }
 
+  async function cargarPagos() {
+    const d = await App.session.api('/payments');
+    qs('#pay-msg-ok').value = d.messageOk;
+    qs('#pay-msg-bad').value = d.messageInvalid;
+    qs('#pay-postflow').value = d.postFlowId || '';
+    App.PAY_RULES.length = 0;
+    App.PAY_RULES.push(...d.rules.map((r) => ({ ...r, files: r.files || [] })));
+    App.PAY_QUICK.length = 0;
+    App.PAY_QUICK.push(...d.quickReplies);
+    renderPayRules();
+    renderQuickReplies();
+  }
+
   function initPayments() {
     renderPayRules();
     renderQuickReplies();
@@ -126,8 +143,22 @@
       if (badQuick) { App.toast('Hay respuestas rápidas incompletas', 'err'); return; }
 
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(800);
-        App.toast('Configuración de pagos guardada', 'ok');
+        try {
+          await App.session.api('/payments', {
+            method: 'PUT',
+            body: {
+              messageOk: qs('#pay-msg-ok').value,
+              messageInvalid: qs('#pay-msg-bad').value,
+              postFlowId: qs('#pay-postflow').value || null,
+              rules: App.PAY_RULES,
+              quickReplies: App.PAY_QUICK,
+            },
+          });
+          await cargarPagos();
+          App.toast('Configuración de pagos guardada', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -135,6 +166,19 @@
   /* ========================================================================
      Configurar IA
      ===================================================================== */
+  async function cargarIa() {
+    const { ai } = await App.session.api('/settings');
+    qs('#ai-enabled').checked = ai.enabled;
+    qs('#ai-model').value = ai.model;
+    qs('#ai-delay').value = ai.delaySeconds;
+    qs('#ai-delay-value').textContent = ai.delaySeconds;
+    qs('#ai-prompt').value = ai.prompt;
+    qs('#ai-key').value = '';
+    qs('#ai-key').placeholder = ai.hasKey ? ai.keyMask : 'sk-…';
+    qs('#ai-prompt-chars').textContent = App.num(ai.prompt.length);
+    qs('#ai-enabled-label').textContent = ai.enabled ? 'IA activada' : 'IA desactivada';
+  }
+
   function initAiConfig() {
     const model = qs('#ai-model');
     App.AI_MODELS.forEach((m) => model.appendChild(el('option', { value: m.id, text: m.label })));
@@ -154,7 +198,6 @@
     const enabled = qs('#ai-enabled');
     enabled.addEventListener('change', () => {
       qs('#ai-enabled-label').textContent = enabled.checked ? 'IA activada' : 'IA desactivada';
-      App.toast(enabled.checked ? 'IA activada' : 'IA desactivada: el bot solo seguirá flujos', enabled.checked ? 'ok' : 'warn');
     });
 
     qs('#ai-load-example').addEventListener('click', async () => {
@@ -170,16 +213,28 @@
     });
 
     qs('#ai-save').addEventListener('click', (ev) => {
-      const ok = App.validate([
-        { input: '#ai-key', test: (v) => v.length >= 8, message: 'La API Key parece incompleta.' },
-      ]);
-      if (!ok) { App.toast('Revisa tu API Key', 'err'); return; }
+      const key = qs('#ai-key').value.trim();
       if (prompt.value.trim().length < 40) {
         App.toast('El prompt base es demasiado corto para dar buenos resultados', 'warn');
       }
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(850);
-        App.toast(`IA configurada · ${model.options[model.selectedIndex].text.split('—')[0].trim()}`, 'ok');
+        try {
+          await App.session.api('/settings/ai', {
+            method: 'PUT',
+            body: {
+              enabled: enabled.checked,
+              model: model.value,
+              delaySeconds: Number(delay.value),
+              prompt: prompt.value,
+              ...(key ? { apiKey: key } : {}),
+            },
+          });
+          qs('#ai-key').value = '';
+          await cargarIa();
+          App.toast(`IA configurada · ${model.options[model.selectedIndex].text.split('—')[0].trim()}`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -301,5 +356,8 @@
       initFaq();
     },
   };
+
+  App.onView('payments', () => cargarPagos().catch((e) => App.toast(e.message, 'err')));
+  App.onView('ai-config', () => cargarIa().catch((e) => App.toast(e.message, 'err')));
 
 })(window.Elorai);

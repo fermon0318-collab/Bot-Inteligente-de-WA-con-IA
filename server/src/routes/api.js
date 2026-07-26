@@ -668,6 +668,41 @@ router.get('/contacts', async (req, res, next) => {
   }
 });
 
+/** Exportación CSV, sin el límite de 100 filas por página de /contacts. */
+router.get('/contacts/export.csv', async (req, res, next) => {
+  try {
+    const filtro = req.query.status
+      ? { sql: 'AND status = $2', params: [req.query.status] }
+      : { sql: '', params: [] };
+
+    const rows = await many(
+      `SELECT name, phone, status, source, amount, currency, last_message_at
+         FROM contacts WHERE account_id = $1 ${filtro.sql}
+        ORDER BY last_message_at DESC`,
+      [account(req), ...filtro.params]
+    );
+
+    const escapar = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const csv = [
+      ['Nombre', 'Teléfono', 'Estado', 'Origen', 'Monto', 'Moneda', 'Último contacto'],
+      ...rows.map((r) => [r.name, r.phone, r.status, r.source, r.amount, r.currency,
+                          new Date(r.last_message_at).toISOString().slice(0, 10)]),
+    ].map((f) => f.map(escapar).join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition',
+      `attachment; filename="elorai-contactos-${new Date().toISOString().slice(0, 10)}.csv"`);
+    // El BOM hace que Excel no destroce los acentos
+    res.send('﻿' + csv);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/contacts/:id/paid', requireSubscription, async (req, res, next) => {
   try {
     const row = await one(

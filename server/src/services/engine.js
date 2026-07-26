@@ -55,20 +55,23 @@ async function isBlocked(accountId, phone) {
 }
 
 /** Crea o actualiza el contacto y devuelve su fila. */
-async function upsertContact({ accountId, phone, profileName, adName, adId }) {
+async function upsertContact({ accountId, phone, profileName, adName, adId, ctwaClid }) {
   return one(
     `INSERT INTO contacts (account_id, phone, name, profile_name, source, ad_name, ad_id,
-                           first_seen_at, last_message_at, last_inbound_at)
-     VALUES ($1, $2, $3, $3, $4, $5, $6, now(), now(), now())
+                           ctwa_clid, first_seen_at, last_message_at, last_inbound_at)
+     VALUES ($1, $2, $3, $3, $4, $5, $6, $7, now(), now(), now())
      ON CONFLICT (account_id, phone) DO UPDATE SET
        profile_name    = COALESCE(NULLIF(EXCLUDED.profile_name, ''), contacts.profile_name),
        name            = CASE WHEN contacts.name = '' THEN EXCLUDED.name ELSE contacts.name END,
+       -- La atribución es la del PRIMER anuncio: si vuelve por otro, el mérito
+       -- sigue siendo del que lo trajo
        ad_name         = COALESCE(contacts.ad_name, EXCLUDED.ad_name),
        ad_id           = COALESCE(contacts.ad_id, EXCLUDED.ad_id),
+       ctwa_clid       = COALESCE(contacts.ctwa_clid, EXCLUDED.ctwa_clid),
        last_message_at = now(),
        last_inbound_at = now()
      RETURNING *, (xmax = 0) AS is_new`,
-    [accountId, phone, profileName || '', adName ? 'Anuncio Meta' : 'Orgánico', adName || null, adId || null]
+    [accountId, phone, profileName || '', adName ? 'Anuncio Meta' : 'Orgánico', adName || null, adId || null, ctwaClid || null]
   );
 }
 
@@ -131,6 +134,7 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
     profileName: contactProfile?.name,
     adName: referral.headline || referral.source_id ? (referral.headline || 'Anuncio') : null,
     adId: referral.source_id || null,
+    ctwaClid: referral.ctwa_clid || null,
   });
 
   const inserted = await one(

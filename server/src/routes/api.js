@@ -13,6 +13,8 @@ import { config } from '../config.js';
 import { many, one, query, transaction } from '../db/pool.js';
 import { decrypt, encrypt, mask } from '../lib/crypto.js';
 import { requireAuth, requireSubscription } from '../middleware/auth.js';
+import * as adsync from '../services/adsync.js';
+import * as capi from '../services/capi.js';
 import * as engine from '../services/engine.js';
 import * as media from '../services/media.js';
 import * as receipts from '../services/receipts.js';
@@ -711,11 +713,13 @@ router.post('/contacts/:id/paid', requireSubscription, async (req, res, next) =>
     const row = await one(
       `UPDATE contacts SET status = 'paid', paid_at = now()
         WHERE id = $1 AND account_id = $2 AND status <> 'paid'
-    RETURNING id, name, phone`,
+    RETURNING id, name, phone, amount, currency`,
       [req.params.id, account(req)]
     );
     if (!row) return res.status(404).json({ error: 'not_found', message: 'El contacto no existe o ya estaba pagado.' });
     await log(account(req), `Contacto ${row.phone} marcado como pagado manualmente`, 'ok');
+    // Ventas cerradas a mano también cuentan para Conversions API
+    await capi.recordPurchase({ accountId: account(req), contactId: row.id, value: row.amount, currency: row.currency });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -872,6 +876,83 @@ router.get('/stats', async (req, res, next) => {
 
     const conversion = totals.contacts30 ? (totals.sales30 / totals.contacts30) * 100 : 0;
     res.json({ totals: { ...totals, conversion }, daily, byHour });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ==========================================================================
+   Métricas de anuncios (Bloque E)
+   ========================================================================== */
+
+router.get('/ads', async (req, res, next) => {
+  try {
+    const desde = req.query.from || new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+    const hasta = req.query.to || new Date().toISOString().slice(0, 10);
+
+    // El gasto viene de Meta; las ventas, de nuestros contactos. Se cruzan por ad_id.
+    const rows = await many(
+      `WITH gasto AS (
+         SELECT ad_id, max(ad_name) AS ad_name, max(campaign_name) AS campaign_name,
+                sum(spend) AS spend, max(currency) AS currency
+           FROM ad_metrics
+          WHERE account_id = $1 AND date BETWEEN $2::date AND $3::date
+          GROUP BY ad_id
+       ),
+       ventas AS (
+         SELECT ad_id,
+                count(*)                                        AS convos,
+                count(*) FILTER (WHERE status = 'paid')         AS sales,
+                COALESCE(sum(amount) FILTER (WHERE status = 'paid'), 0) AS revenue
+           FROM contacts
+          WHERE account_id = $1 AND ad_id IS NOT NULL
+            AND first_seen_at BETWEEN $2::date AND ($3::date + interval '1 day')
+          GROUP BY ad_id
+       )
+       SELECT COALESCE(g.ad_id, v.ad_id)              AS "adId",
+              COALESCE(g.ad_name, 'Anuncio')          AS name,
+              COALESCE(g.campaign_name, '')           AS campaign,
+              COALESCE(g.spend, 0)                    AS spend,
+              COALESCE(v.convos, 0)                   AS convos,
+              COALESCE(v.sales, 0)                    AS sales,
+              COALESCE(v.revenue, 0)                  AS revenue,
+              COALESCE(g.currency, 'USD')             AS currency
+         FROM gasto g FULL OUTER JOIN ventas v ON v.ad_id = g.ad_id
+        ORDER BY 4 DESC`,
+      [account(req), desde, hasta]
+    );
+
+    // Los derivados se calculan aquí y no en SQL: es más legible y son baratos
+    const detalle = rows.map((r) => ({
+      ...r,
+      costPerConvo: r.convos ? r.spend / r.convos : 0,
+      costPerSale: r.sales ? r.spend / r.sales : 0,
+      roi: r.spend ? ((r.revenue - r.spend) / r.spend) * 100 : 0,
+    }));
+
+    const totales = detalle.reduce((acc, r) => ({
+      spend: acc.spend + Number(r.spend),
+      convos: acc.convos + Number(r.convos),
+      sales: acc.sales + Number(r.sales),
+      revenue: acc.revenue + Number(r.revenue),
+    }), { spend: 0, convos: 0, sales: 0, revenue: 0 });
+
+    res.json({
+      rows: detalle,
+      totals: {
+        ...totales,
+        roi: totales.spend ? ((totales.revenue - totales.spend) / totales.spend) * 100 : 0,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Fuerza una sincronización desde el botón del panel. */
+router.post('/ads/sync', requireSubscription, async (req, res, next) => {
+  try {
+    res.json(await adsync.syncAccount({ accountId: account(req) }));
   } catch (err) {
     next(err);
   }

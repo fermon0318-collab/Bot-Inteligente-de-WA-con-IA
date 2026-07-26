@@ -23,6 +23,8 @@ import authRoutes from './routes/auth.js';
 import billingRoutes from './routes/billing.js';
 import apiRoutes from './routes/api.js';
 import webhookRoutes, { reprocessPending } from './routes/webhook.js';
+import * as adsync from './services/adsync.js';
+import * as capi from './services/capi.js';
 import { startWorker } from './services/outbox.js';
 import * as remarketing from './services/remarketing.js';
 
@@ -177,6 +179,12 @@ const stopOutbox = startWorker({ intervalMs: 3000 });
 // Remarketing: busca contactos enfriados cada pocos minutos
 const stopRemarketing = remarketing.startWorker();
 
+// Conversions API: despacha eventos de compra encolados
+const stopCapi = capi.startWorker();
+
+// Sincronización con Meta Ads: trae gasto y métricas una vez por hora
+const stopAdsync = adsync.startWorker();
+
 // Si el proceso murió a mitad de un evento, aquí se recupera
 reprocessPending().catch((err) => console.error('[webhook] reproceso inicial:', err.message));
 
@@ -191,6 +199,8 @@ function shutdown(signal) {
   console.log(`\n${signal} recibido, cerrando…`);
   stopOutbox();
   stopRemarketing();
+  stopCapi();
+  stopAdsync();
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);

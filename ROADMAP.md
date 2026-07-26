@@ -144,14 +144,15 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Autenticación con Google | ✅ funcionando (opcional al arrancar si aún no hay credenciales) |
 | Cobros | ✅ adaptador de Stripe listo · `none` por defecto mientras Wompi no esté · Wompi pendiente |
 | Protección del panel | ✅ nginx `auth_request` (Hetzner) y su equivalente en Express (Railway) |
-| Base de datos y migraciones | ✅ 21 tablas |
-| API del panel | ✅ 44 endpoints |
+| Base de datos y migraciones | ✅ 23 tablas |
+| API del panel | ✅ 46 endpoints |
+| **Métricas de anuncios y Conversions API (Bloque E)** | ✅ gasto real cruzado con ventas, conversiones reportadas a Meta |
 | **Remarketing (Bloque D)** | ✅ trabajador periódico, franja horaria, interruptor por cuenta |
 | Despliegue | ✅ Railway (sin nginx, ver [docs/deploy-railway.md](docs/deploy-railway.md)) y Hetzner+nginx probados |
 | **Motor del bot** | ✅ webhook, flujos, IA y cola de envíos — probado |
 | **Archivos (Bloque F)** | ✅ subida real, guardado en disco y a Meta |
 | **Verificación de pagos (Bloque B)** | ✅ lectura de comprobantes, reglas, entrega y revisión manual |
-| **Panel conectado a la API (Bloque C)** | ✅ todo excepto Métricas de Anuncios, que espera al Bloque E |
+| **Panel conectado a la API (Bloque C)** | ✅ completo, incluida Métricas de Anuncios (Bloque E) |
 
 ---
 
@@ -277,16 +278,49 @@ activa, se guarda y persiste tras recargar la página completa.
 
 **Depende de:** bloque A (ya terminado).
 
-## Bloque E · Métricas de anuncios
+## Bloque E · Métricas de anuncios ✅ terminado
 
-📘 **Guía completa: [docs/bloque-e-metricas.md](docs/bloque-e-metricas.md)**
+📘 **Guía original: [docs/bloque-e-metricas.md](docs/bloque-e-metricas.md)**
 
-- [ ] Lectura de gasto y campañas desde la Marketing API de Meta
-- [ ] `GET /api/ads` con el detalle por anuncio (no existe todavía)
-- [ ] Envío del evento de compra por Conversions API al confirmar un pago
-- [ ] Atribución del contacto al anuncio de origen (`ctwa_clid`)
+- [x] Atribución del contacto al anuncio de origen (`ad_id`, `ad_name`, `ctwa_clid`)
+- [x] Sincronización horaria del gasto real con la Marketing API de Meta,
+      guardado por día y por anuncio en `ad_metrics`
+- [x] `GET /api/ads` cruza ese gasto con las ventas reales de `contacts` y
+      calcula costo/conversación, costo/venta y ROI en el servidor
+- [x] Botón de sincronización manual (`POST /api/ads/sync`) sin esperar a la
+      pasada horaria
+- [x] Conversions API: cada venta (automática o marcada a mano) encola un
+      evento `Purchase` con teléfono y nombre siempre con hash SHA-256, nunca
+      en claro, y `ctwa_clid` cuando existe
 
-**Depende de:** bloques A y B.
+**Archivos:** `server/src/services/{capi,adsync}.js` ·
+`server/src/services/engine.js` (captura `ctwa_clid`) ·
+`server/src/services/receipts.js` (`entregar()` encola la conversión) ·
+migración `006_metricas.sql`
+
+**Se quitó la columna "Estado" de la tabla de anuncios** del panel: la
+Marketing API de insights no expone el estado activo/pausado del anuncio (eso
+vive en el nodo `ad`, no en `insights`, y añadir esa llamada extra quedaba
+fuera de lo que pedía este bloque), así que mostrar un badge inventado sería
+peor que no mostrarlo.
+
+**Un bug que corregí de paso:** `PUT /settings/ads` guarda las credenciales de
+Meta Ads y las de Conversions API en el mismo registro. El panel tiene dos
+formularios separados ("Guardar credenciales" y "Guardar" de Conversions
+API) que pegan al mismo endpoint — si cada uno mandara solo sus propios
+campos, guardar uno borraría los valores del otro. Ahora los dos envían
+siempre el conjunto completo.
+
+**Probado de extremo a extremo** contra una base y credenciales reales
+(fake token/pixel, llamada real a Meta): `recordPurchase` encola y `flush`
+hace la llamada real a Conversions API, que Meta rechaza con 403 y el evento
+queda marcado `failed` con el motivo — nunca se pierde ni rompe el flujo de
+pago. `GET /api/ads` cruza gasto y ventas reales correctamente. Por la UI
+real: guardar credenciales de Ads y luego Conversions API no borra lo que se
+guardó antes (justo el bug que corregí), y ambos persisten tras recargar la
+página completa.
+
+**Depende de:** bloques A y B (ya terminados).
 
 ## Bloque F · Archivos ✅ terminado
 
@@ -327,11 +361,11 @@ archivos no sobreviven a un redeploy (ver paso 5 de
 3. ~~Bloque B~~ ✅
 4. ~~Bloque C~~ ✅
 5. ~~Bloque D~~ ✅
-6. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
+6. ~~Bloque E~~ ✅
+7. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
    conectar un número real de WhatsApp.** El motor no se puede dar por bueno
-   hasta que haya hablado con Meta de verdad — y hasta entonces, ni la lectura
-   de comprobantes, ni el panel, ni el remarketing se han visto en producción.
-7. **Bloque E** por valor comercial.
+   hasta que haya hablado con Meta de verdad — y hasta entonces, nada de lo
+   construido en los bloques B a E se ha visto en producción.
 8. **Bloque G** antes de tener volumen real.
 
 ## Antes de abrir al público

@@ -7,11 +7,6 @@
 
   const { qs, el, money, num } = App;
 
-  // Bloque E (Métricas y Conversions API) todavía no tiene endpoint: arranca
-  // vacío en vez de mostrar cifras de ejemplo que un cliente podría confundir
-  // con su rendimiento real.
-  App.ADS = [];
-
   const STATUS_META = {
     paid: ['Pagado', 'badge-ok'],
     pending: ['Pendiente', 'badge-warn'],
@@ -127,29 +122,28 @@
   /* ========================================================================
      Métricas de anuncios
      ===================================================================== */
-  function adsRows() {
-    return App.ADS.map((a) => {
-      const costPerConvo = a.convos ? a.spend / a.convos : 0;
-      const costPerSale = a.sales ? a.spend / a.sales : 0;
-      const roi = a.spend ? ((a.revenue - a.spend) / a.spend) * 100 : 0;
-      return Object.assign({}, a, { costPerConvo, costPerSale, roi });
-    });
+  let lastAds = { rows: [], totals: { spend: 0, convos: 0, sales: 0, revenue: 0, roi: 0 } };
+
+  async function cargarAnuncios() {
+    const params = new URLSearchParams({ from: qs('#ads-from').value, to: qs('#ads-to').value });
+    lastAds = await App.session.api(`/ads?${params}`);
+    renderAds();
   }
 
   function renderAds() {
-    const rows = adsRows();
+    const { rows, totals } = lastAds;
     const tbody = qs('#ads-tbody');
     tbody.innerHTML = '';
 
     if (!rows.length) {
-      tbody.appendChild(el('tr', {}, el('td', { colspan: '10' },
+      tbody.appendChild(el('tr', {}, el('td', { colspan: '9' },
         el('div', { class: 'empty-state', html: '<i class="fa-regular fa-chart-bar"></i>Todavía no hay métricas de anuncios. Conecta Meta Ads arriba para verlas aquí.' }))));
     }
 
     rows.forEach((a) => {
       tbody.appendChild(el('tr', {}, [
         el('td', { class: 'font-semibold text-ink', text: a.name }),
-        el('td', { class: 'text-ink/70', text: a.campaign }),
+        el('td', { class: 'text-ink/70', text: a.campaign || '—' }),
         el('td', { class: 'whitespace-nowrap', text: money(a.spend) }),
         el('td', { text: num(a.convos) }),
         el('td', { text: num(a.sales) }),
@@ -160,30 +154,44 @@
           class: `badge ${a.roi >= 300 ? 'badge-ok' : a.roi >= 100 ? 'badge-brand' : 'badge-danger'}`,
           text: `${a.roi.toFixed(0)}%`,
         })),
-        el('td', {}, el('span', {
-          class: `badge ${a.status === 'active' ? 'badge-ok' : 'badge-muted'}`,
-          text: a.status === 'active' ? 'Activo' : 'Pausado',
-        })),
       ]));
     });
-
-    const totals = rows.reduce((acc, a) => ({
-      spend: acc.spend + a.spend,
-      convos: acc.convos + a.convos,
-      sales: acc.sales + a.sales,
-      revenue: acc.revenue + a.revenue,
-    }), { spend: 0, convos: 0, sales: 0, revenue: 0 });
 
     qs('#ads-spend').textContent = money(totals.spend);
     qs('#ads-convos').textContent = num(totals.convos);
     qs('#ads-sales').textContent = num(totals.sales);
-    qs('#ads-roi').textContent = totals.spend
-      ? `${(((totals.revenue - totals.spend) / totals.spend) * 100).toFixed(0)}%` : '—';
+    qs('#ads-roi').textContent = totals.spend ? `${totals.roi.toFixed(0)}%` : '—';
+  }
+
+  async function cargarAdsSettings() {
+    const { ads } = await App.session.api('/settings');
+    qs('#ads-account').value = ads.accountId || '';
+    qs('#ads-token').value = '';
+    qs('#ads-token').placeholder = ads.hasToken ? ads.tokenMask : 'EAAG…';
+    qs('#capi-pixel').value = ads.pixelId || '';
+    qs('#capi-currency').value = ads.currency || 'USD';
+    qs('#capi-enabled').checked = ads.capiEnabled;
+  }
+
+  /** Las credenciales de Ads y de Conversions API viven en el mismo registro:
+   *  cada guardado manda el conjunto completo para no pisar lo que no se tocó. */
+  async function guardarAds() {
+    const token = qs('#ads-token').value.trim();
+    await App.session.api('/settings/ads', {
+      method: 'PUT',
+      body: {
+        adsAccountId: qs('#ads-account').value.trim(),
+        pixelId: qs('#capi-pixel').value.trim(),
+        currency: qs('#capi-currency').value,
+        capiEnabled: qs('#capi-enabled').checked,
+        ...(token ? { token } : {}),
+      },
+    });
+    await cargarAdsSettings();
   }
 
   function initAds() {
     App.fillCurrencySelect(qs('#capi-currency'));
-    qs('#capi-currency').value = 'USD';
 
     const today = new Date();
     const monthAgo = new Date(today);
@@ -196,12 +204,15 @@
     qs('#ads-save').addEventListener('click', (ev) => {
       const ok = App.validate([
         { input: '#ads-account', test: (v) => /^act_\d{6,}$/.test(v), message: 'Formato esperado: act_1234567890' },
-        { input: '#ads-token', test: (v) => v.length >= 8, message: 'El Access Token parece incompleto.' },
       ]);
       if (!ok) { App.toast('Revisa las credenciales de Meta Ads', 'err'); return; }
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(750);
-        App.toast('Credenciales de Meta Ads guardadas', 'ok');
+        try {
+          await guardarAds();
+          App.toast('Credenciales de Meta Ads guardadas', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
 
@@ -212,13 +223,16 @@
         if (!ok) { App.toast('Revisa el Pixel ID', 'err'); return; }
       }
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(700);
-        App.toast(enabled ? 'Conversions API activada' : 'Conversions API desactivada', enabled ? 'ok' : 'warn');
+        try {
+          await guardarAds();
+          App.toast(enabled ? 'Conversions API activada' : 'Conversions API desactivada', enabled ? 'ok' : 'warn');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
 
     qs('#capi-enabled').addEventListener('change', (ev) => {
-      qs('#capi-pixel').disabled = false;
       if (ev.target.checked) App.toast('Recuerda guardar para aplicar el cambio', 'info', 2600);
     });
 
@@ -227,18 +241,36 @@
       const to = qs('#ads-to').value;
       if (from && to && from > to) { App.toast('La fecha inicial no puede ser posterior a la final', 'err'); return; }
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(650);
-        renderAds();
-        App.toast('Métricas actualizadas', 'ok');
+        try {
+          await cargarAnuncios();
+          App.toast('Métricas actualizadas', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Cargando…');
     });
 
+    // La sincronización con Meta se hace una vez por hora en el servidor; este
+    // botón solo la adelanta manualmente cuando alguien está mirando el panel.
+    qs('#ads-sync')?.addEventListener('click', (ev) => {
+      App.withBusy(ev.currentTarget, async () => {
+        try {
+          const r = await App.session.api('/ads/sync', { method: 'POST' });
+          if (r.skipped) { App.toast('Configura Ad Account ID y Access Token primero', 'warn'); return; }
+          if (r.error) { App.toast(r.error, 'err'); return; }
+          await cargarAnuncios();
+          App.toast(`Sincronizado: ${r.synced} fila(s)`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
+      }, 'Sincronizando…');
+    });
+
     qs('#ads-export').addEventListener('click', () => {
-      const header = ['Anuncio', 'Campaña', 'Gasto', 'Conversaciones', 'Ventas', 'Ingresos', 'Costo/conversación', 'Costo/venta', 'ROI %', 'Estado'];
-      const body = adsRows().map((a) => [
-        a.name, a.campaign, a.spend.toFixed(2), a.convos, a.sales, a.revenue.toFixed(2),
+      const header = ['Anuncio', 'Campaña', 'Gasto', 'Conversaciones', 'Ventas', 'Ingresos', 'Costo/conversación', 'Costo/venta', 'ROI %'];
+      const body = lastAds.rows.map((a) => [
+        a.name, a.campaign, Number(a.spend).toFixed(2), a.convos, a.sales, Number(a.revenue).toFixed(2),
         a.costPerConvo.toFixed(2), a.costPerSale.toFixed(2), a.roi.toFixed(1),
-        a.status === 'active' ? 'Activo' : 'Pausado',
       ]);
       App.downloadCsv(`elorai-anuncios-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
       App.toast('Reporte de anuncios exportado', 'ok');
@@ -250,5 +282,9 @@
   App.reports = { init() { initReports(); initAds(); } };
 
   App.onView('reports', () => cargarContactos().catch((e) => App.toast(e.message, 'err')));
+  App.onView('ads', () => {
+    cargarAdsSettings().catch((e) => App.toast(e.message, 'err'));
+    cargarAnuncios().catch((e) => App.toast(e.message, 'err'));
+  });
 
 })(window.Elorai);

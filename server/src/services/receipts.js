@@ -9,6 +9,7 @@
 
 import { many, one, query, transaction } from '../db/pool.js';
 import { decrypt } from '../lib/crypto.js';
+import * as capi from './capi.js';
 import { normalize, runFlow } from './flows.js';
 import { enqueue } from './outbox.js';
 import * as wa from './whatsapp.js';
@@ -191,6 +192,12 @@ async function entregar({ accountId, contactId, reciboId, motivoAprobacion, regl
       [contactId, monto ?? 0, moneda || regla.currency, regla.id]
     );
   });
+
+  // Conversions API: si está configurada, esta venta vuelve a Meta para que
+  // el algoritmo aprenda del comprador real, no solo de quien abrió el chat.
+  // Solo se encola aquí (una fila en capi_events); el envío real a Meta lo
+  // hace el trabajador de capi.js, así que esto no puede retrasar la entrega.
+  await capi.recordPurchase({ accountId, contactId, value: monto ?? 0, currency: moneda || regla.currency });
 
   let retraso = 0;
   if (ajustes?.pay_message_ok) {

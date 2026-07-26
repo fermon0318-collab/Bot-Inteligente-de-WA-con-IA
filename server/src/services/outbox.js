@@ -12,6 +12,7 @@
  */
 
 import { many, one, query, transaction } from '../db/pool.js';
+import * as media from './media.js';
 import * as wa from './whatsapp.js';
 
 const MAX_ATTEMPTS = 5;
@@ -99,19 +100,23 @@ async function dispatch(item) {
     let messageId = null;
 
     if (item.kind === 'media') {
-      const media = await one(
-        'SELECT name, file_type, wa_media_id FROM media_files WHERE account_id = $1 AND name = $2',
+      const file = await one(
+        'SELECT id, name, file_type, wa_media_id FROM media_files WHERE account_id = $1 AND name = $2',
         [item.account_id, item.media_name]
       );
-      if (!media?.wa_media_id) {
-        await fail(item, `El archivo "${item.media_name}" no está subido a Meta`, true);
+      if (!file) {
+        await fail(item, `El archivo "${item.media_name}" ya no existe`, true);
         return 'failed';
       }
+
+      // Si no tiene media_id o caducó, se sube ahora en vez de fallar
+      const mediaId = await media.ensureUploaded(item.account_id, file.id);
+
       messageId = await wa.sendMedia({
         token: cfg.token, phoneNumberId: cfg.phoneNumberId, to,
-        mediaId: media.wa_media_id,
-        kind: media.file_type === 'pdf' ? 'document' : media.file_type,
-        filename: media.name,
+        mediaId,
+        kind: file.file_type === 'pdf' ? 'document' : file.file_type,
+        filename: file.name,
         caption: item.body || undefined,
       });
     } else if (item.kind === 'template') {

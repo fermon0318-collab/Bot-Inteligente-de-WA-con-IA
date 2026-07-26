@@ -27,21 +27,33 @@ deja el proxy en **DNS only** hasta emitir el certificado.
 
 ## 2. Servidor
 
-VPS con **Ubuntu 24.04**. Recomendado: Hetzner CX22 (~4 €/mes) o DigitalOcean 6 $/mes.
+Dos rutas, la misma base de código:
 
-```bash
-ssh root@IP
-git clone <repo> /var/www/elorai && cd /var/www/elorai
-sudo bash deploy/deploy.sh tudominio.com
-```
+- **Mientras dure el plan gratuito de Railway (30 días):** sin VPS ni nginx —
+  Railway aloja el proceso de Node y le da HTTPS. Guía completa:
+  **[docs/deploy-railway.md](docs/deploy-railway.md)**.
+- **Al escalar, VPS propio** con **Ubuntu 24.04**. Recomendado: Hetzner CX22
+  (~4 €/mes) o DigitalOcean 6 $/mes.
 
-Instala nginx, PostgreSQL, Node y certbot; genera `SESSION_SECRET` y
-`ENCRYPTION_KEY`; y se detiene pidiendo credenciales.
+  ```bash
+  ssh root@IP
+  git clone <repo> /var/www/elorai && cd /var/www/elorai
+  sudo bash deploy/deploy.sh tudominio.com
+  ```
+
+  Instala nginx, PostgreSQL, Node y certbot; genera `SESSION_SECRET` y
+  `ENCRYPTION_KEY`; y se detiene pidiendo credenciales.
 
 > **Guarda `ENCRYPTION_KEY` en un gestor de contraseñas.** Cifra los tokens de
 > Meta y las API Key de IA de tus clientes. Si lo pierdes, son irrecuperables.
 
 ## 3. Google — botón «Ingresar»
+
+> `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` son opcionales al arrancar: sin
+> ellas el servidor funciona igual y el botón "Acceder con Google" solo
+> redirige con un aviso. Puedes completar el paso de Credenciales (última
+> fila de la tabla) más tarde, cuando ya tengas la URL pública real —
+> justo como en el paso 6 de [docs/deploy-railway.md](docs/deploy-railway.md).
 
 <https://console.cloud.google.com> → nuevo proyecto.
 
@@ -60,7 +72,15 @@ Copia **Client ID** y **Client Secret** → `/etc/elorai/elorai.env`:
 > La URI de redirección debe coincidir carácter por carácter, sin barra final.
 > Es la causa del 90 % de los `redirect_uri_mismatch`.
 
-## 4. Stripe — cobrar a tus clientes
+## 4. Pasarela de pago — cobrar a tus clientes
+
+> Mientras no configures ninguna, `BILLING_PROVIDER=none` deja que cualquier
+> cuenta con sesión use el panel sin pagar — así puedes publicar y probar todo
+> antes de tener cobros listos. El adaptador de Stripe (abajo) ya está
+> terminado; el de **Wompi** (elegido para LatAm) está en proceso y se añade
+> con el mismo patrón — ver el paso 9 de [docs/deploy-railway.md](docs/deploy-railway.md).
+
+### Stripe
 
 <https://dashboard.stripe.com>
 
@@ -121,14 +141,15 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Capa | Estado |
 |---|---|
 | Landing, panel y páginas legales | ✅ completo |
-| Autenticación con Google | ✅ funcionando |
-| Suscripciones con Stripe | ✅ funcionando |
-| Protección del panel (nginx `auth_request`) | ✅ funcionando |
-| Base de datos y migraciones | ✅ 18 tablas |
-| API del panel | ✅ 40 endpoints |
-| Despliegue (nginx, systemd, TLS) | ✅ probado |
+| Autenticación con Google | ✅ funcionando (opcional al arrancar si aún no hay credenciales) |
+| Cobros | ✅ adaptador de Stripe listo · `none` por defecto mientras Wompi no esté · Wompi pendiente |
+| Protección del panel | ✅ nginx `auth_request` (Hetzner) y su equivalente en Express (Railway) |
+| Base de datos y migraciones | ✅ 19 tablas |
+| API del panel | ✅ 41 endpoints |
+| Despliegue | ✅ Railway (sin nginx, ver [docs/deploy-railway.md](docs/deploy-railway.md)) y Hetzner+nginx probados |
 | **Motor del bot** | ✅ webhook, flujos, IA y cola de envíos — probado |
-| **Panel conectado a la API** | ⚠️ solo sesión y cobros; los datos siguen siendo de ejemplo |
+| **Archivos (Bloque F)** | ✅ subida real, guardado en disco y a Meta |
+| **Panel conectado a la API** | ⚠️ solo sesión, cobros y archivos; el resto sigue siendo de ejemplo |
 
 ---
 
@@ -210,15 +231,24 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 
 **Depende de:** bloques A y B.
 
-## Bloque F · Archivos
+## Bloque F · Archivos ✅ terminado
 
-📘 **Guía completa: [docs/bloque-f-archivos.md](docs/bloque-f-archivos.md)**
+📘 **Guía original: [docs/bloque-f-archivos.md](docs/bloque-f-archivos.md)**
 
-- [ ] `POST /api/media` — subida real (hoy solo hay listar y borrar)
-- [ ] Almacenamiento en disco o S3 con límite de tamaño y tipo
-- [ ] Subida a la Graph API para obtener el `media_id` reutilizable
+- [x] `POST /api/media` — subida real, en memoria y validada por tipo/tamaño
+- [x] Almacenamiento en disco (`UPLOADS_DIR`, con nombre aleatorio por archivo)
+- [x] Subida a la Graph API para obtener el `media_id`, renovado automáticamente
+      a los 25 días desde `outbox.js` si ya caducó
+- [x] `DELETE /api/media/:id` borra también el archivo en disco
+- [x] Panel conectado: subir, listar y borrar hablan con la API real
 
-**Depende de:** nada.
+**Archivos:** `server/src/services/{storage,media}.js` ·
+`server/src/routes/api.js` · migración `003_media.sql` ·
+`assets/js/automation.js`
+
+**Pendiente:** en Railway hace falta montar un Volume en `UPLOADS_DIR` o los
+archivos no sobreviven a un redeploy (ver paso 5 de
+[docs/deploy-railway.md](docs/deploy-railway.md)).
 
 ## Bloque G · Endurecer para producción
 
@@ -236,13 +266,15 @@ La API ya existe; falta que el frontend la use en lugar de `mock.js`.
 ## Orden recomendado
 
 1. ~~Bloque A~~ ✅
-2. **Publicar y conectar un número real de WhatsApp.** El motor no se puede dar
-   por bueno hasta que haya hablado con Meta de verdad.
-3. **Bloque C** — el panel sigue mostrando datos de ejemplo aunque ya haya
+2. ~~Bloque F~~ ✅
+3. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
+   conectar un número real de WhatsApp.** El motor no se puede dar por bueno
+   hasta que haya hablado con Meta de verdad.
+4. **Bloque C** — el panel sigue mostrando datos de ejemplo aunque ya haya
    conversaciones reales en la base.
-4. **Bloque B** — la verificación de pagos es tu diferenciador.
-5. **Bloques D, E y F** por valor comercial.
-6. **Bloque G** antes de tener volumen real.
+5. **Bloque B** — la verificación de pagos es tu diferenciador.
+6. **Bloques D y E** por valor comercial.
+7. **Bloque G** antes de tener volumen real.
 
 ## Antes de abrir al público
 

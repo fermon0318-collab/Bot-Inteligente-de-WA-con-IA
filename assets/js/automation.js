@@ -106,10 +106,15 @@
           `Se eliminará <strong>${App.escapeHtml(m.name)}</strong>. Los flujos que lo usen dejarán de enviarlo.`,
           { confirmText: 'Eliminar', danger: true, icon: 'fa-trash' });
         if (!ok) return;
-        const i = App.MEDIA.indexOf(m);
-        if (i >= 0) App.MEDIA.splice(i, 1);
-        renderMedia();
-        App.toast('Archivo eliminado', 'ok');
+        try {
+          await App.session.api(`/media/${m.id}`, { method: 'DELETE' });
+          const i = App.MEDIA.indexOf(m);
+          if (i >= 0) App.MEDIA.splice(i, 1);
+          renderMedia();
+          App.toast('Archivo eliminado', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       });
 
       grid.appendChild(el('div', { class: 'card card-hover p-3.5' }, [
@@ -129,26 +134,42 @@
     });
   }
 
-  function uploadFiles(fileList) {
+  async function uploadFiles(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
-    const tooBig = files.filter((f) => f.size > 16 * 1024 * 1024);
-    if (tooBig.length) App.toast(`${tooBig.length} archivo(s) superan los 16 MB y se omitieron`, 'warn');
 
-    files.filter((f) => f.size <= 16 * 1024 * 1024).forEach((f) => {
-      App.MEDIA.unshift({
-        id: 'md_' + Date.now() + Math.floor(Math.random() * 1000),
-        name: f.name, type: detectType(f.name), size: f.size,
-        at: new Date().toISOString().slice(0, 10),
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+
+    App.toast(`Subiendo ${files.length} archivo(s)…`, 'info');
+
+    try {
+      const res = await fetch('/api/media', {
+        method: 'POST', credentials: 'same-origin', body: form,
       });
-    });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'No se pudo subir');
+
+      data.rejected?.forEach((r) => App.toast(`${r.name}: ${r.reason}`, 'err', 6000));
+      if (data.saved?.length) App.toast(`${data.saved.length} archivo(s) subidos`, 'ok');
+
+      await loadMedia();
+    } catch (err) {
+      App.toast(err.message, 'err');
+    }
+  }
+
+  async function loadMedia() {
+    const files = await App.session.api('/media');
+    App.MEDIA.length = 0;
+    App.MEDIA.push(...files.map((f) => ({
+      id: f.id, name: f.name, type: f.type, size: f.size, at: f.at.slice(0, 10),
+    })));
     renderMedia();
-    const added = files.length - tooBig.length;
-    if (added) App.toast(`${added} archivo(s) subidos`, 'ok');
   }
 
   function initMedia() {
-    renderMedia();
+    loadMedia().catch(() => renderMedia());
     const zone = qs('#media-dropzone');
     const input = qs('#media-input');
 

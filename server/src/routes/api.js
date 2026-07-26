@@ -7,15 +7,25 @@
  */
 
 import { Router } from 'express';
+import multer from 'multer';
 import { billing } from '../billing/index.js';
 import { config } from '../config.js';
 import { many, one, query, transaction } from '../db/pool.js';
 import { decrypt, encrypt, mask } from '../lib/crypto.js';
 import { requireAuth, requireSubscription } from '../middleware/auth.js';
 import * as engine from '../services/engine.js';
+import * as media from '../services/media.js';
+import { ALLOWED, MAX_BYTES } from '../services/storage.js';
 
 const router = Router();
 router.use(requireAuth);
+
+// En memoria: los archivos son pequeños y así no hay temporales que limpiar
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BYTES, files: 10 },
+  fileFilter: (_req, file, cb) => cb(null, Boolean(ALLOWED[file.mimetype])),
+});
 
 const account = (req) => req.user.accountId;
 
@@ -839,9 +849,40 @@ router.get('/media', async (req, res, next) => {
   }
 });
 
+router.post('/media', requireSubscription, upload.array('files', 10), async (req, res, next) => {
+  try {
+    const files = req.files || [];
+    if (!files.length) {
+      return res.status(400).json({ error: 'validation', message: 'No llegó ningún archivo.' });
+    }
+
+    const saved = [];
+    const rejected = [];
+
+    for (const file of files) {
+      try {
+        saved.push(await media.addFile({
+          accountId: account(req),
+          buffer: file.buffer,
+          mimeType: file.mimetype,
+          originalName: file.originalname,
+        }));
+      } catch (err) {
+        rejected.push({ name: file.originalname, reason: err.message });
+      }
+    }
+
+    await log(account(req), `${saved.length} archivo(s) subidos`, 'ok');
+    res.status(201).json({ saved, rejected });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/media/:id', requireSubscription, async (req, res, next) => {
   try {
-    await query('DELETE FROM media_files WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    const ok = await media.removeFile({ accountId: account(req), mediaFileId: req.params.id });
+    if (!ok) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
   } catch (err) {
     next(err);

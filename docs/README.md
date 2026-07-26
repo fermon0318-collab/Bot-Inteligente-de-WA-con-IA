@@ -7,17 +7,15 @@ qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
 
 | # | Bloque | Documento | Por qué en este orden |
 |---|---|---|---|
-| 1 | **F · Archivos** | [bloque-f-archivos.md](bloque-f-archivos.md) | El bloque B necesita poder enviar archivos, y eso hoy no existe |
-| 2 | **B · Verificación de pagos** | [bloque-b-pagos.md](bloque-b-pagos.md) | Tu diferenciador frente a la competencia |
-| 3 | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | Independiente: puedes hacerlo cuando quieras |
-| 4 | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | Recupera ventas perdidas |
-| 5 | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | Depende de que B ya marque pagos |
-| 6 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
+| — | **F · Archivos** | [bloque-f-archivos.md](bloque-f-archivos.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
+| 1 | **B · Verificación de pagos** | [bloque-b-pagos.md](bloque-b-pagos.md) | Tu diferenciador frente a la competencia |
+| 2 | **C · Panel con datos reales** | [bloque-c-panel.md](bloque-c-panel.md) | Independiente: puedes hacerlo cuando quieras |
+| 3 | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | Recupera ventas perdidas |
+| 4 | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | Depende de que B ya marque pagos |
+| 5 | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | Antes de tener volumen real |
 
-> **F antes que B.** En `outbox.js`, enviar un archivo requiere que
-> `media_files.wa_media_id` tenga valor, y hoy nadie lo rellena. Si haces B
-> primero, la entrega de productos fallará con "el archivo no está subido a Meta"
-> y perderás una tarde buscando por qué.
+> **Despliegue en Railway:** [deploy-railway.md](deploy-railway.md) — la ruta
+> activa mientras dure el plan gratuito, sin nginx.
 
 ---
 
@@ -124,8 +122,11 @@ server/src/
     flows.js            Disparadores y ejecución de flujos
     ai.js               Respuestas con IA
     engine.js           Orquestación del mensaje entrante
+    storage.js          Archivos en disco (Bloque F)
+    media.js            Alta de archivos + subida a Meta (Bloque F)
   billing/
-    index.js            Interfaz de pasarela
+    index.js            Interfaz de pasarela (perezosa: solo carga el adaptador activo)
+    none.js             Adaptador por defecto — sin cobrar, mientras Wompi no esté
     stripe.js           Adaptador
 
 assets/js/              Frontend del panel (aún con datos de ejemplo)

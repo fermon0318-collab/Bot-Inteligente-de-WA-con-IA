@@ -24,6 +24,7 @@ import billingRoutes from './routes/billing.js';
 import apiRoutes from './routes/api.js';
 import webhookRoutes, { reprocessPending } from './routes/webhook.js';
 import { startWorker } from './services/outbox.js';
+import * as remarketing from './services/remarketing.js';
 
 const app = express();
 
@@ -173,6 +174,9 @@ const server = app.listen(config.port, config.host, () => {
 // Trabajador de la cola de salida: despacha lo que ya venció
 const stopOutbox = startWorker({ intervalMs: 3000 });
 
+// Remarketing: busca contactos enfriados cada pocos minutos
+const stopRemarketing = remarketing.startWorker();
+
 // Si el proceso murió a mitad de un evento, aquí se recupera
 reprocessPending().catch((err) => console.error('[webhook] reproceso inicial:', err.message));
 
@@ -186,6 +190,7 @@ purgeExpired().catch(() => {});
 function shutdown(signal) {
   console.log(`\n${signal} recibido, cerrando…`);
   stopOutbox();
+  stopRemarketing();
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);

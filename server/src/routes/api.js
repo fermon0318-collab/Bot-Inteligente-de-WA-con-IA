@@ -101,6 +101,7 @@ function publicSettings(row) {
       postFlowId: row.pay_post_flow_id,
     },
     remarketing: {
+      enabled: row.rm_enabled,
       hours: row.rm_hours,
       minutes: row.rm_minutes,
       windowStart: String(row.rm_window_start).slice(0, 5),
@@ -317,23 +318,25 @@ router.put('/settings/ads', requireSubscription, async (req, res, next) => {
 
 router.put('/settings/remarketing', requireSubscription, async (req, res, next) => {
   try {
-    const { hours = 24, minutes = 0, windowStart = '09:00', windowEnd = '21:00',
+    const { enabled = false, hours = 24, minutes = 0, windowStart = '09:00', windowEnd = '21:00',
             timezone = 'America/Mexico_City', steps = [] } = req.body || {};
 
     if (Number(hours) === 0 && Number(minutes) === 0) {
       return res.status(400).json({ error: 'validation', message: 'El tiempo de disparo no puede ser cero.' });
     }
-    if (String(windowStart) >= String(windowEnd)) {
-      return res.status(400).json({ error: 'validation', message: 'La hora de inicio debe ser anterior a la de fin.' });
+    // Igual a igual es una franja de ancho cero; al revés (22:00–02:00) es una
+    // franja nocturna válida, así que solo se rechaza la igualdad exacta.
+    if (String(windowStart) === String(windowEnd)) {
+      return res.status(400).json({ error: 'validation', message: 'La hora de inicio y la de fin no pueden ser iguales.' });
     }
 
     await transaction(async (client) => {
       await client.query(
         `UPDATE bot_settings
-            SET rm_hours = $2, rm_minutes = $3, rm_window_start = $4,
+            SET rm_enabled = $7, rm_hours = $2, rm_minutes = $3, rm_window_start = $4,
                 rm_window_end = $5, rm_timezone = $6, updated_at = now()
           WHERE account_id = $1`,
-        [account(req), Number(hours), Number(minutes), windowStart, windowEnd, timezone]
+        [account(req), Number(hours), Number(minutes), windowStart, windowEnd, timezone, Boolean(enabled)]
       );
       await client.query('DELETE FROM remarketing_steps WHERE account_id = $1', [account(req)]);
       for (const [i, step] of steps.entries()) {

@@ -144,8 +144,9 @@ cliente en el panel. Ya se guardan; **falta el envío de eventos** (bloque E).
 | Autenticación con Google | ✅ funcionando (opcional al arrancar si aún no hay credenciales) |
 | Cobros | ✅ adaptador de Stripe listo · `none` por defecto mientras Wompi no esté · Wompi pendiente |
 | Protección del panel | ✅ nginx `auth_request` (Hetzner) y su equivalente en Express (Railway) |
-| Base de datos y migraciones | ✅ 20 tablas |
+| Base de datos y migraciones | ✅ 21 tablas |
 | API del panel | ✅ 44 endpoints |
+| **Remarketing (Bloque D)** | ✅ trabajador periódico, franja horaria, interruptor por cuenta |
 | Despliegue | ✅ Railway (sin nginx, ver [docs/deploy-railway.md](docs/deploy-railway.md)) y Hetzner+nginx probados |
 | **Motor del bot** | ✅ webhook, flujos, IA y cola de envíos — probado |
 | **Archivos (Bloque F)** | ✅ subida real, guardado en disco y a Meta |
@@ -250,16 +251,31 @@ de la página — confirma que persisten en el servidor y no solo en memoria.
 **Depende de:** nada (la API respondía desde antes). Bloque F ya estaba
 terminado, así que Archivos no necesitó cambios en este bloque.
 
-## Bloque D · Automatizaciones programadas
+## Bloque D · Automatizaciones programadas ✅ terminado
 
-📘 **Guía completa: [docs/bloque-d-remarketing.md](docs/bloque-d-remarketing.md)**
+📘 **Guía original: [docs/bloque-d-remarketing.md](docs/bloque-d-remarketing.md)**
 
-- [ ] Trabajo periódico que detecta contactos sin conversión
-- [ ] Respeto de la franja horaria y la zona horaria del cliente
-- [ ] Ejecución de la secuencia de remarketing
-- [ ] Registro para no reenviar al mismo contacto
+- [x] Trabajo periódico (cada 5 min) que detecta contactos sin conversión
+- [x] Respeto de la franja horaria y la zona horaria de cada cuenta, incluidas
+      franjas nocturnas que cruzan medianoche (22:00–02:00)
+- [x] Ejecución de la secuencia de remarketing por la cola de salida
+- [x] Registro en `remarketing_sends` para no reenviar al mismo contacto
+- [x] Interruptor por cuenta (`rm_enabled`), **apagado por defecto**
+- [x] Excluye contactos ya pagados, con automatización detenida o con algo
+      pendiente de enviarse todavía
 
-**Depende de:** bloque A.
+**Archivos:** `server/src/services/remarketing.js` ·
+`server/src/index.js` (trabajador) · `server/src/routes/api.js`
+(`enabled` en `/settings/remarketing`) · migración `005_remarketing.sql`
+
+**Probado de extremo a extremo** contra una base real: franja normal y franja
+que cruza medianoche calculadas bien, un contacto candidato recibe la
+secuencia y una segunda pasada no la duplica, un contacto pagado y uno con
+automatización detenida quedan excluidos, y apagar el interruptor detiene los
+envíos de inmediato. El interruptor también se probó por la UI real: se
+activa, se guarda y persiste tras recargar la página completa.
+
+**Depende de:** bloque A (ya terminado).
 
 ## Bloque E · Métricas de anuncios
 
@@ -310,12 +326,13 @@ archivos no sobreviven a un redeploy (ver paso 5 de
 2. ~~Bloque F~~ ✅
 3. ~~Bloque B~~ ✅
 4. ~~Bloque C~~ ✅
-5. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
+5. ~~Bloque D~~ ✅
+6. **Publicar en Railway** ([docs/deploy-railway.md](docs/deploy-railway.md)) **y
    conectar un número real de WhatsApp.** El motor no se puede dar por bueno
    hasta que haya hablado con Meta de verdad — y hasta entonces, ni la lectura
-   de comprobantes ni el panel se han visto en producción.
-6. **Bloques D y E** por valor comercial.
-7. **Bloque G** antes de tener volumen real.
+   de comprobantes, ni el panel, ni el remarketing se han visto en producción.
+7. **Bloque E** por valor comercial.
+8. **Bloque G** antes de tener volumen real.
 
 ## Antes de abrir al público
 

@@ -13,7 +13,7 @@
   App.SIMPLE_FLOWS = [];
   App.ADVANCED_FLOWS = [];
   App.TRIGGERS = { simple: [], advanced: [] };
-  App.REMARKETING = { hours: 24, minutes: 0, start: '09:00', end: '21:00', tz: 'America/Mexico_City', steps: [] };
+  App.REMARKETING = { enabled: false, hours: 24, minutes: 0, start: '09:00', end: '21:00', tz: 'America/Mexico_City', steps: [] };
 
   /* ========================================================================
      Editor de pasos (compartido por Flujos Simples y Remarketing)
@@ -517,6 +517,7 @@
     ]);
     const cfg = App.REMARKETING;
     Object.assign(cfg, {
+      enabled: settings.remarketing.enabled,
       hours: settings.remarketing.hours,
       minutes: settings.remarketing.minutes,
       start: settings.remarketing.windowStart,
@@ -526,6 +527,7 @@
     cfg.steps.length = 0;
     cfg.steps.push(...steps);
 
+    qs('#rm-enabled').checked = cfg.enabled;
     qs('#rm-tz').value = cfg.tz;
     qs('#rm-hours').value = cfg.hours;
     qs('#rm-minutes').value = cfg.minutes;
@@ -538,6 +540,7 @@
     const cfg = App.REMARKETING;
     const tz = qs('#rm-tz');
     App.TIMEZONES.forEach((z) => tz.appendChild(el('option', { value: z, text: z.replace(/_/g, ' ') })));
+    qs('#rm-enabled').checked = cfg.enabled;
     tz.value = cfg.tz;
     qs('#rm-hours').value = cfg.hours;
     qs('#rm-minutes').value = cfg.minutes;
@@ -558,11 +561,14 @@
       }
       App.setError(qs('#rm-hours'), false);
 
-      if (qs('#rm-start').value >= qs('#rm-end').value) {
-        App.toast('La hora de inicio debe ser anterior a la de fin', 'err');
+      // Igual a igual es una franja de ancho cero; al revés (22:00–02:00) es
+      // una franja nocturna válida — igual que evalúa dentroDeFranja() en el servidor.
+      if (qs('#rm-start').value === qs('#rm-end').value) {
+        App.toast('La hora de inicio y la de fin no pueden ser iguales', 'err');
         return;
       }
-      if (!cfg.steps.length) { App.toast('Agrega al menos un paso a la secuencia', 'err'); return; }
+      const enabled = qs('#rm-enabled').checked;
+      if (enabled && !cfg.steps.length) { App.toast('Agrega al menos un paso a la secuencia', 'err'); return; }
       if (cfg.steps.some((s) => !String(s.value || '').trim())) { App.toast('Hay pasos vacíos: complétalos antes de guardar', 'err'); return; }
 
       App.withBusy(ev.currentTarget, async () => {
@@ -570,13 +576,15 @@
           await App.session.api('/settings/remarketing', {
             method: 'PUT',
             body: {
-              hours, minutes,
+              enabled, hours, minutes,
               windowStart: qs('#rm-start').value, windowEnd: qs('#rm-end').value,
               timezone: tz.value, steps: cfg.steps,
             },
           });
-          Object.assign(cfg, { hours, minutes, start: qs('#rm-start').value, end: qs('#rm-end').value, tz: tz.value });
-          App.toast(`Remarketing configurado a ${hours}h ${minutes}min del primer contacto`, 'ok');
+          Object.assign(cfg, { enabled, hours, minutes, start: qs('#rm-start').value, end: qs('#rm-end').value, tz: tz.value });
+          App.toast(enabled
+            ? `Remarketing activado a ${hours}h ${minutes}min del primer contacto`
+            : 'Remarketing guardado (desactivado)', 'ok');
         } catch (err) {
           App.toast(err.message, 'err');
         }

@@ -19,9 +19,46 @@ propague el DNS.
 24.04 LTS**. Sobra para miles de conversaciones diarias. DigitalOcean a 6 $/mes
 es equivalente y tiene panel más sencillo.
 
+### ¿Todavía no tienes dominio? Publica gratis para probar
+
+Cloudflare no regala dominios — es DNS/CDN gratuito, pero el dominio en sí
+cuesta en cualquier proveedor, incluido el registrador de Cloudflare (vende a
+precio de costo, no gratis).
+
+Para probar el sistema completo hoy mismo sin gastar nada, usa
+**[sslip.io](https://sslip.io)**: resuelve automáticamente cualquier hostname
+que contenga tu IP, sin registro ni cuenta.
+
+```
+IP del VPS: 203.0.113.45
+Tu "dominio": 203-0-113-45.sslip.io
+```
+
+Es un dominio real a efectos prácticos — Let's Encrypt emite certificado válido,
+y Google, Stripe y Meta lo aceptan sin problema, porque para ellos es solo una
+URL HTTPS pública. Despliega igual que siempre, sustituyendo el dominio:
+
+```bash
+sudo bash deploy/deploy.sh 203-0-113-45.sslip.io
+```
+
+Y usa esa misma URL donde el resto de esta guía dice `tudominio.com` (Google
+Cloud, Stripe, Meta).
+
+**Límite:** sirve para el tramo de desarrollo y pruebas, contigo y unos pocos
+testers — mientras tu app de Google esté en modo "Prueba" (hasta 100 usuarios
+añadidos a mano) no exige dominio verificado. No sirve para el lanzamiento
+público: nadie va a pagar una suscripción con confianza en una URL así, y
+Google empezará a pedir verificación de dominio si pasas la app a producción.
+Cuando compres el dominio real, repites `deploy.sh` con el nuevo nombre y
+actualizas las tres URIs — cinco minutos.
+
 ---
 
 ## 1 · Servidor y DNS
+
+> Si vas a usar sslip.io del paso anterior, sáltate el resto de esta sección:
+> no hace falta comprar dominio ni configurar registros DNS.
 
 Crea el VPS con Ubuntu 24.04 y anota su IP pública. Después, en el panel de tu
 dominio, crea dos registros:

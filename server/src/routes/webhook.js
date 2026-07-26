@@ -27,7 +27,7 @@ router.get('/whatsapp', async (req, res) => {
 
   if (mode !== 'subscribe' || !token) return res.sendStatus(400);
 
-  // El token de verificación lo genera ApolAI por cuenta al crearla, así que
+  // El token de verificación lo genera Elorai por cuenta al crearla, así que
   // sirve además para saber quién está dando de alta el webhook.
   const account = await one(
     'SELECT account_id FROM bot_settings WHERE wa_verify_token = $1',

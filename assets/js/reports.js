@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — Reportes y Métricas de Anuncios
+   Elorai — Reportes y Métricas de Anuncios
    ========================================================================== */
 
 (function (App) {
@@ -106,7 +106,7 @@
       c.name, c.phone, STATUS_META[c.status][0], c.source,
       App.dateShort(c.lastContact), c.amount ? money(c.amount).replace(/[^\d.,-]/g, '') : '0',
     ]);
-    App.downloadCsv(`apolai-contactos-${kind}-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
+    App.downloadCsv(`elorai-contactos-${kind}-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
     App.toast(`${rows.length} contactos exportados`, 'ok');
   }
 
@@ -124,7 +124,7 @@
     qs('#rep-phone').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') applyFilters(); });
     App.qsa('[data-export]').forEach((b) => b.addEventListener('click', () => exportContacts(b.dataset.export)));
 
-    document.addEventListener('apolai:currency', renderReports);
+    document.addEventListener('elorai:currency', renderReports);
   }
 
   /* ========================================================================
@@ -238,13 +238,13 @@
         a.costPerConvo.toFixed(2), a.costPerSale.toFixed(2), a.roi.toFixed(1),
         a.status === 'active' ? 'Activo' : 'Pausado',
       ]);
-      App.downloadCsv(`apolai-anuncios-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
+      App.downloadCsv(`elorai-anuncios-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
       App.toast('Reporte de anuncios exportado', 'ok');
     });
 
-    document.addEventListener('apolai:currency', renderAds);
+    document.addEventListener('elorai:currency', renderAds);
   }
 
   App.reports = { init() { initReports(); initAds(); } };
 
-})(window.ApolAI);
+})(window.Elorai);

@@ -1,5 +1,5 @@
 /**
- * Configuración de ApolAI.
+ * Configuración de Elorai.
  *
  * Se lee una sola vez al arrancar y se valida de golpe: si falta algo, el
  * proceso muere con un mensaje claro en lugar de fallar a mitad de una petición
@@ -66,10 +66,10 @@ export const config = {
   host: optional('HOST', '127.0.0.1'),
 
   /** URL pública del sitio, sin barra final. Se usa para OAuth y Stripe. */
-  publicUrl: required('PUBLIC_URL', { hint: 'ej. https://apolai.io' }).replace(/\/$/, ''),
+  publicUrl: required('PUBLIC_URL', { hint: 'ej. https://elorai.io' }).replace(/\/$/, ''),
 
   db: {
-    connectionString: required('DATABASE_URL', { hint: 'postgres://usuario:clave@host:5432/apolai' }),
+    connectionString: required('DATABASE_URL', { hint: 'postgres://usuario:clave@host:5432/elorai' }),
     ssl: optional('DATABASE_SSL', 'false') === 'true' ? { rejectUnauthorized: false } : false,
     max: Number(optional('DATABASE_POOL_MAX', '10')),
   },

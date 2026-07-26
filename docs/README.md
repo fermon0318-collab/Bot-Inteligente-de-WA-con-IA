@@ -1,4 +1,4 @@
-# Guía de implementación de ApolAI
+# Guía de implementación de Elorai
 
 Cómo terminar tú misma los bloques que faltan. Cada documento es autocontenido:
 qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
@@ -27,13 +27,13 @@ qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
 
 ```bash
 # 1. PostgreSQL (una vez)
-sudo -u postgres createuser apolai --pwprompt
-sudo -u postgres createdb -O apolai apolai_dev
+sudo -u postgres createuser elorai --pwprompt
+sudo -u postgres createdb -O elorai elorai_dev
 
 # 2. Configuración
 cp .env.example server/.env
 # edita server/.env:
-#   DATABASE_URL=postgres://apolai:TUCLAVE@127.0.0.1:5432/apolai_dev
+#   DATABASE_URL=postgres://elorai:TUCLAVE@127.0.0.1:5432/elorai_dev
 #   PUBLIC_URL=http://localhost:3000
 #   SESSION_SECRET y ENCRYPTION_KEY  →  openssl rand -hex 32
 #   El resto puede quedar con valores falsos mientras no pruebes login o cobros
@@ -145,8 +145,8 @@ import * as ai from './ai.js';         // aiConfig, reply
 ## Si algo falla
 
 ```bash
-journalctl -u apolai -f              # en el servidor
-tail -f /tmp/apolai.log              # en local
+journalctl -u elorai -f              # en el servidor
+tail -f /tmp/elorai.log              # en local
 psql $DATABASE_URL                   # inspeccionar datos
 ```
 

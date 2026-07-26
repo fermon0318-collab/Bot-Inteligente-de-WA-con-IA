@@ -1,6 +1,6 @@
 /* ==========================================================================
-   ApolAI — páginas legales (privacidad, términos)
-   Carga después de apolai.css + landing.css.
+   Elorai — páginas legales (privacidad, términos)
+   Carga después de elorai.css + landing.css.
    ========================================================================== */
 
 .legal-hero {
@@ -106,4 +106,4 @@
   font-size: 0.9rem;
 }
 
-/* El marcador .ph vive en apolai.css: también lo usa el FAQ del panel. */
+/* El marcador .ph vive en elorai.css: también lo usa el FAQ del panel. */

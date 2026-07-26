@@ -11,7 +11,7 @@ import { one, query } from '../db/pool.js';
 
 const client = new Stripe(config.stripe.secretKey, {
   apiVersion: '2024-12-18.acacia',
-  appInfo: { name: 'ApolAI', version: '1.0.0' },
+  appInfo: { name: 'Elorai', version: '1.0.0' },
   maxNetworkRetries: 2,
 });
 

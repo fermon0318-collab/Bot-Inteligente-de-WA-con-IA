@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — arranque de la aplicación
+   Elorai — arranque de la aplicación
    ========================================================================== */
 
 (function (App) {
@@ -11,7 +11,7 @@
   // ejemplo abriendo el HTML en local), el panel sigue siendo explorable.
   const SESSION = {
     name: 'Administrador',
-    email: 'admin@apolai.io',
+    email: 'admin@elorai.io',
     plan: 'Pro',
     expiry: '—',
   };
@@ -115,4 +115,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-})(window.ApolAI);
+})(window.Elorai);

@@ -1,5 +1,5 @@
 /**
- * ApolAI — arranque del servidor.
+ * Elorai — arranque del servidor.
  *
  * Escucha solo en 127.0.0.1: quien expone el servicio a internet es nginx, que
  * además termina TLS y sirve los archivos estáticos.
@@ -65,7 +65,7 @@ app.get('/internal/auth', requireAuth, async (req, res, next) => {
   try {
     const { allowed } = await subscriptionAccess(req.user);
     if (!allowed) return res.status(403).end();
-    res.setHeader('X-Apolai-User', req.user.email);
+    res.setHeader('X-Elorai-User', req.user.email);
     res.status(200).end();
   } catch (err) {
     next(err);
@@ -95,7 +95,7 @@ app.use((err, req, res, _next) => {
 
 /* --- Ciclo de vida -------------------------------------------------------- */
 const server = app.listen(config.port, config.host, () => {
-  console.log(`ApolAI escuchando en http://${config.host}:${config.port} · entorno ${config.env}`);
+  console.log(`Elorai escuchando en http://${config.host}:${config.port} · entorno ${config.env}`);
   console.log(`URL pública: ${config.publicUrl}`);
 });
 

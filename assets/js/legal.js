@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — páginas legales: navbar, índice activo y scroll suave
+   Elorai — páginas legales: navbar, índice activo y scroll suave
    ========================================================================== */
 
 (function () {

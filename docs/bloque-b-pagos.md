@@ -5,7 +5,7 @@ pueden entregar los archivos del producto.
 
 ## Qué vas a construir
 
-El cliente final manda una foto del comprobante. ApolAI la lee, comprueba que
+El cliente final manda una foto del comprobante. Elorai la lee, comprueba que
 el monto coincide con una de tus reglas, entrega el producto y marca la venta.
 Todo sin que nadie mire el chat.
 

@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — Cloud API y Bloqueo por País
+   Elorai — Cloud API y Bloqueo por País
    ========================================================================== */
 
 (function (App) {
@@ -23,7 +23,7 @@
 
   function seedLog() {
     [
-      ['Servicio ApolAI iniciado · v1.0.0', 'ok'],
+      ['Servicio Elorai iniciado · v1.0.0', 'ok'],
       ['Webhook verificado por Meta (hub.challenge OK)', 'ok'],
       ['Suscripción a campos: messages, message_status', 'info'],
       ['Mensaje entrante de +52 55 4821 9930', 'info'],
@@ -59,7 +59,7 @@
         const phone = qs('#auto-phone').value.trim();
         qs('#meta-waba').textContent = '209' + Math.floor(1e11 + Math.random() * 8e11);
         qs('#meta-phone-id').textContent = '109' + Math.floor(1e11 + Math.random() * 8e11);
-        qs('#meta-verified-name').textContent = 'ApolAI Store';
+        qs('#meta-verified-name').textContent = 'Elorai Store';
         qs('#meta-display-phone').textContent = phone;
         qs('#meta-result').classList.remove('hidden');
         log('Datos de Meta recuperados correctamente', 'ok');
@@ -129,7 +129,7 @@
     qs('#stop-bot-btn').addEventListener('click', async () => {
       const ok = await App.confirmModal(
         'Detener el bot',
-        'Mientras esté detenido, ApolAI dejará de responder mensajes. Los mensajes entrantes quedarán en cola en Meta hasta 72 horas.',
+        'Mientras esté detenido, Elorai dejará de responder mensajes. Los mensajes entrantes quedarán en cola en Meta hasta 72 horas.',
         { confirmText: 'Detener bot', danger: true, icon: 'fa-stop' }
       );
       if (!ok) return;
@@ -215,4 +215,4 @@
 
   App.connect = { init() { initCloudApi(); initCountries(); }, log };
 
-})(window.ApolAI);
+})(window.Elorai);

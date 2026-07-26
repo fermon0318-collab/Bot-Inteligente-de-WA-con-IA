@@ -1,5 +1,5 @@
 -- ============================================================================
--- ApolAI · motor del bot
+-- Elorai · motor del bot
 --
 -- Tres piezas nuevas:
 --   · outbox     cola de envíos con reintentos — nada se envía en caliente

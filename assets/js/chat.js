@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — Chat en Vivo e Histórico de Chats
+   Elorai — Chat en Vivo e Histórico de Chats
    Ambas secciones comparten motor; se diferencian por opciones (IA / paginación).
    ========================================================================== */
 
@@ -296,4 +296,4 @@
 
   App.chat = { init };
 
-})(window.ApolAI);
+})(window.Elorai);

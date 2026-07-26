@@ -1,5 +1,5 @@
 -- ============================================================================
--- ApolAI · esquema inicial
+-- Elorai · esquema inicial
 --
 -- Cada cliente es una "cuenta" (account). Un usuario pertenece a una cuenta.
 -- Todo lo que genera el bot cuelga de account_id, para que añadir equipos más

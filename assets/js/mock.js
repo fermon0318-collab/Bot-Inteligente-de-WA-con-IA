@@ -1,10 +1,10 @@
 /* ============================================================================
-   ApolAI — datos de ejemplo (mock)
+   Elorai — datos de ejemplo (mock)
    Todo lo que aquí se genera está pensado para sustituirse por respuestas del
    backend. Cada colección expone la misma forma que consumirá la API real.
    ========================================================================== */
 
-window.ApolAI = window.ApolAI || {};
+window.Elorai = window.Elorai || {};
 
 (function (App) {
   'use strict';
@@ -144,7 +144,7 @@ window.ApolAI = window.ApolAI || {};
   function buildMessages(kind) {
     const base = [
       { from: 'in', text: 'Hola, vi el anuncio y quiero información 👋' },
-      { from: 'bot', text: '¡Hola! Soy el asistente de ApolAI 🤖 Con gusto te explico. ¿Buscas el plan mensual o el acceso completo?' },
+      { from: 'bot', text: '¡Hola! Soy el asistente de Elorai 🤖 Con gusto te explico. ¿Buscas el plan mensual o el acceso completo?' },
       { from: 'in', text: 'El acceso completo, ¿cuánto cuesta?' },
       { from: 'bot', text: 'El acceso completo cuesta $89 USD por única vez e incluye todas las actualizaciones. ¿Te comparto los medios de pago?' },
       { from: 'in', text: 'Sí, por favor' },
@@ -210,7 +210,7 @@ window.ApolAI = window.ApolAI || {};
     {
       id: 'sf_bienvenida', name: 'Bienvenida',
       steps: [
-        { type: 'text', value: '¡Hola! 👋 Soy el asistente de ApolAI. ¿En qué puedo ayudarte hoy?' },
+        { type: 'text', value: '¡Hola! 👋 Soy el asistente de Elorai. ¿En qué puedo ayudarte hoy?' },
         { type: 'delay', value: '3' },
         { type: 'text', value: 'Puedo contarte sobre precios, formas de pago o resolver dudas del producto.' },
       ],
@@ -228,7 +228,7 @@ window.ApolAI = window.ApolAI || {};
       id: 'sf_pago', name: 'Datos de pago',
       steps: [
         { type: 'text', value: 'Puedes pagar por transferencia o tarjeta. Te comparto los datos:' },
-        { type: 'text', value: 'Banco: BBVA\nCLABE: 012 180 0123 4567 8901\nTitular: ApolAI SA de CV' },
+        { type: 'text', value: 'Banco: BBVA\nCLABE: 012 180 0123 4567 8901\nTitular: Elorai SA de CV' },
       ],
     },
   ];
@@ -321,8 +321,8 @@ window.ApolAI = window.ApolAI || {};
   ];
 
   App.PAY_QUICK = [
-    { id: 'pq_1', keyword: 'transferencia', reply: 'Banco: BBVA\nCLABE: 012 180 0123 4567 8901\nTitular: ApolAI SA de CV\n\nEnvíame el comprobante cuando termines 🙌' },
-    { id: 'pq_2', keyword: 'tarjeta', reply: 'Puedes pagar con tarjeta aquí: https://pago.apolai.io/checkout\nAcepta débito, crédito y hasta 3 MSI.' },
+    { id: 'pq_1', keyword: 'transferencia', reply: 'Banco: BBVA\nCLABE: 012 180 0123 4567 8901\nTitular: Elorai SA de CV\n\nEnvíame el comprobante cuando termines 🙌' },
+    { id: 'pq_2', keyword: 'tarjeta', reply: 'Puedes pagar con tarjeta aquí: https://pago.elorai.io/checkout\nAcepta débito, crédito y hasta 3 MSI.' },
   ];
 
   /* --- Tutoriales --------------------------------------------------------- */
@@ -331,7 +331,7 @@ window.ApolAI = window.ApolAI || {};
       group: 'Guías generales',
       icon: 'fa-compass',
       videos: [
-        { id: 'aqz-KE-bpKQ', title: 'Tour completo por ApolAI', desc: 'Recorrido por cada sección del panel en 12 minutos.' },
+        { id: 'aqz-KE-bpKQ', title: 'Tour completo por Elorai', desc: 'Recorrido por cada sección del panel en 12 minutos.' },
         { id: 'ScMzIvxBSi4', title: 'Tu primer bot en 10 minutos', desc: 'Del número vacío a un bot respondiendo de verdad.' },
         { id: '0Gu-2QQOZcE', title: 'Estrategia de embudo en WhatsApp', desc: 'Cómo estructurar la conversación para vender más.' },
       ],
@@ -349,10 +349,10 @@ window.ApolAI = window.ApolAI || {};
 
   /* --- FAQ ---------------------------------------------------------------- */
   App.FAQ = [
-    { q: '¿Qué necesito para poner en marcha ApolAI?', a: 'Un número de WhatsApp Business conectado a Cloud API (no puede estar activo en la app normal), una cuenta de Meta for Developers con Access Token permanente, y una API Key del proveedor de IA que elijas. Con esos tres datos, la sección Cloud API te deja el bot activo en minutos.' },
+    { q: '¿Qué necesito para poner en marcha Elorai?', a: 'Un número de WhatsApp Business conectado a Cloud API (no puede estar activo en la app normal), una cuenta de Meta for Developers con Access Token permanente, y una API Key del proveedor de IA que elijas. Con esos tres datos, la sección Cloud API te deja el bot activo en minutos.' },
     { q: '¿Puedo usar mi número personal de WhatsApp?', a: 'No. Meta exige que el número esté dado de alta en Cloud API y desvinculado de la app de WhatsApp o WhatsApp Business. Si lo migras, perderás el historial local de ese teléfono, así que lo recomendable es usar un número dedicado al negocio.' },
-    { q: '¿Cómo decide ApolAI qué flujo lanzar?', a: 'Al llegar un mensaje se buscan coincidencias con tus disparadores, de la frase más específica a la más general. Si ninguno coincide, se ejecuta el disparador marcado como predeterminado. Si tampoco hay predeterminado y la IA está activada, responde la IA con tu prompt base.' },
-    { q: '¿Cómo verifica los pagos si el comprobante es una imagen?', a: 'ApolAI lee el comprobante y extrae monto, fecha y referencia. Luego los compara con tus reglas de acceso (monto + contexto). Si coinciden, envía el mensaje y los archivos de esa regla; si no, responde con tu mensaje de "comprobante no válido" y deja el contacto en estado pendiente para que lo revises manualmente.' },
+    { q: '¿Cómo decide Elorai qué flujo lanzar?', a: 'Al llegar un mensaje se buscan coincidencias con tus disparadores, de la frase más específica a la más general. Si ninguno coincide, se ejecuta el disparador marcado como predeterminado. Si tampoco hay predeterminado y la IA está activada, responde la IA con tu prompt base.' },
+    { q: '¿Cómo verifica los pagos si el comprobante es una imagen?', a: 'Elorai lee el comprobante y extrae monto, fecha y referencia. Luego los compara con tus reglas de acceso (monto + contexto). Si coinciden, envía el mensaje y los archivos de esa regla; si no, responde con tu mensaje de "comprobante no válido" y deja el contacto en estado pendiente para que lo revises manualmente.' },
     { q: '¿Puedo intervenir una conversación que está llevando la IA?', a: 'Sí. En Chat en Vivo cada conversación tiene un switch de IA. Al apagarlo, el bot deja de responder a ese contacto y tú escribes directamente. El botón "Detener automatización" además cancela los flujos y el remarketing que estuvieran programados para esa persona.' },
     { q: '¿Cuándo se envía el remarketing?', a: 'Cuando pasa el tiempo que configuraste desde el primer contacto sin que haya conversión. Si ese momento cae fuera de tu franja horaria permitida, el mensaje se encola y sale al abrir la siguiente ventana, para no escribirle a nadie de madrugada.' },
     { q: '¿Qué hace exactamente la Conversions API?', a: 'Devuelve a Meta cada venta confirmada dentro de WhatsApp, algo que el píxel por sí solo no puede ver. Con esa señal el algoritmo aprende qué perfil compra de verdad y deja de optimizar hacia gente que solo abre conversación. Suele notarse en el costo por venta a partir de la segunda semana.' },
@@ -365,12 +365,12 @@ window.ApolAI = window.ApolAI || {};
     },
     {
       q: '¿Quién es el responsable de los datos de mis contactos?',
-      a: 'Tú. Sobre los datos de tu cuenta ApolAI actúa como responsable, pero sobre las conversaciones de las personas que te escriben actúa como encargado del tratamiento: las procesa por cuenta tuya y siguiendo tus instrucciones. Eso significa que a ti te toca informar a tus contactos de que conversan con un sistema automatizado y atender las solicitudes de acceso o borrado que te dirijan. Desde Reportes puedes exportar o eliminar lo que necesites para responderlas.',
+      a: 'Tú. Sobre los datos de tu cuenta Elorai actúa como responsable, pero sobre las conversaciones de las personas que te escriben actúa como encargado del tratamiento: las procesa por cuenta tuya y siguiendo tus instrucciones. Eso significa que a ti te toca informar a tus contactos de que conversan con un sistema automatizado y atender las solicitudes de acceso o borrado que te dirijan. Desde Reportes puedes exportar o eliminar lo que necesites para responderlas.',
       link: { href: 'privacidad.html#roles', label: 'Ver el detalle de los roles' },
     },
     {
       q: '¿El precio incluye lo que cobran Meta y la IA?',
-      a: 'No. Tu plan de ApolAI cubre la plataforma. Aparte quedan lo que Meta te facture por las conversaciones de WhatsApp Cloud API y el consumo del proveedor de inteligencia artificial cuya API Key configures. Ambos te los cobran ellos directamente, con sus propias tarifas.',
+      a: 'No. Tu plan de Elorai cubre la plataforma. Aparte quedan lo que Meta te facture por las conversaciones de WhatsApp Cloud API y el consumo del proveedor de inteligencia artificial cuya API Key configures. Ambos te los cobran ellos directamente, con sus propias tarifas.',
       link: { href: 'terminos.html#planes', label: 'Ver planes y facturación' },
     },
     {
@@ -378,7 +378,7 @@ window.ApolAI = window.ApolAI || {};
       a: 'Sí: [PLAZO_REEMBOLSO] días desde la contratación inicial, siempre que no hayas superado [LIMITE_CONVERSACIONES_REEMBOLSO] conversaciones procesadas. Se solicita escribiendo a soporte y se devuelve por el mismo medio de pago. Pasado ese plazo las cuotas ya abonadas no son reembolsables, sin perjuicio de los derechos que te reconozca la normativa de consumo de tu país.',
       link: { href: 'terminos.html#reembolsos', label: 'Ver la cláusula completa' },
     },
-    { q: '¿Qué pasa si se cae mi servidor o Meta tiene una incidencia?', a: 'Los mensajes entrantes quedan en cola en Meta hasta 72 horas y ApolAI los procesa al reconectar. En la terminal de Cloud API verás el detalle de la reconexión y cuántos mensajes se recuperaron.' },
+    { q: '¿Qué pasa si se cae mi servidor o Meta tiene una incidencia?', a: 'Los mensajes entrantes quedan en cola en Meta hasta 72 horas y Elorai los procesa al reconectar. En la terminal de Cloud API verás el detalle de la reconexión y cuántos mensajes se recuperaron.' },
   ];
 
   /* --- Prompt de referencia ---------------------------------------------- */
@@ -428,4 +428,4 @@ principal en una línea y pregunta cómo prefiere pagar.`;
     { id: 'md_6', name: 'bienvenida.mp3', type: 'audio', size: 226000, at: '2026-06-22' },
   ];
 
-})(window.ApolAI);
+})(window.Elorai);

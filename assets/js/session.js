@@ -1,9 +1,9 @@
 /* ============================================================================
-   ApolAI — sesión y cobros en el navegador
+   Elorai — sesión y cobros en el navegador
    Compartido por la landing y el panel: una sola forma de hablar con la API.
    ========================================================================== */
 
-window.ApolAI = window.ApolAI || {};
+window.Elorai = window.Elorai || {};
 
 (function (App) {
   'use strict';
@@ -100,4 +100,4 @@ window.ApolAI = window.ApolAI || {};
     startCheckout, openBillingPortal, SUBSCRIPTION_LABEL,
   };
 
-})(window.ApolAI);
+})(window.Elorai);

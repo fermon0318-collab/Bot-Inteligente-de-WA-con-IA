@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — Pagos y Acceso, Configurar IA, Tutoriales y FAQ
+   Elorai — Pagos y Acceso, Configurar IA, Tutoriales y FAQ
    ========================================================================== */
 
 (function (App) {
@@ -302,4 +302,4 @@
     },
   };
 
-})(window.ApolAI);
+})(window.Elorai);

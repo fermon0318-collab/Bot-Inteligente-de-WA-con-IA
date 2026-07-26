@@ -1,6 +1,6 @@
-# ApolAI
+# Elorai
 
-Producto completo de ApolAI: landing pública, panel de administración, backend con
+Producto completo de Elorai: landing pública, panel de administración, backend con
 autenticación de Google y suscripciones de Stripe, y despliegue con nginx.
 
 | Página | Archivo | Qué es |
@@ -12,10 +12,10 @@ autenticación de Google y suscripciones de Stripe, y despliegue con nginx.
 | Backend | `server/` | Node + PostgreSQL: login con Google, cobros con Stripe y API del panel |
 | Despliegue | `deploy/` | nginx, systemd y script de instalación — ver [deploy/README.md](deploy/README.md) |
 
-Todas comparten `assets/css/apolai.css`, el logo y la tipografía: son literalmente
+Todas comparten `assets/css/elorai.css`, el logo y la tipografía: son literalmente
 los mismos componentes, no dos interpretaciones de la misma marca.
 
-![ApolAI](assets/img/apolai-logo.svg)
+![Elorai](assets/img/elorai-logo.svg)
 
 **Estado del proyecto: [ROADMAP.md](ROADMAP.md)** · **Guías de implementación: [docs/](docs/README.md)**
 
@@ -25,7 +25,7 @@ La guía completa —dominio, VPS, DNS, credenciales de Google y Stripe, TLS— 
 en **[deploy/README.md](deploy/README.md)**. Resumen:
 
 ```bash
-git clone <repo> /var/www/apolai && cd /var/www/apolai
+git clone <repo> /var/www/elorai && cd /var/www/elorai
 sudo bash deploy/deploy.sh tu-dominio.com
 ```
 
@@ -95,7 +95,7 @@ tinta `#1E1B4B`.
 trazado original. Contorno `#6D28D9`, panel facial `#8B5CF6`, sombreado `#DDD6FE`,
 relleno claro `#EEF2FF`.
 
-`assets/img/apolai-logo.svg` es la fuente de verdad. Si cambia la paleta, se edita
+`assets/img/elorai-logo.svg` es la fuente de verdad. Si cambia la paleta, se edita
 ese archivo y se regeneran los PNG (favicons y apple-touch-icon):
 
 ```bash
@@ -110,7 +110,7 @@ dashboard.html          Panel de administración (16 secciones)
 privacidad.html         Política de privacidad
 terminos.html           Términos y condiciones
 assets/css/
-  apolai.css            Sistema de diseño compartido por todas las páginas
+  elorai.css            Sistema de diseño compartido por todas las páginas
   landing.css           Solo landing: blobs, timeline, precios, reveal
   legal.css             Solo legales: índice lateral, prosa, marcadores
 assets/js/
@@ -135,9 +135,9 @@ server/
   src/billing/          Adaptador de la pasarela (hoy Stripe)
 deploy/
   nginx.conf            Sitio: TLS, CSP, auth_request, caché y proxy
-  apolai-headers.conf   Cabeceras de seguridad compartidas
-  apolai-proxy.conf     Cabeceras de proxy hacia Node
-  apolai.service        Unidad de systemd endurecida
+  elorai-headers.conf   Cabeceras de seguridad compartidas
+  elorai-proxy.conf     Cabeceras de proxy hacia Node
+  elorai.service        Unidad de systemd endurecida
   deploy.sh             Instalación y despliegue idempotentes
   README.md             Guía de publicación paso a paso
 tools/render_logo.mjs   Rasterizador del logo a PNG
@@ -162,13 +162,13 @@ grep -n "\[[A-Z_]\+\]" index.html
 | `[MEJORA_1..3]` | Métricas de resultados |
 
 Las tres métricas del bloque "Resultados esperables" son marcadores a propósito:
-publicar cifras inventadas como si fueran datos medidos de ApolAI sería publicidad
+publicar cifras inventadas como si fueran datos medidos de Elorai sería publicidad
 engañosa. Sustitúyelas por resultados propios indicando periodo y muestra, o borra
 el bloque.
 
 ## Páginas legales
 
-`privacidad.html` y `terminos.html` están redactadas a partir de cómo funciona ApolAI
+`privacidad.html` y `terminos.html` están redactadas a partir de cómo funciona Elorai
 de verdad: qué datos toca el bot, qué se envía a Meta y al proveedor de IA, qué pasa
 con los comprobantes de pago, y quién responde de qué frente a los contactos finales.
 
@@ -230,6 +230,6 @@ Para conectar la API real:
 3. Los inputs y botones tienen IDs estables y descriptivos (`#api-token`,
    `#capi-pixel`, `#rep-tbody`, `#trig-form`…) para engancharlos sin tocar el markup.
 
-Utilidades disponibles en `window.ApolAI`: `toast`, `modal`, `confirmModal`,
+Utilidades disponibles en `window.Elorai`: `toast`, `modal`, `confirmModal`,
 `promptModal`, `validate`, `downloadCsv`, `renderPager`, `money`, `navigate`,
 `setConnection`, `setBotState`, `onView`.

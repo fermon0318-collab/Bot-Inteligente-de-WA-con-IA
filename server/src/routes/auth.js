@@ -171,7 +171,7 @@ async function upsertUser({ googleSub, email, name, avatarUrl }) {
        VALUES ($1, $2, $3, $4)`,
       [
         accountId,
-        `apolai_vf_${randomBytes(8).toString('hex')}`,
+        `elorai_vf_${randomBytes(8).toString('hex')}`,
         '¡Pago confirmado! 🎉 En un momento recibes tus accesos.',
         'No pudimos validar el comprobante. Revisa que se vea el monto, la fecha y la referencia completa, y vuelve a enviarlo.',
       ]

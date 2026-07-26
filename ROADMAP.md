@@ -1,4 +1,4 @@
-# ApolAI · qué está hecho y qué falta
+# Elorai · qué está hecho y qué falta
 
 Estado a fecha del último commit. Dos partes: **conectar** (credenciales y
 servicios externos, no requiere código) y **construir** (lo que falta por
@@ -31,7 +31,7 @@ VPS con **Ubuntu 24.04**. Recomendado: Hetzner CX22 (~4 €/mes) o DigitalOcean 
 
 ```bash
 ssh root@IP
-git clone <repo> /var/www/apolai && cd /var/www/apolai
+git clone <repo> /var/www/elorai && cd /var/www/elorai
 sudo bash deploy/deploy.sh tudominio.com
 ```
 
@@ -54,7 +54,7 @@ Instala nginx, PostgreSQL, Node y certbot; genera `SESSION_SECRET` y
 | Origen autorizado | `https://tudominio.com` |
 | URI de redirección | `https://tudominio.com/auth/google/callback` |
 
-Copia **Client ID** y **Client Secret** → `/etc/apolai/apolai.env`:
+Copia **Client ID** y **Client Secret** → `/etc/elorai/elorai.env`:
 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
 > La URI de redirección debe coincidir carácter por carácter, sin barra final.
@@ -92,7 +92,7 @@ Añade tu correo en `BILLING_BYPASS_EMAILS` para entrar sin pagarte a ti mismo.
 | Configurar webhook | URL `https://tudominio.com/webhook/whatsapp` + token de verificación |
 | Suscribir campos | `messages`, `message_status` |
 
-El **token de verificación** lo genera ApolAI al crear cada cuenta y aparece en
+El **token de verificación** lo genera Elorai al crear cada cuenta y aparece en
 la sección Cloud API del panel: hay que copiarlo tal cual en Meta. El endpoint
 responde al `hub.challenge` y lo valida contra la cuenta correspondiente.
 

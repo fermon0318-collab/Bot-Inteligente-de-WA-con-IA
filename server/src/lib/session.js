@@ -12,7 +12,7 @@ import { randomId, sign, unsign } from './crypto.js';
 // El prefijo __Host- ata la cookie al dominio exacto y exige Secure + Path=/.
 // En desarrollo (http://localhost) el navegador lo rechazaría, así que se cae
 // a un nombre normal.
-export const COOKIE = config.isProd ? '__Host-apolai_session' : 'apolai_session';
+export const COOKIE = config.isProd ? '__Host-elorai_session' : 'elorai_session';
 
 const MAX_AGE = config.sessionDays * 24 * 60 * 60;
 

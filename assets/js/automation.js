@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — Archivos, Flujos (simples y avanzados), Remarketing y Disparadores
+   Elorai — Archivos, Flujos (simples y avanzados), Remarketing y Disparadores
    ========================================================================== */
 
 (function (App) {
@@ -568,4 +568,4 @@
     refreshFlowSelects,
   };
 
-})(window.ApolAI);
+})(window.Elorai);

@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — núcleo: helpers, navegación, modales, toasts, loader
+   Elorai — núcleo: helpers, navegación, modales, toasts, loader
    ========================================================================== */
 
 (function (App) {
@@ -251,7 +251,7 @@
     'triggers': ['Disparadores', 'Palabras clave que activan flujos'],
     'payments': ['Pagos y Acceso', 'Verificación y entrega automática'],
     'ai-config': ['Configurar IA', 'Modelo, prompt y comportamiento'],
-    'tutorials': ['Tutoriales', 'Videos guía de ApolAI'],
+    'tutorials': ['Tutoriales', 'Videos guía de Elorai'],
     'faq': ['Preguntas Frecuentes', 'Dudas resueltas'],
   };
 
@@ -272,7 +272,7 @@
     const [title, subtitle] = VIEWS[view];
     qs('#view-title').textContent = title;
     qs('#view-subtitle').textContent = subtitle;
-    document.title = `ApolAI · ${title}`;
+    document.title = `Elorai · ${title}`;
 
     if (location.hash.slice(1) !== view) history.replaceState(null, '', `#${view}`);
     closeSidebar();
@@ -320,7 +320,7 @@
 
     qs('#logout-btn').addEventListener('click', async () => {
       menu.classList.add('hidden');
-      const ok = await confirmModal('Cerrar sesión', '¿Seguro que quieres salir de tu panel de ApolAI?', {
+      const ok = await confirmModal('Cerrar sesión', '¿Seguro que quieres salir de tu panel de Elorai?', {
         confirmText: 'Cerrar sesión', danger: true, icon: 'fa-right-from-bracket',
       });
       if (ok) {
@@ -458,4 +458,4 @@
     downloadCsv, renderPager, fakeRequest, withBusy,
   });
 
-})(window.ApolAI);
+})(window.Elorai);

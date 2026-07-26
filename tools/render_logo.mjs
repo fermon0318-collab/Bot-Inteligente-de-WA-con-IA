@@ -1,5 +1,5 @@
 /**
- * Rasteriza assets/img/apolai-logo.svg a los PNG que usa el sitio
+ * Rasteriza assets/img/elorai-logo.svg a los PNG que usa el sitio
  * (favicons y apple-touch-icon).
  *
  *   npm i -D playwright && node tools/render_logo.mjs
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const svg = readFileSync(join(root, 'assets/img/apolai-logo.svg'), 'utf8');
+const svg = readFileSync(join(root, 'assets/img/elorai-logo.svg'), 'utf8');
 
 const targets = [
   { file: 'favicon-32.png', size: 32, bg: null },

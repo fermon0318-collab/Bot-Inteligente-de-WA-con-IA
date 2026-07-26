@@ -1,9 +1,9 @@
 {
-  "name": "apolai-server",
+  "name": "elorai-server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Backend de ApolAI: autenticación con Google, suscripciones y API del panel",
+  "description": "Backend de Elorai: autenticación con Google, suscripciones y API del panel",
   "engines": { "node": ">=20" },
   "scripts": {
     "start": "node src/index.js",

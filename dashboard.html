@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="description" content="ApolAI — panel de administración para tu bot de WhatsApp con inteligencia artificial." />
+<meta name="description" content="Elorai — panel de administración para tu bot de WhatsApp con inteligencia artificial." />
 <meta name="theme-color" content="#4F46E5" />
-<title>ApolAI · Panel de Control</title>
+<title>Elorai · Panel de Control</title>
 
-<meta name="apple-mobile-web-app-title" content="ApolAI" />
+<meta name="apple-mobile-web-app-title" content="Elorai" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-<link rel="icon" type="image/svg+xml" href="assets/img/apolai-logo.svg" />
+<link rel="icon" type="image/svg+xml" href="assets/img/elorai-logo.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
@@ -51,16 +51,16 @@
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/css/apolai.css" />
+<link rel="stylesheet" href="assets/css/elorai.css" />
 </head>
 
 <body class="antialiased">
 
 <!-- ══════════════════════════ Loader global ══════════════════════════ -->
 <div id="global-loader" role="status" aria-live="polite">
-  <img src="assets/img/apolai-logo.svg" alt="" class="w-16 h-16 animate-pulse" />
+  <img src="assets/img/elorai-logo.svg" alt="" class="w-16 h-16 animate-pulse" />
   <div class="spinner" aria-hidden="true"></div>
-  <p id="loader-text" class="text-sm font-semibold text-ink/70">Iniciando ApolAI…</p>
+  <p id="loader-text" class="text-sm font-semibold text-ink/70">Iniciando Elorai…</p>
 </div>
 
 <!-- ══════════════════════════ Toasts ══════════════════════════ -->
@@ -79,10 +79,10 @@
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex flex-col glass border-r shadow-2xl">
   <!-- Marca -->
   <div class="flex items-center gap-3 px-5 py-5 border-b border-accent-200/60">
-    <a href="index.html" class="flex items-center gap-3 min-w-0" title="Ir al sitio de ApolAI">
-      <img src="assets/img/apolai-logo.svg" alt="Logo ApolAI" class="w-11 h-11 drop-shadow" />
+    <a href="index.html" class="flex items-center gap-3 min-w-0" title="Ir al sitio de Elorai">
+      <img src="assets/img/elorai-logo.svg" alt="Logo Elorai" class="w-11 h-11 drop-shadow" />
       <span class="leading-tight block">
-        <span class="block text-xl font-extrabold brand-text tracking-tight">ApolAI</span>
+        <span class="block text-xl font-extrabold brand-text tracking-tight">Elorai</span>
         <span class="block text-[0.68rem] font-semibold text-ink/50 uppercase tracking-widest">Bot IA · WhatsApp</span>
       </span>
     </a>
@@ -164,7 +164,7 @@
             <span class="avatar !w-8 !h-8 !text-xs" id="user-avatar">AP</span>
             <span class="hidden md:block text-left leading-tight max-w-[10rem]">
               <span class="block text-xs font-bold text-ink truncate" id="user-name">Administrador</span>
-              <span class="block text-[0.68rem] text-ink/50 truncate" id="user-email-short">admin@apolai.io</span>
+              <span class="block text-[0.68rem] text-ink/50 truncate" id="user-email-short">admin@elorai.io</span>
             </span>
             <i class="fa-solid fa-chevron-down text-xs text-ink/40"></i>
           </button>
@@ -172,7 +172,7 @@
           <div id="user-menu" class="hidden absolute right-0 mt-2 w-64 rounded-xl bg-white border border-accent-200 shadow-2xl overflow-hidden z-40">
             <div class="brand-gradient px-4 py-3 text-white">
               <p class="text-sm font-bold" id="user-menu-name">Administrador</p>
-              <p class="text-xs opacity-90 break-all" id="user-menu-email">admin@apolai.io</p>
+              <p class="text-xs opacity-90 break-all" id="user-menu-email">admin@elorai.io</p>
             </div>
             <div class="px-4 py-3 space-y-2 text-sm">
               <div class="flex items-center justify-between">
@@ -307,7 +307,7 @@
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-cloud"></i></span>
         <div class="mr-auto">
           <h2 class="text-lg font-extrabold">WhatsApp Cloud API</h2>
-          <p class="text-sm opacity-90">Conecta tu número de WhatsApp Business con ApolAI</p>
+          <p class="text-sm opacity-90">Conecta tu número de WhatsApp Business con Elorai</p>
         </div>
         <div class="flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1.5">
           <span class="dot dot-ok" id="api-status-dot"></span>
@@ -323,14 +323,14 @@
           <div>
             <label class="label" for="webhook-url">URL de callback</label>
             <div class="copyable">
-              <input id="webhook-url" class="input font-mono !text-xs" readonly value="https://api.apolai.io/webhook/wa/8f2c-4a71-b930" />
+              <input id="webhook-url" class="input font-mono !text-xs" readonly value="https://api.elorai.io/webhook/wa/8f2c-4a71-b930" />
               <button type="button" class="btn btn-soft !rounded-l-none" data-copy="#webhook-url" aria-label="Copiar URL"><i class="fa-regular fa-copy"></i></button>
             </div>
           </div>
           <div>
             <label class="label" for="webhook-token">Token de verificación</label>
             <div class="copyable">
-              <input id="webhook-token" class="input font-mono !text-xs" readonly value="apolai_vf_9d31c6ba7e05" />
+              <input id="webhook-token" class="input font-mono !text-xs" readonly value="elorai_vf_9d31c6ba7e05" />
               <button type="button" class="btn btn-soft !rounded-l-none" data-copy="#webhook-token" aria-label="Copiar token"><i class="fa-regular fa-copy"></i></button>
             </div>
           </div>
@@ -340,7 +340,7 @@
       <!-- Flujo semi-automático -->
       <div class="card p-4 lg:p-5 mt-4">
         <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-wand-magic-sparkles text-accent-600 mr-1.5"></i>Configuración semi-automática</h3>
-        <p class="hint !mt-0 mb-4">Ingresa tu Access Token y el teléfono; ApolAI consulta Meta y completa el resto por ti.</p>
+        <p class="hint !mt-0 mb-4">Ingresa tu Access Token y el teléfono; Elorai consulta Meta y completa el resto por ti.</p>
         <div class="grid lg:grid-cols-2 gap-4">
           <div>
             <label class="label" for="auto-token">Access Token</label>
@@ -466,7 +466,7 @@
           <div id="live-chat-pane" class="flex flex-col min-h-0 max-lg:hidden">
             <!-- Bienvenida -->
             <div id="live-welcome" class="flex-1 flex flex-col items-center justify-center text-center px-6">
-              <img src="assets/img/apolai-logo.svg" alt="" class="w-20 h-20 mb-4 opacity-90" />
+              <img src="assets/img/elorai-logo.svg" alt="" class="w-20 h-20 mb-4 opacity-90" />
               <p class="text-lg font-extrabold text-ink">Selecciona una conversación</p>
               <p class="text-sm text-ink/50 max-w-sm mt-1">Aquí verás los mensajes en tiempo real. Puedes intervenir manualmente y desactivar la IA cuando lo necesites.</p>
             </div>
@@ -645,7 +645,7 @@
 
         <div class="card p-4 lg:p-5">
           <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-arrows-rotate text-accent-600 mr-1.5"></i>Conversions API</h3>
-          <p class="hint !mt-0 mb-3">Al activarla, ApolAI devuelve a Meta cada venta confirmada en WhatsApp. El algoritmo aprende quién compra de verdad y optimiza tus campañas hacia ese público.</p>
+          <p class="hint !mt-0 mb-3">Al activarla, Elorai devuelve a Meta cada venta confirmada en WhatsApp. El algoritmo aprende quién compra de verdad y optimiza tus campañas hacia ese público.</p>
           <div class="space-y-3">
             <div><label class="label" for="capi-pixel">Pixel ID</label><input id="capi-pixel" class="input font-mono !text-xs" placeholder="1234567890123456" /></div>
             <div><label class="label" for="capi-currency">Moneda de reporte</label><select id="capi-currency" class="select"></select></div>
@@ -908,7 +908,7 @@
           <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-key text-accent-600 mr-1.5"></i>Reglas de acceso</h3>
           <button id="pay-rule-add" type="button" class="btn btn-soft btn-sm"><i class="fa-solid fa-plus"></i> Nueva regla</button>
         </div>
-        <p class="hint !mt-0 mb-3">Cuando el comprobante coincida con el <strong>monto</strong> y el <strong>contexto</strong>, ApolAI entrega el mensaje y los archivos del producto correspondiente.</p>
+        <p class="hint !mt-0 mb-3">Cuando el comprobante coincida con el <strong>monto</strong> y el <strong>contexto</strong>, Elorai entrega el mensaje y los archivos del producto correspondiente.</p>
         <div id="pay-rules" class="space-y-3"></div>
         <div id="pay-rules-empty" class="empty-state hidden"><i class="fa-solid fa-key"></i>Aún no hay reglas de acceso.</div>
       </div>
@@ -937,7 +937,7 @@
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-brain"></i></span>
         <div class="mr-auto">
           <h2 class="text-lg font-extrabold">Configurar IA</h2>
-          <p class="text-sm opacity-90">Define el cerebro conversacional de ApolAI</p>
+          <p class="text-sm opacity-90">Define el cerebro conversacional de Elorai</p>
         </div>
         <label class="flex items-center gap-2.5 rounded-full bg-white/20 px-3.5 py-1.5 cursor-pointer">
           <span class="switch"><input type="checkbox" id="ai-enabled" checked /><span class="track"></span></span>
@@ -998,7 +998,7 @@
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-graduation-cap"></i></span>
         <div class="mr-auto">
           <h2 class="text-lg font-extrabold">Tutoriales</h2>
-          <p class="text-sm opacity-90">Aprende a sacarle todo el provecho a ApolAI</p>
+          <p class="text-sm opacity-90">Aprende a sacarle todo el provecho a Elorai</p>
         </div>
       </div>
       <div id="tutorials-groups" class="space-y-5 mt-4"></div>
@@ -1010,7 +1010,7 @@
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-circle-question"></i></span>
         <div class="mr-auto">
           <h2 class="text-lg font-extrabold">Preguntas Frecuentes</h2>
-          <p class="text-sm opacity-90">Las dudas más comunes sobre ApolAI, resueltas</p>
+          <p class="text-sm opacity-90">Las dudas más comunes sobre Elorai, resueltas</p>
         </div>
       </div>
 
@@ -1041,7 +1041,7 @@
   <!-- Footer -->
   <footer class="fixed bottom-0 left-0 right-0 lg:left-[17rem] z-20 glass border-t px-4 lg:px-7 py-2.5">
     <div class="flex items-center justify-between gap-3 text-xs text-ink/50 font-semibold">
-      <p>© <span id="footer-year">2026</span> ApolAI · Todos los derechos reservados</p>
+      <p>© <span id="footer-year">2026</span> Elorai · Todos los derechos reservados</p>
       <p class="hidden sm:block">v1.0.0</p>
     </div>
   </footer>

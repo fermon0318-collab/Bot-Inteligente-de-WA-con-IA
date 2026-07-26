@@ -360,7 +360,7 @@ Y en `initMedia()`, sustituye `renderMedia();` por `loadMedia().catch(() => rend
 ```bash
 # 1. Sube un PDF por API
 curl -X POST http://localhost:3000/api/media \
-  -H "Cookie: apolai_session=TU_COOKIE" \
+  -H "Cookie: elorai_session=TU_COOKIE" \
   -F "files=@/ruta/a/catalogo.pdf"
 
 # 2. ¿Está en disco?
@@ -394,6 +394,6 @@ desde otro teléfono. Debe llegarte el PDF.
 | Síntoma | Causa |
 |---|---|
 | "No llegó ningún archivo" | Pusiste `Content-Type` a mano en el `fetch` |
-| `EACCES` al escribir | La carpeta `uploads/` no pertenece al usuario `apolai`. En el servidor: `chown -R apolai:apolai /var/www/apolai/uploads` |
+| `EACCES` al escribir | La carpeta `uploads/` no pertenece al usuario `elorai`. En el servidor: `chown -R elorai:elorai /var/www/elorai/uploads` |
 | `wa_media_id` siempre nulo | Cloud API sin configurar, o el token no tiene permiso `whatsapp_business_messaging` |
 | El archivo llega sin nombre | Falta `filename` en `sendMedia`, solo aplica a documentos |

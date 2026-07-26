@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — Dashboard: estadísticas, resumen de ventas y gráficos
+   Elorai — Dashboard: estadísticas, resumen de ventas y gráficos
    ========================================================================== */
 
 (function (App) {
@@ -235,7 +235,7 @@
       App.state.currency = select.value;
       refreshCurrencyDependent();
       App.toast(`Montos en ${select.value}`, 'info', 2000);
-      document.dispatchEvent(new CustomEvent('apolai:currency', { detail: select.value }));
+      document.dispatchEvent(new CustomEvent('elorai:currency', { detail: select.value }));
     });
 
     qs('#refresh-sales').addEventListener('click', (ev) => {
@@ -258,4 +258,4 @@
 
   App.dashboard = { init, refreshCurrencyDependent };
 
-})(window.ApolAI);
+})(window.Elorai);

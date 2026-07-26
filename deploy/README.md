@@ -1,4 +1,4 @@
-# Publicar ApolAI
+# Publicar Elorai
 
 Guía completa desde cero: dominio, servidor, credenciales y despliegue.
 Tiempo estimado la primera vez: **45–60 minutos**, casi todo esperando a que
@@ -72,7 +72,7 @@ A      www      LA_IP_DE_TU_VPS
 Comprueba que ya resuelve antes de seguir — si no, certbot fallará:
 
 ```bash
-dig +short apolai.io      # debe devolver tu IP
+dig +short elorai.io      # debe devolver tu IP
 ```
 
 Si usas Cloudflare, pon los registros en **DNS only** (nube gris) durante la
@@ -82,21 +82,21 @@ instalación. Puedes activar el proxy después de emitir el certificado.
 
 ## 2 · Credenciales de Google
 
-1. Entra en <https://console.cloud.google.com> y crea un proyecto («ApolAI»).
+1. Entra en <https://console.cloud.google.com> y crea un proyecto («Elorai»).
 2. **APIs y servicios → Pantalla de consentimiento de OAuth**
    - Tipo de usuario: **Externo**
    - Nombre de la app, correo de asistencia y logotipo (usa `favicon-512.png`)
-   - Dominios autorizados: `apolai.io`
-   - Enlaces a `https://apolai.io/privacidad.html` y `https://apolai.io/terminos.html`
+   - Dominios autorizados: `elorai.io`
+   - Enlaces a `https://elorai.io/privacidad.html` y `https://elorai.io/terminos.html`
    - Permisos: solo `openid`, `email` y `profile` — con eso **no necesitas
      verificación de Google**, que es un trámite de semanas.
 3. **Credenciales → Crear credenciales → ID de cliente de OAuth**
    - Tipo: **Aplicación web**
-   - Orígenes autorizados: `https://apolai.io`
+   - Orígenes autorizados: `https://elorai.io`
    - URI de redirección autorizado:
 
      ```
-     https://apolai.io/auth/google/callback
+     https://elorai.io/auth/google/callback
      ```
 
      Tiene que coincidir **carácter por carácter**, incluida la ausencia de
@@ -110,12 +110,12 @@ instalación. Puedes activar el proxy después de emitir el certificado.
 
 ## 3 · Stripe
 
-1. **Productos** → crea «ApolAI» con dos precios recurrentes:
+1. **Productos** → crea «Elorai» con dos precios recurrentes:
    - Mensual → copia el id `price_…`
    - Anual → copia el id `price_…`
 2. **Desarrolladores → Claves de API** → copia la clave secreta (`sk_live_…`).
 3. **Desarrolladores → Webhooks → Añadir endpoint**:
-   - URL: `https://apolai.io/api/billing/webhook`
+   - URL: `https://elorai.io/api/billing/webhook`
    - Eventos:
      ```
      checkout.session.completed
@@ -134,7 +134,7 @@ instalación. Puedes activar el proxy después de emitir el certificado.
 
 > Para probar sin cobrar de verdad, usa las claves de test (`sk_test_…`) y la
 > tarjeta `4242 4242 4242 4242`. El webhook de prueba se reenvía con
-> `stripe listen --forward-to https://apolai.io/api/billing/webhook`.
+> `stripe listen --forward-to https://elorai.io/api/billing/webhook`.
 
 ---
 
@@ -145,16 +145,16 @@ Conéctate por SSH y ejecuta:
 ```bash
 ssh root@LA_IP_DE_TU_VPS
 
-git clone https://github.com/fermon0318-collab/Bot-Inteligente-de-WA-con-IA.git /var/www/apolai
-cd /var/www/apolai
-sudo bash deploy/deploy.sh apolai.io
+git clone https://github.com/fermon0318-collab/Bot-Inteligente-de-WA-con-IA.git /var/www/elorai
+cd /var/www/elorai
+sudo bash deploy/deploy.sh elorai.io
 ```
 
 La primera pasada instala todo (nginx, PostgreSQL, Node, certbot), genera los
 secretos y **se detiene** pidiéndote las credenciales. Complétalas:
 
 ```bash
-sudo nano /etc/apolai/apolai.env
+sudo nano /etc/elorai/elorai.env
 ```
 
 Rellena `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `STRIPE_SECRET_KEY`,
@@ -163,7 +163,7 @@ Añade tu correo en `BILLING_BYPASS_EMAILS` para poder entrar sin pagarte a ti
 mismo. Y vuelve a ejecutar:
 
 ```bash
-sudo bash deploy/deploy.sh apolai.io
+sudo bash deploy/deploy.sh elorai.io
 ```
 
 Es idempotente: para desplegar cambios futuros basta con repetir ese comando.
@@ -173,15 +173,15 @@ Es idempotente: para desplegar cambios futuros basta con repetir ese comando.
 ## 5 · Comprobar que quedó bien
 
 ```bash
-curl -I https://apolai.io                    # 200 y cabeceras de seguridad
-curl https://apolai.io/api/health            # {"ok":true,...}
-curl -I https://apolai.io/dashboard.html     # 302 → /?login=required
-systemctl status apolai                      # active (running)
+curl -I https://elorai.io                    # 200 y cabeceras de seguridad
+curl https://elorai.io/api/health            # {"ok":true,...}
+curl -I https://elorai.io/dashboard.html     # 302 → /?login=required
+systemctl status elorai                      # active (running)
 ```
 
 Y en el navegador:
 
-1. Entra en `https://apolai.io` → pulsa **Ingresar** → **Continuar con Google**.
+1. Entra en `https://elorai.io` → pulsa **Ingresar** → **Continuar con Google**.
 2. Tras autorizar, deberías aterrizar en `/dashboard.html` con tu nombre y tu
    correo reales arriba a la derecha.
 3. Cierra sesión y prueba a abrir `/dashboard.html` directamente: debe echarte.
@@ -190,25 +190,25 @@ Y en el navegador:
    comprueba que vuelves al panel con la suscripción activa.
 
 Si el paso 4 no actualiza el estado, el webhook no está llegando:
-`journalctl -u apolai -f` y mira si aparece `[billing]`.
+`journalctl -u elorai -f` y mira si aparece `[billing]`.
 
 ---
 
 ## 6 · Operación diaria
 
 ```bash
-journalctl -u apolai -f            # registro en vivo
-systemctl restart apolai           # reiniciar
-sudo bash deploy/deploy.sh apolai.io   # desplegar cambios
+journalctl -u elorai -f            # registro en vivo
+systemctl restart elorai           # reiniciar
+sudo bash deploy/deploy.sh elorai.io   # desplegar cambios
 ```
 
 **Copias de seguridad.** Lo mínimo imprescindible, en cron diario:
 
 ```bash
-sudo -u postgres pg_dump apolai | gzip > /var/backups/apolai-$(date +%F).sql.gz
+sudo -u postgres pg_dump elorai | gzip > /var/backups/elorai-$(date +%F).sql.gz
 ```
 
-Guarda también `/etc/apolai/apolai.env` en un gestor de contraseñas. Contiene
+Guarda también `/etc/elorai/elorai.env` en un gestor de contraseñas. Contiene
 `ENCRYPTION_KEY`: **si lo pierdes, los tokens de Meta y las API Key de IA de tus
 clientes son irrecuperables** y tendrán que volver a introducirlas.
 
@@ -242,7 +242,7 @@ y su bloque de configuración por:
 ```
 
 y quita `'unsafe-eval'` y `https://cdn.tailwindcss.com` de la CSP en
-`deploy/apolai-headers.conf`.
+`deploy/elorai-headers.conf`.
 
 ---
 
@@ -255,4 +255,4 @@ y quita `'unsafe-eval'` y `https://cdn.tailwindcss.com` de la CSP en
 | El panel redirige en bucle | `PUBLIC_URL` no coincide con el dominio real, o la cookie no es Secure porque no hay HTTPS |
 | La suscripción no se activa | El webhook no llega: revisa la URL y el `whsec_` |
 | nginx no arranca | Servidor sin IPv6 (deploy.sh lo detecta) o certificado inexistente |
-| `502 Bad Gateway` | El servicio está caído: `journalctl -u apolai -n 50` |
+| `502 Bad Gateway` | El servicio está caído: `journalctl -u elorai -n 50` |

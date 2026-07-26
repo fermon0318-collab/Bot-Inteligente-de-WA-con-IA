@@ -15,27 +15,27 @@ de todos tus clientes. Es lo primero que debes montar.
 
 ### Script
 
-`/usr/local/bin/apolai-backup.sh` en el servidor:
+`/usr/local/bin/elorai-backup.sh` en el servidor:
 
 ```bash
 #!/usr/bin/env bash
 # Copia diaria de la base y de los archivos subidos.
 set -euo pipefail
 
-DESTINO=/var/backups/apolai
+DESTINO=/var/backups/elorai
 RETENCION_DIAS=30
 FECHA=$(date +%F-%H%M)
 
 mkdir -p "$DESTINO"
 
 # Base de datos
-sudo -u postgres pg_dump apolai | gzip > "$DESTINO/db-$FECHA.sql.gz"
+sudo -u postgres pg_dump elorai | gzip > "$DESTINO/db-$FECHA.sql.gz"
 
 # Archivos de los clientes
-tar czf "$DESTINO/uploads-$FECHA.tar.gz" -C /var/www/apolai uploads
+tar czf "$DESTINO/uploads-$FECHA.tar.gz" -C /var/www/elorai uploads
 
 # Configuración: contiene ENCRYPTION_KEY, sin la cual el dump no sirve de nada
-cp /etc/apolai/apolai.env "$DESTINO/env-$FECHA.bak"
+cp /etc/elorai/elorai.env "$DESTINO/env-$FECHA.bak"
 chmod 600 "$DESTINO/env-$FECHA.bak"
 
 # Limpieza
@@ -45,13 +45,13 @@ echo "$(date -Is) copia completada: $(du -sh "$DESTINO" | cut -f1)"
 ```
 
 ```bash
-sudo chmod +x /usr/local/bin/apolai-backup.sh
+sudo chmod +x /usr/local/bin/elorai-backup.sh
 sudo crontab -e
 ```
 
 ```cron
 # Copia diaria a las 03:15
-15 3 * * * /usr/local/bin/apolai-backup.sh >> /var/log/apolai-backup.log 2>&1
+15 3 * * * /usr/local/bin/elorai-backup.sh >> /var/log/elorai-backup.log 2>&1
 ```
 
 ### Sácalas del servidor
@@ -67,7 +67,7 @@ rclone config          # configura tu destino: "remoto"
 Añade al final del script:
 
 ```bash
-rclone copy "$DESTINO" remoto:apolai-backups --max-age 24h
+rclone copy "$DESTINO" remoto:elorai-backups --max-age 24h
 ```
 
 ### Prueba la restauración
@@ -75,10 +75,10 @@ rclone copy "$DESTINO" remoto:apolai-backups --max-age 24h
 **Una copia que nunca restauraste no es una copia.** Hazlo una vez, ahora:
 
 ```bash
-sudo -u postgres createdb apolai_prueba
-gunzip -c /var/backups/apolai/db-FECHA.sql.gz | sudo -u postgres psql apolai_prueba
-sudo -u postgres psql apolai_prueba -c "SELECT count(*) FROM contacts;"
-sudo -u postgres dropdb apolai_prueba
+sudo -u postgres createdb elorai_prueba
+gunzip -c /var/backups/elorai/db-FECHA.sql.gz | sudo -u postgres psql elorai_prueba
+sudo -u postgres psql elorai_prueba -c "SELECT count(*) FROM contacts;"
+sudo -u postgres dropdb elorai_prueba
 ```
 
 ---
@@ -89,7 +89,7 @@ En producción el CDN de Tailwind es lento y obliga a permitir `'unsafe-eval'`
 en la política de seguridad de contenido.
 
 ```bash
-cd /var/www/apolai
+cd /var/www/elorai
 npm install -D tailwindcss@^3.4
 npx tailwindcss -i tools/tailwind-input.css -o assets/css/tailwind.css --minify
 ```
@@ -109,7 +109,7 @@ por:
 <link rel="stylesheet" href="assets/css/tailwind.css" />
 ```
 
-Y en `deploy/apolai-headers.conf`, quita de la CSP:
+Y en `deploy/elorai-headers.conf`, quita de la CSP:
 
 ```
 'unsafe-eval' https://cdn.tailwindcss.com
@@ -184,7 +184,7 @@ async function avisarError(contexto, err) {
     fetch(process.env.ALERT_WEBHOOK, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: `⚠️ ApolAI · ${contexto}\n${err.message}` }),
+      body: JSON.stringify({ text: `⚠️ Elorai · ${contexto}\n${err.message}` }),
     }).catch(() => {});
   }
 }
@@ -209,10 +209,10 @@ cat /etc/logrotate.d/nginx    # debería existir
 
 Para el log de copias:
 
-`/etc/logrotate.d/apolai`
+`/etc/logrotate.d/elorai`
 
 ```
-/var/log/apolai-backup.log {
+/var/log/elorai-backup.log {
     weekly
     rotate 8
     compress
@@ -282,7 +282,7 @@ mandarte cien fotos y pagarás cien lecturas.
 
 ```bash
 # ¿El .env es solo legible por quien debe?
-ls -l /etc/apolai/apolai.env     # esperado: -rw-r----- root apolai
+ls -l /etc/elorai/elorai.env     # esperado: -rw-r----- root elorai
 
 # ¿PostgreSQL está cerrado al exterior?
 sudo ss -tlnp | grep 5432        # debe decir 127.0.0.1, nunca 0.0.0.0

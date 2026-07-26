@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================================
-# ApolAI · instalación y despliegue en Ubuntu 22.04 / 24.04
+# Elorai · instalación y despliegue en Ubuntu 22.04 / 24.04
 #
-#   sudo bash deploy/deploy.sh apolai.io
+#   sudo bash deploy/deploy.sh elorai.io
 #
 # Es idempotente: puedes volver a ejecutarlo para desplegar cambios. Lo que ya
 # está hecho se detecta y se salta.
@@ -11,10 +11,10 @@
 set -euo pipefail
 
 DOMAIN="${1:-}"
-APP_DIR=/var/www/apolai
-ENV_FILE=/etc/apolai/apolai.env
-REPO="${APOLAI_REPO:-https://github.com/fermon0318-collab/Bot-Inteligente-de-WA-con-IA.git}"
-BRANCH="${APOLAI_BRANCH:-main}"
+APP_DIR=/var/www/elorai
+ENV_FILE=/etc/elorai/elorai.env
+REPO="${ELORAI_REPO:-https://github.com/fermon0318-collab/Bot-Inteligente-de-WA-con-IA.git}"
+BRANCH="${ELORAI_BRANCH:-main}"
 NODE_MAJOR=22
 
 bold() { printf '\n\033[1m%s\033[0m\n' "$*"; }
@@ -23,9 +23,9 @@ warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 die()  { printf '\n\033[31m✗ %s\033[0m\n\n' "$*" >&2; exit 1; }
 
 [[ $EUID -eq 0 ]] || die "Ejecuta con sudo: sudo bash deploy/deploy.sh tu-dominio.com"
-[[ -n "$DOMAIN" ]] || die "Falta el dominio: sudo bash deploy/deploy.sh apolai.io"
+[[ -n "$DOMAIN" ]] || die "Falta el dominio: sudo bash deploy/deploy.sh elorai.io"
 
-bold "ApolAI → $DOMAIN"
+bold "Elorai → $DOMAIN"
 
 # --- 1. Paquetes del sistema ------------------------------------------------
 bold "1/8 · Paquetes del sistema"
@@ -43,22 +43,22 @@ ok "Node $(node -v)"
 
 # --- 2. Usuario del servicio -----------------------------------------------
 bold "2/8 · Usuario del sistema"
-if ! id apolai >/dev/null 2>&1; then
-  useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin apolai
-  ok "usuario 'apolai' creado"
+if ! id elorai >/dev/null 2>&1; then
+  useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin elorai
+  ok "usuario 'elorai' creado"
 else
-  ok "usuario 'apolai' ya existe"
+  ok "usuario 'elorai' ya existe"
 fi
 
 # --- 3. Base de datos -------------------------------------------------------
 bold "3/8 · Base de datos"
 systemctl enable --now postgresql >/dev/null 2>&1 || true
 
-if ! su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='apolai'\"" | grep -q 1; then
+if ! su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='elorai'\"" | grep -q 1; then
   DB_PASSWORD="$(openssl rand -hex 24)"
-  su postgres -c "psql -qc \"CREATE ROLE apolai LOGIN PASSWORD '${DB_PASSWORD}'\"" >/dev/null
-  su postgres -c "createdb -O apolai apolai" >/dev/null
-  ok "base de datos 'apolai' creada"
+  su postgres -c "psql -qc \"CREATE ROLE elorai LOGIN PASSWORD '${DB_PASSWORD}'\"" >/dev/null
+  su postgres -c "createdb -O elorai elorai" >/dev/null
+  ok "base de datos 'elorai' creada"
   NEW_DB=1
 else
   ok "base de datos ya existe"
@@ -80,12 +80,12 @@ fi
 mkdir -p "$APP_DIR/uploads"
 npm --prefix "$APP_DIR/server" ci --omit=dev --silent 2>/dev/null \
   || npm --prefix "$APP_DIR/server" install --omit=dev --silent
-chown -R apolai:apolai "$APP_DIR"
+chown -R elorai:elorai "$APP_DIR"
 ok "dependencias instaladas"
 
 # --- 5. Variables de entorno ------------------------------------------------
 bold "5/8 · Configuración"
-mkdir -p /etc/apolai
+mkdir -p /etc/elorai
 
 if [[ ! -f "$ENV_FILE" ]]; then
   cp "$APP_DIR/.env.example" "$ENV_FILE"
@@ -94,9 +94,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
   sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$(openssl rand -hex 32)|" "$ENV_FILE"
   sed -i "s|^NODE_ENV=.*|NODE_ENV=production|" "$ENV_FILE"
   [[ "${NEW_DB}" == "1" ]] && \
-    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgres://apolai:${DB_PASSWORD}@127.0.0.1:5432/apolai|" "$ENV_FILE"
+    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgres://elorai:${DB_PASSWORD}@127.0.0.1:5432/elorai|" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
-  chown root:apolai "$ENV_FILE"
+  chown root:elorai "$ENV_FILE"
   chmod 640 "$ENV_FILE"
   warn "Completa las credenciales de Google y Stripe en $ENV_FILE y vuelve a ejecutar este script"
   PENDING_SECRETS=1
@@ -120,19 +120,19 @@ fi
 
 # --- 7. Servicio ------------------------------------------------------------
 bold "7/8 · Servicio"
-install -m 644 "$APP_DIR/deploy/apolai.service" /etc/systemd/system/apolai.service
+install -m 644 "$APP_DIR/deploy/elorai.service" /etc/systemd/system/elorai.service
 systemctl daemon-reload
-systemctl enable apolai >/dev/null 2>&1 || true
+systemctl enable elorai >/dev/null 2>&1 || true
 
 if [[ "$PENDING_SECRETS" == "1" ]]; then
   warn "servicio no iniciado: completa $ENV_FILE primero"
 else
-  systemctl restart apolai
+  systemctl restart elorai
   sleep 2
-  if systemctl is-active --quiet apolai; then
-    ok "apolai.service activo"
+  if systemctl is-active --quiet elorai; then
+    ok "elorai.service activo"
   else
-    journalctl -u apolai -n 30 --no-pager
+    journalctl -u elorai -n 30 --no-pager
     die "el servicio no arrancó (registro arriba)"
   fi
 fi
@@ -140,13 +140,13 @@ fi
 # --- 8. nginx y TLS ---------------------------------------------------------
 bold "8/8 · nginx y certificado"
 mkdir -p /var/www/certbot /etc/nginx/snippets
-install -m 644 "$APP_DIR/deploy/apolai-proxy.conf" /etc/nginx/snippets/apolai-proxy.conf
-install -m 644 "$APP_DIR/deploy/apolai-headers.conf" /etc/nginx/snippets/apolai-headers.conf
+install -m 644 "$APP_DIR/deploy/elorai-proxy.conf" /etc/nginx/snippets/elorai-proxy.conf
+install -m 644 "$APP_DIR/deploy/elorai-headers.conf" /etc/nginx/snippets/elorai-headers.conf
 
 # La primera vez el certificado aún no existe y nginx no arrancaría con una
 # ruta ssl_certificate inexistente: se emite antes, sirviendo por HTTP.
 if [[ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]]; then
-  cat > /etc/nginx/sites-available/apolai <<TEMP
+  cat > /etc/nginx/sites-available/elorai <<TEMP
 server {
     listen 80;
     server_name ${DOMAIN} www.${DOMAIN};
@@ -155,7 +155,7 @@ server {
     location / { try_files \$uri \$uri/ /index.html; }
 }
 TEMP
-  ln -sf /etc/nginx/sites-available/apolai /etc/nginx/sites-enabled/apolai
+  ln -sf /etc/nginx/sites-available/elorai /etc/nginx/sites-enabled/elorai
   rm -f /etc/nginx/sites-enabled/default
   nginx -t && systemctl reload nginx
   certbot certonly --webroot -w /var/www/certbot -d "$DOMAIN" -d "www.${DOMAIN}" \
@@ -166,16 +166,16 @@ else
   ok "certificado ya presente"
 fi
 
-sed "s/DOMINIO/${DOMAIN}/g" "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-available/apolai
+sed "s/DOMINIO/${DOMAIN}/g" "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-available/elorai
 
 # En un servidor sin IPv6, `listen [::]` impide que nginx arranque. Se comentan
 # esas líneas en lugar de dar por hecho que la pila está disponible.
 if ! ip -6 addr show scope global 2>/dev/null | grep -q inet6; then
-  sed -i 's|^\( *\)listen \[::\]|\1# listen [::]|' /etc/nginx/sites-available/apolai
+  sed -i 's|^\( *\)listen \[::\]|\1# listen [::]|' /etc/nginx/sites-available/elorai
   warn "sin IPv6 global: se desactivaron los listeners [::]"
 fi
 
-ln -sf /etc/nginx/sites-available/apolai /etc/nginx/sites-enabled/apolai
+ln -sf /etc/nginx/sites-available/elorai /etc/nginx/sites-enabled/elorai
 rm -f /etc/nginx/sites-enabled/default
 nginx -t || die "configuración de nginx inválida"
 systemctl reload nginx
@@ -213,7 +213,7 @@ else
   bold "Listo"
   echo "  https://${DOMAIN}"
   echo
-  echo "  Estado:    systemctl status apolai"
-  echo "  Registro:  journalctl -u apolai -f"
+  echo "  Estado:    systemctl status elorai"
+  echo "  Registro:  journalctl -u elorai -f"
   echo
 fi

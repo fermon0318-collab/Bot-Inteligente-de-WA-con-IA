@@ -502,7 +502,7 @@ router.get('/contacts/export.csv', async (req, res, next) => {
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition',
-      `attachment; filename="apolai-contactos-${new Date().toISOString().slice(0,10)}.csv"`);
+      `attachment; filename="elorai-contactos-${new Date().toISOString().slice(0,10)}.csv"`);
     // El BOM hace que Excel no destroce los acentos
     res.send('﻿' + csv);
   } catch (err) { next(err); }

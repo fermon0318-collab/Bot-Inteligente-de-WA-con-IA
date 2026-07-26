@@ -184,7 +184,7 @@ export async function phoneStatus({ token, phoneNumberId }) {
   });
 }
 
-/** Tipo de mensaje de Meta → tipo de archivo de ApolAI. */
+/** Tipo de mensaje de Meta → tipo de archivo de Elorai. */
 export function mediaKindFor(mimeType = '') {
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';

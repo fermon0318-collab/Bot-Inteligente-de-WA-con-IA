@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — landing pública
+   Elorai — landing pública
    Navbar, menú móvil, modal de login, scroll suave y aparición al hacer scroll.
    ========================================================================== */
 
@@ -119,7 +119,7 @@
   /* ========================================================================
      Sesión y contratación
      ===================================================================== */
-  const session = window.ApolAI && window.ApolAI.session;
+  const session = window.Elorai && window.Elorai.session;
   if (!session) return;
 
   /** Aviso discreto arriba del todo, para mensajes de vuelta del servidor. */

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#4F46E5" />
+<title>Elorai · Completa tu cuenta</title>
+
+<link rel="icon" type="image/svg+xml" href="assets/img/elorai-logo.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link rel="stylesheet" href="assets/css/tailwind.css" />
+<link rel="stylesheet" href="assets/css/elorai.css" />
+</head>
+<body class="antialiased" style="background: radial-gradient(circle at top, #ede9fe, #f5f3ff 55%, #ffffff);">
+
+<div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+<div class="min-h-screen flex items-center justify-center px-4 py-10">
+  <div class="w-full max-w-lg">
+
+    <div class="card p-6 sm:p-8">
+      <div class="text-center">
+        <img src="assets/img/elorai-logo.svg" alt="Elorai" class="w-14 h-14 mx-auto mb-3" />
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-ink">Completa tu cuenta</h1>
+        <p class="mt-2 text-sm sm:text-base font-bold brand-text">¡No te quedes con la duda! Prueba 7 días gratis</p>
+        <p class="mt-2 text-sm text-ink/55" id="welcome-line">Ya iniciaste sesión con Google — solo faltan estos datos de tu negocio.</p>
+      </div>
+
+      <form id="onboarding-form" class="mt-6 space-y-4" novalidate>
+
+        <div>
+          <label class="label" for="ob-business-type">¿Qué tipo de negocio tienes?</label>
+          <select id="ob-business-type" class="select" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+            <option value="ecommerce">Ecommerce / Tienda Online</option>
+            <option value="restaurante">Restaurante / Comida</option>
+            <option value="clinica">Clínica / Consultorio Médico</option>
+            <option value="estetica">Centro de Estética</option>
+            <option value="gimnasio">Gimnasio / Centro Deportivo</option>
+            <option value="inmobiliaria">Inmobiliaria</option>
+            <option value="educacion">Educación / Cursos</option>
+            <option value="servicios_profesionales">Servicios Profesionales (abogados, contadores)</option>
+            <option value="agencia_marketing">Agencia de Marketing</option>
+            <option value="productos_digitales">Productos Digitales</option>
+            <option value="freelancer">Freelancer / Independiente</option>
+            <option value="otro">Otro</option>
+          </select>
+          <p class="error-msg" data-error-for="ob-business-type">Elige el tipo de negocio.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-team-size">¿Cuántas personas atienden en tu negocio?</label>
+          <select id="ob-team-size" class="select" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+            <option value="independiente">Soy independiente</option>
+            <option value="2">2</option>
+            <option value="3-5">3-5</option>
+            <option value="6-15">6-15</option>
+            <option value="16+">16+</option>
+          </select>
+          <p class="error-msg" data-error-for="ob-team-size">Indica cuántas personas atienden en tu negocio.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-name">Nombre y apellido</label>
+          <input id="ob-name" class="input" placeholder="Ingresa tu nombre y apellido" required />
+          <p class="error-msg" data-error-for="ob-name">Escribe tu nombre y apellido.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-email">Email</label>
+          <input id="ob-email" class="input" type="email" disabled />
+          <p class="hint">Es el correo de tu cuenta de Google — no se puede cambiar aquí.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-phone">Teléfono</label>
+          <div class="flex gap-2">
+            <select id="ob-phone-country" class="select !w-auto flex-none" style="min-width: 6.5rem;" aria-label="País del teléfono"></select>
+            <input id="ob-phone" class="input flex-1" placeholder="321 1234567" inputmode="numeric" required />
+          </div>
+          <p class="error-msg" data-error-for="ob-phone">Escribe un teléfono válido para el país seleccionado.</p>
+        </div>
+
+        <button id="ob-submit" type="submit" class="btn btn-gradient w-full !py-3 !text-base mt-2">
+          Prueba Gratis <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-xs text-ink/40 mt-5">
+      <a href="/auth/logout" class="hover:text-ink/60 font-semibold">¿No eres tú? Cierra sesión</a>
+    </p>
+  </div>
+</div>
+
+<script src="assets/js/session.js"></script>
+<script src="assets/js/catalogs.js"></script>
+<script src="assets/js/core.js"></script>
+<script src="assets/js/onboarding.js"></script>
+</body>
+</html>

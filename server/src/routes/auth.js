@@ -126,7 +126,12 @@ router.get('/google/callback', rateLimit({ windowMs: 60_000, max: 30 }), async (
     await createSession(res, user.id, req);
     console.log(`[auth] sesión iniciada · ${email} · ${clientIp(req)}`);
 
-    res.redirect(saved.redirect_to || '/dashboard.html');
+    const dest = saved.redirect_to || '/dashboard.html';
+    const hasProfile = await one('SELECT 1 FROM business_profile WHERE account_id = $1', [user.account_id]);
+    if (!hasProfile && dest !== '/onboarding.html') {
+      return res.redirect(`/onboarding.html?next=${encodeURIComponent(dest)}`);
+    }
+    res.redirect(dest);
   } catch (err) {
     next(err);
   }

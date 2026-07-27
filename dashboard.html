@@ -72,7 +72,7 @@
       <ul class="space-y-1">
         <li><button class="nav-link active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></button></li>
         <li><button class="nav-link" data-view="cloud-api"><i class="fa-solid fa-cloud"></i><span>Cloud API</span></button></li>
-        <li><button class="nav-link" data-view="countries"><i class="fa-solid fa-earth-americas"></i><span>Bloqueo por País</span></button></li>
+        <li><button class="nav-link" data-view="agenda"><i class="fa-solid fa-calendar-days"></i><span>Agenda</span></button></li>
         <li><button class="nav-link" data-view="live-chat"><i class="fa-solid fa-comments"></i><span>Chat en Vivo</span></button></li>
         <li><button class="nav-link" data-view="chat-history"><i class="fa-solid fa-clock-rotate-left"></i><span>Histórico Chats</span></button></li>
         <li><button class="nav-link" data-view="reports"><i class="fa-solid fa-file-lines"></i><span>Reportes</span></button></li>
@@ -380,30 +380,71 @@
       </div>
     </section>
 
-    <!-- ═══════════════════ 3. BLOQUEO POR PAÍS ═══════════════════ -->
-    <section id="view-countries" class="view">
+    <!-- ═══════════════════ 3. AGENDA ═══════════════════ -->
+    <section id="view-agenda" class="view">
       <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-earth-americas"></i></span>
+        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-calendar-days"></i></span>
         <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Bloqueo por País</h2>
-          <p class="text-sm opacity-90">Los mensajes desde países bloqueados serán ignorados por el bot</p>
+          <h2 class="text-lg font-extrabold">Agenda</h2>
+          <p class="text-sm opacity-90">Reservas, bloqueos de horario y profesionales — el bot también agenda aquí</p>
         </div>
-        <div class="rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-bold"><span id="blocked-count">0</span> bloqueados</div>
+        <button id="agenda-add-professional" type="button" class="btn btn-sm !bg-white/15 !text-white !border-white/25 hover:!bg-white/25"><i class="fa-solid fa-user-plus"></i> Profesional</button>
+        <button id="agenda-add-service" type="button" class="btn btn-sm !bg-white/15 !text-white !border-white/25 hover:!bg-white/25"><i class="fa-solid fa-briefcase"></i> Servicio</button>
       </div>
 
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap gap-3 items-end">
-          <div class="flex-1 min-w-[14rem]">
-            <label class="label" for="country-search">Buscar país</label>
-            <div class="relative">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-accent-400 text-sm"></i>
-              <input id="country-search" class="input !pl-9" placeholder="Ej. Argentina, +54…" />
-            </div>
+      <div class="grid lg:grid-cols-[15rem_1fr] gap-4 mt-4 items-start">
+
+        <!-- Sidebar de la agenda -->
+        <aside class="card p-4 space-y-5">
+          <div>
+            <label class="label" for="agenda-professional-filter">Profesional</label>
+            <select id="agenda-professional-filter" class="select"></select>
           </div>
-          <button id="countries-clear" type="button" class="btn btn-ghost"><i class="fa-solid fa-rotate-left"></i> Desbloquear todos</button>
-          <button id="countries-save" type="button" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+          <div>
+            <label class="label" for="agenda-status-filter">Estado de la reserva</label>
+            <select id="agenda-status-filter" class="select">
+              <option value="">Todas las reservas</option>
+              <option value="reservado">Reservado</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="asiste">Asiste</option>
+              <option value="no_asistio">No asistió</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en_espera">En espera</option>
+            </select>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <button type="button" id="agenda-mini-prev" class="btn btn-ghost btn-icon btn-sm" aria-label="Mes anterior"><i class="fa-solid fa-chevron-left"></i></button>
+              <p id="agenda-mini-label" class="text-sm font-extrabold text-ink capitalize"></p>
+              <button type="button" id="agenda-mini-next" class="btn btn-ghost btn-icon btn-sm" aria-label="Mes siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div id="agenda-mini-calendar"></div>
+          </div>
+          <div>
+            <p class="label !mb-2">Leyenda</p>
+            <div id="agenda-legend" class="space-y-1.5"></div>
+          </div>
+        </aside>
+
+        <!-- Panel principal -->
+        <div class="card p-3 sm:p-4 lg:p-5 min-w-0">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <div class="inline-flex rounded-xl border border-accent-200 overflow-hidden">
+              <button type="button" class="agenda-mode-btn active" data-mode="week">Semana</button>
+              <button type="button" class="agenda-mode-btn" data-mode="day">Día</button>
+            </div>
+            <button type="button" id="agenda-prev" class="btn btn-ghost btn-icon btn-sm" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <button type="button" id="agenda-next" class="btn btn-ghost btn-icon btn-sm" aria-label="Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+            <button type="button" id="agenda-today" class="btn btn-ghost btn-sm">Hoy</button>
+            <p id="agenda-range-label" class="text-sm font-bold text-ink/70 mr-auto"></p>
+            <button type="button" id="agenda-refresh" class="btn btn-ghost btn-icon" aria-label="Refrescar"><i class="fa-solid fa-rotate"></i></button>
+            <button type="button" id="agenda-new" class="btn btn-gradient"><i class="fa-solid fa-plus"></i> Nuevo</button>
+          </div>
+
+          <div id="agenda-grid-wrap" class="scroll-thin agenda-grid-wrap">
+            <div id="agenda-grid" class="agenda-grid"></div>
+          </div>
         </div>
-        <div id="country-list" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-2 mt-4 max-h-[28rem] overflow-y-auto scroll-thin pr-1"></div>
       </div>
     </section>
 
@@ -1038,6 +1079,128 @@
   </div>
 </div>
 
+<!-- ══════════════════════════ Modal: Bloqueo de horas ══════════════════════════ -->
+<div id="agenda-block-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="agenda-block-title">
+  <div class="modal-card">
+    <div class="modal-head">
+      <i class="fa-solid fa-lock"></i>
+      <h3 id="agenda-block-title" class="text-base font-extrabold">Bloqueo de horas</h3>
+      <button type="button" class="ml-auto text-white/80 hover:text-white" data-close-agenda-block aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body space-y-4">
+      <div>
+        <label class="label" for="block-label">Motivo/Etiqueta</label>
+        <input id="block-label" class="input" placeholder="Ej: Almuerzo, reunión…" />
+      </div>
+      <div>
+        <label class="label" for="block-professional">Profesional</label>
+        <select id="block-professional" class="select"></select>
+        <p class="error-msg" data-error-for="block-professional">Elige un profesional.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="label" for="block-start-date">Fecha de inicio</label>
+          <input id="block-start-date" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="block-start-time">Hora inicio</label>
+          <input id="block-start-time" type="time" class="input" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="label" for="block-end-date">Fecha de fin</label>
+          <input id="block-end-date" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="block-end-time">Hora fin</label>
+          <input id="block-end-time" type="time" class="input" />
+        </div>
+      </div>
+      <p class="error-msg" id="block-error"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close-agenda-block>Cancelar</button>
+      <button type="button" id="block-save" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar bloqueo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ Modal: Nueva Reserva ══════════════════════════ -->
+<div id="agenda-appt-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="agenda-appt-title">
+  <div class="modal-card">
+    <div class="modal-head">
+      <i class="fa-solid fa-calendar-check"></i>
+      <h3 id="agenda-appt-title" class="text-base font-extrabold">Nueva Reserva</h3>
+      <div class="ml-auto flex items-center gap-2">
+        <select id="appt-status" class="select !w-auto !py-1.5 !text-sm !pr-7"></select>
+        <button type="button" class="text-white/80 hover:text-white" data-close-agenda-appt aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="modal-body space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="label" for="appt-date">Fecha</label>
+          <input id="appt-date" type="date" class="input" />
+        </div>
+        <div>
+          <label class="label" for="appt-time">Hora</label>
+          <input id="appt-time" type="time" class="input" />
+        </div>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm font-semibold text-ink/70">
+        <input type="checkbox" id="appt-repeat-toggle" class="h-4 w-4" />
+        Repetir semanalmente
+      </label>
+      <div id="appt-repeat-weeks-wrap" class="hidden">
+        <label class="label" for="appt-repeat-weeks">Número de semanas (incluida esta)</label>
+        <input id="appt-repeat-weeks" type="number" min="2" max="12" value="4" class="input !w-24" />
+      </div>
+
+      <div>
+        <label class="label" for="appt-client-search">Cliente</label>
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <input id="appt-client-search" class="input" placeholder="Busca por nombre, teléfono o email…" autocomplete="off" />
+            <div id="appt-client-results" class="agenda-client-results hidden"></div>
+          </div>
+          <button type="button" id="appt-new-client-toggle" class="btn btn-ghost btn-sm whitespace-nowrap"><i class="fa-solid fa-plus"></i> Nuevo cliente</button>
+        </div>
+        <p id="appt-client-selected" class="hint"></p>
+        <p class="error-msg" data-error-for="appt-client-search">Busca y selecciona un cliente, o crea uno nuevo.</p>
+      </div>
+
+      <div id="appt-new-client-form" class="hidden card p-3 space-y-2 !bg-accent-50/60">
+        <div class="grid sm:grid-cols-2 gap-2">
+          <input id="new-client-name" class="input" placeholder="Nombre y apellido" />
+          <input id="new-client-phone" class="input" placeholder="Teléfono" />
+        </div>
+        <input id="new-client-email" class="input" placeholder="Email (opcional)" />
+        <button type="button" id="new-client-save" class="btn btn-primary btn-sm w-full"><i class="fa-solid fa-user-check"></i> Crear cliente</button>
+      </div>
+
+      <div>
+        <label class="label" for="appt-professional">Profesional</label>
+        <select id="appt-professional" class="select"></select>
+      </div>
+
+      <div>
+        <label class="label" for="appt-service">Servicio</label>
+        <select id="appt-service" class="select">
+          <option value="">Sin servicio específico</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" id="appt-delete" class="btn btn-danger hidden mr-auto"><i class="fa-solid fa-trash"></i> Eliminar</button>
+      <button type="button" class="btn btn-ghost" data-close-agenda-appt>Cancelar</button>
+      <button type="button" id="appt-save-another" class="btn btn-soft"><i class="fa-solid fa-plus"></i> Agregar otra reserva</button>
+      <button type="button" id="appt-save" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar reserva</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════ Botón flotante de WhatsApp ══════════════════════════ -->
 <div id="whatsapp-fab" class="wa-fab hidden">
   <div id="whatsapp-fab-bubble" class="wa-fab-bubble">
@@ -1054,6 +1217,7 @@
 <script src="assets/js/core.js"></script>
 <script src="assets/js/dashboard.js"></script>
 <script src="assets/js/connect.js"></script>
+<script src="assets/js/agenda.js"></script>
 <script src="assets/js/chat.js"></script>
 <script src="assets/js/reports.js"></script>
 <script src="assets/js/automation.js"></script>

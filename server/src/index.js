@@ -16,7 +16,7 @@ import helmet from 'helmet';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { config, ROOT } from './config.js';
-import { pool } from './db/pool.js';
+import { one, pool } from './db/pool.js';
 import { avisarError } from './lib/alert.js';
 import { purgeExpired } from './lib/session.js';
 import { attachSession, requireAuth, subscriptionAccess } from './middleware/auth.js';
@@ -115,10 +115,25 @@ app.get('/internal/auth', requireAuth, async (req, res, next) => {
    ------------------------------------------------------------------------ */
 app.get('/dashboard.html', requireAuth, async (req, res, next) => {
   try {
+    const hasProfile = await one('SELECT 1 FROM business_profile WHERE account_id = $1', [req.user.accountId]);
+    if (!hasProfile) return res.redirect('/onboarding.html');
     const { allowed } = await subscriptionAccess(req.user);
     if (!allowed) return res.redirect('/#precios?suscripcion=requerida');
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(join(ROOT, 'dashboard.html'));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* --- Onboarding -------------------------------------------------------------
+   Paso obligatorio tras el primer login con Google: sin esto, la cuenta existe
+   pero no sabemos qué tipo de negocio es ni cómo contactarlo. No exige
+   suscripción — el negocio completa esto antes de elegir plan. */
+app.get('/onboarding.html', requireAuth, async (req, res, next) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(join(ROOT, 'onboarding.html'));
   } catch (err) {
     next(err);
   }

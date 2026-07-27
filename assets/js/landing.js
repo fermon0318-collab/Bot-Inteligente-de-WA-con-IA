@@ -188,6 +188,14 @@
     });
   }
 
+  const signupLink = qs('#signup-link');
+  if (signupLink) {
+    signupLink.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      session.goToLogin('/onboarding.html');
+    });
+  }
+
   /* --- Botones de plan ------------------------------------------------------ */
   qsa('[data-plan]').forEach((btn) => {
     btn.addEventListener('click', async (ev) => {

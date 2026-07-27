@@ -178,10 +178,8 @@
     qs('#api-status-text').textContent = connected ? 'Conectado' : 'Sin conexión';
   }
 
-  // Nota: "Bloqueo por País" ya no tiene vista en el panel (sustituida por
-  // Agenda), pero el filtrado real de mensajes sigue vivo en
-  // server/src/services/engine.js contra la tabla blocked_countries — las
-  // cuentas que ya bloquearon países no pierden esa protección.
+  // "Bloqueo por País" se retiró por completo (UI y backend) y fue sustituido
+  // por Agenda — no había negocios activos usándolo.
 
   App.connect = { init() { initCloudApi(); }, log };
 

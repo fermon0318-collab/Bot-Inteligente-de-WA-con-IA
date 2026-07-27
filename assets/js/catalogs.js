@@ -27,8 +27,8 @@ window.Elorai = window.Elorai || {};
     { code: 'GTQ', name: 'Quetzal guatemalteco', symbol: 'Q', rate: 7.78 },
   ];
 
-  /* --- Países ------------------------------------------------------------- */
-  // `blocked` es solo el valor por defecto antes de cargar /api/countries.
+  /* --- Países -------------------------------------------------------------
+     Usado por el selector de teléfono del onboarding (código, nombre, prefijo). */
   App.COUNTRIES = [
     ['MX', 'México', '+52'], ['CO', 'Colombia', '+57'], ['AR', 'Argentina', '+54'],
     ['CL', 'Chile', '+56'], ['PE', 'Perú', '+51'], ['BR', 'Brasil', '+55'],
@@ -46,7 +46,7 @@ window.Elorai = window.Elorai || {};
     ['PH', 'Filipinas', '+63'], ['VN', 'Vietnam', '+84'], ['CN', 'China', '+86'],
     ['RU', 'Rusia', '+7'], ['TR', 'Turquía', '+90'], ['AE', 'Emiratos Árabes', '+971'],
     ['AU', 'Australia', '+61'], ['JP', 'Japón', '+81'], ['KR', 'Corea del Sur', '+82'],
-  ].map(([code, name, dial]) => ({ code, name, dial, blocked: false }));
+  ].map(([code, name, dial]) => ({ code, name, dial }));
 
   /* --- Zonas horarias ----------------------------------------------------- */
   App.TIMEZONES = [

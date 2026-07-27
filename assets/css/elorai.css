@@ -265,7 +265,6 @@ body {
 }
 .check-item:hover { background: #fff; border-color: var(--stroke); }
 .check-item input { width: 1.05rem; height: 1.05rem; accent-color: var(--brand-2); cursor: pointer; flex: none; }
-.check-item.is-blocked { border-color: rgba(239, 68, 68, 0.45); background: rgba(254, 242, 242, 0.75); }
 
 /* --------------------------------------------------------------------------
    Badges y chips

@@ -451,43 +451,6 @@ router.get('/remarketing/steps', async (req, res, next) => {
 });
 
 /* ==========================================================================
-   Bloqueo por país
-   ========================================================================== */
-
-router.get('/countries', async (req, res, next) => {
-  try {
-    const rows = await many(
-      'SELECT country_code AS code, dial_prefix AS dial FROM blocked_countries WHERE account_id = $1',
-      [account(req)]
-    );
-    res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.put('/countries', requireSubscription, async (req, res, next) => {
-  try {
-    const list = Array.isArray(req.body?.blocked) ? req.body.blocked : [];
-    await transaction(async (client) => {
-      await client.query('DELETE FROM blocked_countries WHERE account_id = $1', [account(req)]);
-      for (const item of list) {
-        if (!item?.code) continue;
-        await client.query(
-          `INSERT INTO blocked_countries (account_id, country_code, dial_prefix)
-           VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-          [account(req), String(item.code), String(item.dial || '')]
-        );
-      }
-    });
-    await log(account(req), `Lista de países bloqueados actualizada (${list.length})`, 'info');
-    res.json({ ok: true, blocked: list.length });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/* ==========================================================================
    Flujos y disparadores
    ========================================================================== */
 

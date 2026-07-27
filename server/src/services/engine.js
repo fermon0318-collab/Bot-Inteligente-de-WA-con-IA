@@ -4,12 +4,11 @@
  * El orden importa y está pensado para gastar lo mínimo antes de descartar:
  *
  *   1. ¿La cuenta existe y el bot está encendido?
- *   2. ¿El país está bloqueado?  → se descarta sin tocar la IA
- *   3. Se registra el contacto y el mensaje (esto siempre, aunque no se responda)
- *   4. ¿Automatización detenida para este contacto?  → solo se guarda
- *   5. ¿Había un flujo esperando respuesta?          → continúa por su rama
- *   6. ¿Coincide algún disparador?                   → ejecuta su flujo
- *   7. Si no, y la IA está activa                    → responde la IA
+ *   2. Se registra el contacto y el mensaje (esto siempre, aunque no se responda)
+ *   3. ¿Automatización detenida para este contacto?  → solo se guarda
+ *   4. ¿Había un flujo esperando respuesta?          → continúa por su rama
+ *   5. ¿Coincide algún disparador?                   → ejecuta su flujo
+ *   6. Si no, y la IA está activa                    → responde la IA
  */
 
 import { many, one, query } from '../db/pool.js';
@@ -34,24 +33,6 @@ export async function accountForPhoneNumberId(phoneNumberId) {
        FROM bot_settings WHERE wa_phone_number_id = $1`,
     [String(phoneNumberId)]
   );
-}
-
-/**
- * ¿Está bloqueado el país de este número?
- *
- * Se compara por prefijo más largo primero: +1809 (Dominicana) debe ganar a
- * +1 (Estados Unidos) cuando ambos están en la lista.
- */
-async function isBlocked(accountId, phone) {
-  const digits = String(phone).replace(/\D/g, '');
-  const blocked = await many(
-    'SELECT country_code, dial_prefix FROM blocked_countries WHERE account_id = $1',
-    [accountId]
-  );
-  return blocked
-    .map((b) => ({ ...b, prefix: b.dial_prefix.replace(/\D/g, '') }))
-    .filter((b) => b.prefix && digits.startsWith(b.prefix))
-    .sort((a, b) => b.prefix.length - a.prefix.length)[0] || null;
 }
 
 /** Crea o actualiza el contacto y devuelve su fila. */
@@ -118,13 +99,6 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
   const accountId = account.account_id;
   const phone = `+${String(message.from).replace(/\D/g, '')}`;
   const text = textOf(message);
-
-  /* 2 · Bloqueo por país, antes de gastar nada */
-  const blocked = await isBlocked(accountId, phone);
-  if (blocked) {
-    await log(accountId, `Mensaje ignorado de ${phone} · país bloqueado (${blocked.country_code})`, 'warn');
-    return { skipped: 'pais_bloqueado', country: blocked.country_code };
-  }
 
   /* 3 · Contacto y mensaje se registran siempre */
   const referral = message.referral || {};

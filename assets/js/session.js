@@ -16,6 +16,15 @@ window.Elorai = window.Elorai || {};
    * cada pantalla decide qué hacer con eso.
    */
   async function api(path, { method = 'GET', body, raw = false } = {}) {
+    // Panel de demostración: se navega y se lee con normalidad, pero ninguna
+    // escritura llega al servidor (no hay sesión real detrás).
+    if (App.state?.demo && method !== 'GET' && !path.startsWith('/auth/')) {
+      const err = new Error('Esto es una demo — inicia sesión para guardar cambios de verdad.');
+      err.status = 401;
+      err.code = 'demo_mode';
+      throw err;
+    }
+
     // Las rutas de autenticación cuelgan de /auth, no de /api
     const url = path.startsWith('/auth/') ? path : `/api${path}`;
     const res = await fetch(url, {
@@ -31,7 +40,10 @@ window.Elorai = window.Elorai || {};
     try { data = await res.json(); } catch { /* respuesta sin cuerpo */ }
 
     if (!res.ok) {
-      const err = new Error(data?.message || `Error ${res.status}`);
+      // En demo, un 401 de lectura es normal (no hay sesión real detrás de
+      // ninguna vista) — se marca para que no salga como error en pantalla.
+      const silent = App.state?.demo && method === 'GET' && res.status === 401;
+      const err = new Error(`${silent ? '__demo_silent__' : ''}${data?.message || `Error ${res.status}`}`);
       err.status = res.status;
       err.code = data?.error;
       throw err;

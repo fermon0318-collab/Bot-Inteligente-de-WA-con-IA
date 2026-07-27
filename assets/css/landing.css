@@ -56,6 +56,8 @@ section[id] { scroll-margin-top: 5.5rem; }
 #mobile-menu {
   max-height: 0;
   overflow: hidden;
+  background: #fff;
+  box-shadow: 0 20px 34px -20px rgba(30, 27, 75, 0.35);
   transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 #mobile-menu.open { max-height: 32rem; }
@@ -216,6 +218,13 @@ section[id] { scroll-margin-top: 5.5rem; }
   min-height: 11rem;
 }
 .tl-panel i { font-size: 3.5rem; }
+
+/* En una sola columna el panel de ícono pierde su función (queda como un
+   recuadro grande y vacío junto al texto); se oculta y el número + el texto
+   quedan como un bloque compacto hasta que hay espacio para las dos columnas. */
+@media (max-width: 1023px) {
+  .tl-panel { display: none; }
+}
 
 /* --------------------------------------------------------------------------
    Precios

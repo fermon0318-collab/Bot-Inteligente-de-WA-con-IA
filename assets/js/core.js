@@ -75,6 +75,10 @@
   const TOAST_ICONS = { ok: 'fa-circle-check', err: 'fa-circle-exclamation', warn: 'fa-triangle-exclamation', info: 'fa-circle-info' };
 
   function toast(message, kind = 'ok', ms = 3400) {
+    // El panel de demostración no tiene sesión real: cada lectura sin datos
+    // propios lanza un 401 esperado que `session.js` marca con este prefijo
+    // para no llenar la demo de avisos de error que no significan nada.
+    if (typeof message === 'string' && message.startsWith('__demo_silent__')) return;
     const stack = qs('#toast-stack');
     const node = el('div', { class: `toast ${kind}`, role: 'status' }, [
       el('i', { class: `fa-solid ${TOAST_ICONS[kind] || TOAST_ICONS.info}` }),

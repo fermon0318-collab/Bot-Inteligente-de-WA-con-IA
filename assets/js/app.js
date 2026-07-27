@@ -7,14 +7,17 @@
 
   const { qs } = App;
 
+  // ?demo=1 (el link "Ver el panel de demostración" de la landing): se navega
+  // el panel completo sin sesión real, pero ninguna acción de escritura llega
+  // al servidor — ver el guard en session.js `api()`.
+  const isDemo = new URLSearchParams(location.search).get('demo') === '1';
+  App.state.demo = isDemo;
+
   // Datos mostrados mientras llega /api/me. Si el backend no responde (por
   // ejemplo abriendo el HTML en local), el panel sigue siendo explorable.
-  const SESSION = {
-    name: 'Administrador',
-    email: 'admin@elorai.io',
-    plan: 'Pro',
-    expiry: '—',
-  };
+  const SESSION = isDemo
+    ? { name: 'Cuenta de demostración', email: 'demo@elorai.io', plan: 'Demo', expiry: '—' }
+    : { name: 'Administrador', email: 'admin@elorai.io', plan: 'Pro', expiry: '—' };
 
   function paintSession() {
     qs('#user-avatar').textContent = App.initials(SESSION.name);
@@ -39,6 +42,9 @@
       return; // backend no disponible: se conserva el modo de exploración
     }
     if (!me) {
+      // El link "Ver el panel de demostración" trae aquí a propósito sin
+      // sesión: se queda en modo exploración en vez de mandar a login.
+      if (isDemo) return;
       // nginx ya impide llegar aquí sin sesión; esto cubre el acceso directo
       // al archivo o una sesión caducada mientras el panel estaba abierto.
       window.location.href = session.loginUrl('/dashboard.html');
@@ -93,6 +99,8 @@
     paintSession();
     App.initShell();
     App.initCopyButtons();
+
+    if (isDemo) qs('#demo-banner').classList.remove('hidden');
 
     App.dashboard.init();
     App.connect.init();

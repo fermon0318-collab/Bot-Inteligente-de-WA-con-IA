@@ -178,94 +178,16 @@
     qs('#api-status-text').textContent = connected ? 'Conectado' : 'Sin conexión';
   }
 
-  /* ========================================================================
-     Bloqueo por país
-     ===================================================================== */
-  function renderCountries(filter = '') {
-    const list = qs('#country-list');
-    const term = filter.trim().toLowerCase();
-    list.innerHTML = '';
+  // Nota: "Bloqueo por País" ya no tiene vista en el panel (sustituida por
+  // Agenda), pero el filtrado real de mensajes sigue vivo en
+  // server/src/services/engine.js contra la tabla blocked_countries — las
+  // cuentas que ya bloquearon países no pierden esa protección.
 
-    const visible = App.COUNTRIES.filter((c) =>
-      !term || c.name.toLowerCase().includes(term) || c.dial.includes(term) || c.code.toLowerCase() === term);
-
-    if (!visible.length) {
-      list.appendChild(el('div', { class: 'empty-state sm:col-span-2 xl:col-span-3', html: '<i class="fa-solid fa-magnifying-glass"></i>Ningún país coincide con la búsqueda.' }));
-      return;
-    }
-
-    visible.forEach((c) => {
-      const input = el('input', { type: 'checkbox', id: `country-${c.code}` });
-      input.checked = c.blocked;
-      const label = el('label', { class: `check-item ${c.blocked ? 'is-blocked' : ''}`, for: `country-${c.code}` }, [
-        input,
-        el('span', { class: 'text-sm font-semibold text-ink flex-1 truncate', text: c.name }),
-        el('span', { class: 'text-xs font-mono text-ink/45', text: c.dial }),
-      ]);
-      input.addEventListener('change', () => {
-        c.blocked = input.checked;
-        label.classList.toggle('is-blocked', c.blocked);
-        updateBlockedCount();
-      });
-      list.appendChild(label);
-    });
-  }
-
-  function updateBlockedCount() {
-    qs('#blocked-count').textContent = App.COUNTRIES.filter((c) => c.blocked).length;
-  }
-
-  async function cargarPaises() {
-    const bloqueados = await App.session.api('/countries');
-    const codigos = new Set(bloqueados.map((b) => b.code));
-    App.COUNTRIES.forEach((c) => { c.blocked = codigos.has(c.code); });
-    renderCountries(qs('#country-search').value);
-    updateBlockedCount();
-  }
-
-  function initCountries() {
-    renderCountries();
-    updateBlockedCount();
-
-    let t;
-    qs('#country-search').addEventListener('input', (ev) => {
-      clearTimeout(t);
-      t = setTimeout(() => renderCountries(ev.target.value), 160);
-    });
-
-    qs('#countries-clear').addEventListener('click', async () => {
-      const blocked = App.COUNTRIES.filter((c) => c.blocked).length;
-      if (!blocked) { App.toast('No hay países bloqueados', 'info'); return; }
-      const ok = await App.confirmModal('Desbloquear todos',
-        `Se desbloquearán <strong>${blocked}</strong> países. El bot volverá a responder mensajes desde esos prefijos.`,
-        { confirmText: 'Desbloquear', danger: true });
-      if (!ok) return;
-      App.COUNTRIES.forEach((c) => { c.blocked = false; });
-      renderCountries(qs('#country-search').value);
-      updateBlockedCount();
-      App.toast('Todos los países desbloqueados', 'ok');
-    });
-
-    qs('#countries-save').addEventListener('click', (ev) => {
-      App.withBusy(ev.currentTarget, async () => {
-        try {
-          const blocked = App.COUNTRIES.filter((c) => c.blocked)
-            .map((c) => ({ code: c.code, dial: c.dial }));
-          const r = await App.session.api('/countries', { method: 'PUT', body: { blocked } });
-          App.toast(`Lista guardada · ${r.blocked} ${r.blocked === 1 ? 'país bloqueado' : 'países bloqueados'}`, 'ok');
-        } catch (err) {
-          App.toast(err.message, 'err');
-        }
-      }, 'Guardando…');
-    });
-  }
-
-  App.connect = { init() { initCloudApi(); initCountries(); }, log };
+  App.connect = { init() { initCloudApi(); }, log };
 
   App.onView('cloud-api', () => {
     cargarCloudApi().catch((e) => App.toast(e.message, 'err'));
     cargarActividad().catch(() => {});
   });
-  App.onView('countries', () => cargarPaises().catch((e) => App.toast(e.message, 'err')));
 
 })(window.Elorai);

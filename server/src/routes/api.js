@@ -65,6 +65,86 @@ router.get('/me', async (req, res, next) => {
 });
 
 /* ==========================================================================
+   Onboarding — datos de negocio recogidos tras el primer login con Google
+   ========================================================================== */
+
+const BUSINESS_TYPES = new Set([
+  'ecommerce', 'restaurante', 'clinica', 'estetica', 'inmobiliaria', 'educacion',
+  'servicios_profesionales', 'gimnasio', 'productos_digitales', 'agencia_marketing',
+  'freelancer', 'otro',
+]);
+const TEAM_SIZES = new Set(['independiente', '2', '3-5', '6-15', '16+']);
+// Longitud esperada de teléfono (sin prefijo) por país. Los que no están aquí
+// se validan con un rango genérico razonable.
+const PHONE_LENGTHS = {
+  CO: [10, 10], MX: [10, 10], AR: [10, 11], CL: [9, 9], PE: [9, 9], BR: [10, 11],
+  US: [10, 10], CA: [10, 10], ES: [9, 9], EC: [9, 9], VE: [10, 10], UY: [8, 9],
+  PY: [9, 9], BO: [8, 8], GT: [8, 8], DO: [10, 10], PA: [7, 8], CR: [8, 8],
+};
+
+router.get('/onboarding', async (req, res, next) => {
+  try {
+    const row = await one('SELECT * FROM business_profile WHERE account_id = $1', [account(req)]);
+    res.json({
+      profile: row && {
+        businessType: row.business_type,
+        teamSize: row.team_size,
+        fullName: row.full_name,
+        phoneCountry: row.phone_country,
+        phoneNumber: row.phone_number,
+      },
+      email: req.user.email,
+      suggestedName: req.user.name,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/onboarding', async (req, res, next) => {
+  try {
+    const businessType = String(req.body?.businessType || '').trim();
+    const teamSize = String(req.body?.teamSize || '').trim();
+    const fullName = String(req.body?.fullName || '').trim();
+    const phoneCountry = String(req.body?.phoneCountry || '').trim().toUpperCase();
+    const phoneNumber = String(req.body?.phoneNumber || '').replace(/\D/g, '');
+
+    if (!BUSINESS_TYPES.has(businessType)) {
+      return res.status(400).json({ error: 'validation', message: 'Elige el tipo de negocio.' });
+    }
+    if (!TEAM_SIZES.has(teamSize)) {
+      return res.status(400).json({ error: 'validation', message: 'Indica cuántas personas atienden en tu negocio.' });
+    }
+    if (fullName.length < 3) {
+      return res.status(400).json({ error: 'validation', message: 'Escribe tu nombre y apellido.' });
+    }
+    if (!/^[A-Z]{2}$/.test(phoneCountry)) {
+      return res.status(400).json({ error: 'validation', message: 'Selecciona un país válido.' });
+    }
+    const [min, max] = PHONE_LENGTHS[phoneCountry] || [7, 15];
+    if (phoneNumber.length < min || phoneNumber.length > max) {
+      return res.status(400).json({
+        error: 'validation',
+        message: `El teléfono debe tener ${min === max ? `${min} dígitos` : `entre ${min} y ${max} dígitos`} para ese país.`,
+      });
+    }
+
+    const row = await one(
+      `INSERT INTO business_profile (account_id, business_type, team_size, full_name, phone_country, phone_number)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (account_id) DO UPDATE
+         SET business_type = $2, team_size = $3, full_name = $4, phone_country = $5, phone_number = $6
+       RETURNING account_id`,
+      [account(req), businessType, teamSize, fullName, phoneCountry, phoneNumber]
+    );
+    await log(account(req), `Onboarding completado · ${fullName}`);
+    res.status(201).json({ ok: true, accountId: row.account_id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ==========================================================================
    Configuración del bot
    ========================================================================== */
 
@@ -1038,6 +1118,379 @@ router.delete('/media/:id', requireSubscription, async (req, res, next) => {
   try {
     const ok = await media.removeFile({ accountId: account(req), mediaFileId: req.params.id });
     if (!ok) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ==========================================================================
+   Agenda — profesionales, clientes, servicios, bloqueos y reservas
+   ========================================================================== */
+
+const APPT_STATUSES = new Set(['reservado', 'confirmado', 'asiste', 'no_asistio', 'pendiente', 'en_espera']);
+
+function parseDate(value, field) {
+  const d = new Date(value);
+  if (!value || Number.isNaN(d.getTime())) {
+    const err = new Error(`Fecha inválida en "${field}".`);
+    err.status = 400;
+    throw err;
+  }
+  return d;
+}
+
+/** Fila en conflicto (cita u otro bloqueo) para el mismo profesional en ese rango, o null. */
+async function findConflict(client, { accountId, professionalId, startsAt, endsAt, excludeAppointmentId }) {
+  const appt = await client.query(
+    `SELECT a.id, a.starts_at, a.ends_at, c.name AS client_name
+       FROM appointments a JOIN clients c ON c.id = a.client_id
+      WHERE a.account_id = $1 AND a.professional_id = $2
+        AND a.id <> COALESCE($5, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND a.starts_at < $4 AND a.ends_at > $3
+      LIMIT 1`,
+    [accountId, professionalId, startsAt, endsAt, excludeAppointmentId || null]
+  );
+  if (appt.rows[0]) {
+    const r = appt.rows[0];
+    return { kind: 'appointment', message: `Ya hay una reserva de ${r.client_name} en ese horario.` };
+  }
+
+  const block = await client.query(
+    `SELECT id, label FROM schedule_blocks
+      WHERE account_id = $1 AND professional_id = $2 AND starts_at < $4 AND ends_at > $3
+      LIMIT 1`,
+    [accountId, professionalId, startsAt, endsAt]
+  );
+  if (block.rows[0]) {
+    return { kind: 'block', message: `Ese horario está bloqueado (${block.rows[0].label || 'sin motivo'}).` };
+  }
+
+  return null;
+}
+
+/* --- Profesionales -------------------------------------------------------- */
+
+router.get('/agenda/professionals', async (req, res, next) => {
+  try {
+    let rows = await many(
+      'SELECT id, name, active FROM professionals WHERE account_id = $1 ORDER BY created_at',
+      [account(req)]
+    );
+    if (!rows.length) {
+      const created = await one(
+        'INSERT INTO professionals (account_id, name) VALUES ($1, $2) RETURNING id, name, active',
+        [account(req), req.user.name || 'Profesional']
+      );
+      rows = [created];
+    }
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/agenda/professionals', requireSubscription, async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'validation', message: 'El profesional necesita un nombre.' });
+    const row = await one(
+      'INSERT INTO professionals (account_id, name) VALUES ($1, $2) RETURNING id, name, active',
+      [account(req), name]
+    );
+    res.status(201).json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/agenda/professionals/:id', requireSubscription, async (req, res, next) => {
+  try {
+    const row = await one(
+      `UPDATE professionals SET name = COALESCE($3, name), active = COALESCE($4, active)
+        WHERE id = $1 AND account_id = $2 RETURNING id, name, active`,
+      [req.params.id, account(req), req.body?.name ?? null, req.body?.active ?? null]
+    );
+    if (!row) return res.status(404).json({ error: 'not_found' });
+    res.json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* --- Servicios -------------------------------------------------------------- */
+
+router.get('/agenda/services', async (req, res, next) => {
+  try {
+    res.json(await many(
+      'SELECT id, name, duration_min, active FROM services WHERE account_id = $1 ORDER BY created_at',
+      [account(req)]
+    ));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/agenda/services', requireSubscription, async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const durationMin = Number(req.body?.durationMin) || 30;
+    if (!name) return res.status(400).json({ error: 'validation', message: 'El servicio necesita un nombre.' });
+    const row = await one(
+      'INSERT INTO services (account_id, name, duration_min) VALUES ($1, $2, $3) RETURNING id, name, duration_min, active',
+      [account(req), name, Math.max(5, Math.min(durationMin, 480))]
+    );
+    res.status(201).json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/agenda/services/:id', requireSubscription, async (req, res, next) => {
+  try {
+    const row = await one(
+      `UPDATE services SET name = COALESCE($3, name), duration_min = COALESCE($4, duration_min), active = COALESCE($5, active)
+        WHERE id = $1 AND account_id = $2 RETURNING id, name, duration_min, active`,
+      [req.params.id, account(req), req.body?.name ?? null, req.body?.durationMin ?? null, req.body?.active ?? null]
+    );
+    if (!row) return res.status(404).json({ error: 'not_found' });
+    res.json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/agenda/services/:id', requireSubscription, async (req, res, next) => {
+  try {
+    await query('DELETE FROM services WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* --- Clientes ----------------------------------------------------------------
+   El buscador del modal "Nueva Reserva" y "+ Nuevo cliente" cuelgan de aquí. */
+
+router.get('/agenda/clients', async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const rows = q
+      ? await many(
+          `SELECT id, name, phone, email FROM clients
+            WHERE account_id = $1 AND (name ILIKE $2 OR phone ILIKE $2 OR email ILIKE $2)
+            ORDER BY name LIMIT 20`,
+          [account(req), `%${q}%`]
+        )
+      : await many('SELECT id, name, phone, email FROM clients WHERE account_id = $1 ORDER BY name LIMIT 20', [account(req)]);
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/agenda/clients', requireSubscription, async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const phone = String(req.body?.phone || '').replace(/[^\d+]/g, '');
+    const email = String(req.body?.email || '').trim();
+    if (!name) return res.status(400).json({ error: 'validation', message: 'El cliente necesita un nombre.' });
+
+    const row = await one(
+      'INSERT INTO clients (account_id, name, phone, email) VALUES ($1, $2, $3, $4) RETURNING id, name, phone, email',
+      [account(req), name, phone, email]
+    );
+    res.status(201).json(row);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'duplicate', message: 'Ya existe un cliente con ese teléfono.' });
+    }
+    next(err);
+  }
+});
+
+/* --- Eventos de la semana/día (citas + bloqueos) ----------------------------- */
+
+router.get('/agenda/events', async (req, res, next) => {
+  try {
+    const from = parseDate(req.query.from, 'from');
+    const to = parseDate(req.query.to, 'to');
+    const professionalId = req.query.professionalId || null;
+    const status = req.query.status && APPT_STATUSES.has(req.query.status) ? req.query.status : null;
+
+    const appointments = await many(
+      `SELECT a.id, a.status, a.starts_at, a.ends_at, a.professional_id, a.source,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone,
+              s.id AS service_id, s.name AS service_name
+         FROM appointments a
+         JOIN clients c ON c.id = a.client_id
+         LEFT JOIN services s ON s.id = a.service_id
+        WHERE a.account_id = $1 AND a.starts_at < $3 AND a.ends_at > $2
+          AND ($4::uuid IS NULL OR a.professional_id = $4)
+          AND ($5::text IS NULL OR a.status = $5)
+        ORDER BY a.starts_at`,
+      [account(req), from, to, professionalId, status]
+    );
+
+    const blocks = await many(
+      `SELECT b.id, b.label, b.starts_at, b.ends_at, b.professional_id
+         FROM schedule_blocks b
+        WHERE b.account_id = $1 AND b.starts_at < $3 AND b.ends_at > $2
+          AND ($4::uuid IS NULL OR b.professional_id = $4)
+        ORDER BY b.starts_at`,
+      [account(req), from, to, professionalId]
+    );
+
+    res.json({ appointments, blocks });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* --- Reservas ----------------------------------------------------------------- */
+
+router.post('/agenda/appointments', requireSubscription, async (req, res, next) => {
+  try {
+    const professionalId = String(req.body?.professionalId || '');
+    const clientId = String(req.body?.clientId || '');
+    const serviceId = req.body?.serviceId || null;
+    const status = APPT_STATUSES.has(req.body?.status) ? req.body.status : 'reservado';
+    const startsAt = parseDate(req.body?.startsAt, 'startsAt');
+    const endsAt = parseDate(req.body?.endsAt, 'endsAt');
+    const repeatWeeks = Math.min(Math.max(Number(req.body?.repeatWeeks) || 1, 1), 12);
+
+    if (!professionalId || !clientId) {
+      return res.status(400).json({ error: 'validation', message: 'Falta el profesional o el cliente.' });
+    }
+    if (endsAt <= startsAt) {
+      return res.status(400).json({ error: 'validation', message: 'La hora de fin debe ser posterior a la de inicio.' });
+    }
+
+    const occurrences = Array.from({ length: repeatWeeks }, (_, i) => ({
+      startsAt: new Date(startsAt.getTime() + i * 7 * 86400000),
+      endsAt: new Date(endsAt.getTime() + i * 7 * 86400000),
+    }));
+
+    const created = await transaction(async (client) => {
+      const owned = await client.query(
+        'SELECT 1 FROM professionals WHERE id = $1 AND account_id = $2',
+        [professionalId, account(req)]
+      );
+      if (!owned.rows[0]) { const e = new Error('Profesional no encontrado.'); e.status = 404; throw e; }
+
+      const rows = [];
+      for (const occ of occurrences) {
+        const conflict = await findConflict(client, {
+          accountId: account(req), professionalId, startsAt: occ.startsAt, endsAt: occ.endsAt,
+        });
+        if (conflict) {
+          const e = new Error(conflict.message);
+          e.status = 409;
+          throw e;
+        }
+        const { rows: [row] } = await client.query(
+          `INSERT INTO appointments (account_id, professional_id, client_id, service_id, status, starts_at, ends_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id, status, starts_at, ends_at, professional_id, client_id, service_id`,
+          [account(req), professionalId, clientId, serviceId, status, occ.startsAt, occ.endsAt]
+        );
+        rows.push(row);
+      }
+      return rows;
+    });
+
+    await log(account(req), `${created.length > 1 ? `${created.length} reservas creadas` : 'Reserva creada'}`);
+    res.status(201).json({ appointments: created });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'conflict', message: err.message });
+    next(err);
+  }
+});
+
+router.put('/agenda/appointments/:id', requireSubscription, async (req, res, next) => {
+  try {
+    const current = await one(
+      'SELECT * FROM appointments WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]
+    );
+    if (!current) return res.status(404).json({ error: 'not_found' });
+
+    const professionalId = req.body?.professionalId ?? current.professional_id;
+    const startsAt = req.body?.startsAt ? parseDate(req.body.startsAt, 'startsAt') : current.starts_at;
+    const endsAt = req.body?.endsAt ? parseDate(req.body.endsAt, 'endsAt') : current.ends_at;
+    const status = req.body?.status && APPT_STATUSES.has(req.body.status) ? req.body.status : current.status;
+    const clientId = req.body?.clientId ?? current.client_id;
+    const serviceId = req.body?.serviceId !== undefined ? req.body.serviceId : current.service_id;
+
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      return res.status(400).json({ error: 'validation', message: 'La hora de fin debe ser posterior a la de inicio.' });
+    }
+
+    const timeChanged = professionalId !== current.professional_id
+      || new Date(startsAt).getTime() !== new Date(current.starts_at).getTime()
+      || new Date(endsAt).getTime() !== new Date(current.ends_at).getTime();
+
+    const row = await transaction(async (client) => {
+      if (timeChanged) {
+        const conflict = await findConflict(client, {
+          accountId: account(req), professionalId, startsAt, endsAt, excludeAppointmentId: current.id,
+        });
+        if (conflict) { const e = new Error(conflict.message); e.status = 409; throw e; }
+      }
+      const { rows: [updated] } = await client.query(
+        `UPDATE appointments
+            SET professional_id = $3, client_id = $4, service_id = $5, status = $6,
+                starts_at = $7, ends_at = $8, updated_at = now()
+          WHERE id = $1 AND account_id = $2
+      RETURNING id, status, starts_at, ends_at, professional_id, client_id, service_id`,
+        [current.id, account(req), professionalId, clientId, serviceId, status, startsAt, endsAt]
+      );
+      return updated;
+    });
+
+    res.json(row);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'conflict', message: err.message });
+    next(err);
+  }
+});
+
+router.delete('/agenda/appointments/:id', requireSubscription, async (req, res, next) => {
+  try {
+    await query('DELETE FROM appointments WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* --- Bloqueos de horas -------------------------------------------------------- */
+
+router.post('/agenda/blocks', requireSubscription, async (req, res, next) => {
+  try {
+    const professionalId = String(req.body?.professionalId || '');
+    const label = String(req.body?.label || '').trim();
+    const startsAt = parseDate(req.body?.startsAt, 'startsAt');
+    const endsAt = parseDate(req.body?.endsAt, 'endsAt');
+    if (!professionalId) return res.status(400).json({ error: 'validation', message: 'Falta el profesional.' });
+    if (endsAt <= startsAt) {
+      return res.status(400).json({ error: 'validation', message: 'La hora de fin debe ser posterior a la de inicio.' });
+    }
+
+    const row = await one(
+      `INSERT INTO schedule_blocks (account_id, professional_id, label, starts_at, ends_at)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, label, starts_at, ends_at, professional_id`,
+      [account(req), professionalId, label, startsAt, endsAt]
+    );
+    await log(account(req), `Horario bloqueado · ${label || 'sin motivo'}`);
+    res.status(201).json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/agenda/blocks/:id', requireSubscription, async (req, res, next) => {
+  try {
+    await query('DELETE FROM schedule_blocks WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
     res.json({ ok: true });
   } catch (err) {
     next(err);

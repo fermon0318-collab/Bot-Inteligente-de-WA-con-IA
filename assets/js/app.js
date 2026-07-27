@@ -108,6 +108,7 @@
     App.reports.init();
     App.automation.init();
     App.settings.init();
+    App.agenda.init();
 
     // Botón flotante de WhatsApp: un mensaje por vista, no una tarjeta metida
     // en el contenido. Cada vista con oferta de ayuda registra su propio

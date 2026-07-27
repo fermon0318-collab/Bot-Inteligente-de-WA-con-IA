@@ -123,8 +123,6 @@
      Métricas de anuncios
      ===================================================================== */
   let lastAds = { rows: [], totals: { spend: 0, convos: 0, sales: 0, revenue: 0, roi: 0 } };
-  let adsWhatsappCta = null;
-  let adsLowRoiCta = null;
 
   // Bajo rendimiento = gastando más de lo que regresa (ROI por debajo de
   // 100%) con suficiente gasto acumulado para que la señal sea real y no
@@ -170,8 +168,15 @@
     qs('#ads-sales').textContent = num(totals.sales);
     qs('#ads-roi').textContent = totals.spend ? `${totals.roi.toFixed(0)}%` : '—';
 
+    // El widget flotante ya puede haberse ido a otra vista si esto resuelve
+    // tarde (red lenta) — no lo toques si ya no estás viendo Anuncios.
+    if (App.state.view !== 'ads') return;
     const lowRoi = totals.spend >= LOW_ROI_MIN_SPEND && totals.roi < LOW_ROI_THRESHOLD;
-    if (lowRoi) adsLowRoiCta?.show(); else adsLowRoiCta?.hide();
+    App.whatsappFab.set(lowRoi ? {
+      key: 'wa-ads-low-roi',
+      message: 'Tus campañas están dando bajo retorno. ¿Deseas mejorar tus campañas?',
+      href: `https://wa.me/[WHATSAPP_NUMBER]?text=${encodeURIComponent('Hola, vi que mis campañas tienen bajo retorno, quiero ayuda para mejorarlas')}`,
+    } : App.WA_MESSAGES.ads);
   }
 
   async function cargarAdsSettings() {
@@ -202,10 +207,6 @@
   }
 
   function initAds() {
-    adsWhatsappCta = App.initWhatsappCta('#cta-ads-whatsapp', 'cta-ads-whatsapp');
-    adsWhatsappCta?.show();
-    adsLowRoiCta = App.initWhatsappCta('#cta-ads-low-roi', 'cta-ads-low-roi');
-
     App.fillCurrencySelect(qs('#capi-currency'));
 
     const today = new Date();

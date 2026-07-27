@@ -81,28 +81,41 @@
   App.getPref = getPref;
   App.setPref = setPref;
 
-  /* --- Avisos de WhatsApp desechables --------------------------------------
-     Tarjetas "¿quieres que te ayudemos por WhatsApp?" en Cloud API, Métricas
-     de Anuncios, etc. Se acuerdan de si ya las cerraste (por dispositivo) y
-     no vuelven a aparecer. `show()` deja mostrar una más adelante (p. ej. la
-     de "bajo rendimiento" solo cuando de verdad hay métricas flojas). */
-  function initWhatsappCta(id, storageKey) {
-    const node = qs(id);
-    if (!node) return null;
-    const closeBtn = node.querySelector('[data-cta-close]');
-    const dismissed = () => getPref(storageKey, '') === 'dismissed';
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        node.classList.add('hidden');
-        setPref(storageKey, 'dismissed');
-      });
-    }
+  /* --- Botón flotante de WhatsApp -------------------------------------------
+     Un único widget fijo en la esquina (no una tarjeta metida en el
+     contenido): burbuja con un mensaje contextual + botón redondo que
+     siempre lleva a WhatsApp. Cloud API y Métricas de Anuncios lo activan
+     con su propio mensaje al entrar a esa vista (ver `App.onAnyView` más
+     abajo); cada mensaje se recuerda cerrado por separado y por dispositivo. */
+  function initWhatsappFab() {
+    const fab = qs('#whatsapp-fab');
+    if (!fab) return { set() {}, hide() {} };
+    const bubble = qs('#whatsapp-fab-bubble');
+    const text = qs('#whatsapp-fab-text');
+    const link = qs('#whatsapp-fab-link');
+    let currentKey = null;
+
+    qs('#whatsapp-fab-close').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      bubble.classList.add('hidden');
+      if (currentKey) setPref(currentKey, 'dismissed');
+    });
+    qs('#whatsapp-fab-toggle').addEventListener('click', () => {
+      if (bubble.classList.contains('hidden')) bubble.classList.remove('hidden');
+    });
+
     return {
-      show() { if (!dismissed()) node.classList.remove('hidden'); },
-      hide() { node.classList.add('hidden'); },
+      set({ key, message, href }) {
+        currentKey = key;
+        text.textContent = message;
+        link.href = href;
+        fab.classList.remove('hidden');
+        bubble.classList.toggle('hidden', getPref(key, '') === 'dismissed');
+      },
+      hide() { fab.classList.add('hidden'); },
     };
   }
-  App.initWhatsappCta = initWhatsappCta;
+  App.initWhatsappFab = initWhatsappFab;
 
   /* --- Estado global ------------------------------------------------------ */
   App.state = {
@@ -303,6 +316,12 @@
   const viewHooks = {};
   App.onView = (name, fn) => { (viewHooks[name] = viewHooks[name] || []).push(fn); };
 
+  // Hooks que corren en CADA cambio de vista (reciben el nombre de la vista),
+  // a diferencia de onView que solo corre para una vista puntual. Lo usa el
+  // botón flotante de WhatsApp para saber cuándo mostrarse/ocultarse.
+  const anyViewHooks = [];
+  App.onAnyView = (fn) => anyViewHooks.push(fn);
+
   function navigate(view) {
     if (!VIEWS[view]) view = 'dashboard';
     App.state.view = view;
@@ -323,6 +342,7 @@
     closeSidebar();
     window.scrollTo({ top: 0, behavior: 'auto' });
     (viewHooks[view] || []).forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+    anyViewHooks.forEach((fn) => { try { fn(view); } catch (e) { console.error(e); } });
   }
 
   /* --- Sidebar ------------------------------------------------------------ */

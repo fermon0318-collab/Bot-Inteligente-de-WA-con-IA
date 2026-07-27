@@ -109,6 +109,29 @@
     App.automation.init();
     App.settings.init();
 
+    // Botón flotante de WhatsApp: un mensaje por vista, no una tarjeta metida
+    // en el contenido. Cada vista con oferta de ayuda registra su propio
+    // texto aquí; reports.js reutiliza App.WA_MESSAGES.ads para volver al
+    // mensaje normal cuando el ROI deja de estar bajo.
+    App.whatsappFab = App.initWhatsappFab();
+    App.WA_MESSAGES = {
+      'cloud-api': {
+        key: 'wa-cloudapi',
+        message: '¿Deseas que hagamos la conexión por ti?',
+        href: `https://wa.me/[WHATSAPP_NUMBER]?text=${encodeURIComponent('Hola, necesito ayuda para conectar mi WhatsApp Cloud API a Elorai')}`,
+      },
+      ads: {
+        key: 'wa-ads',
+        message: '¿Deseas que hagamos la conexión por ti?',
+        href: `https://wa.me/[WHATSAPP_NUMBER]?text=${encodeURIComponent('Hola, necesito ayuda para conectar Meta Ads a Elorai')}`,
+      },
+    };
+    App.onAnyView((view) => {
+      const cfg = App.WA_MESSAGES[view];
+      if (cfg) App.whatsappFab.set(cfg);
+      else App.whatsappFab.hide();
+    });
+
     App.setConnection(true);
     App.setBotState(true);
     App.navigate(location.hash.slice(1) || 'dashboard');

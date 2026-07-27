@@ -53,8 +53,6 @@
   }
 
   function initCloudApi() {
-    App.initWhatsappCta('#cta-cloudapi-whatsapp', 'cta-cloudapi-whatsapp')?.show();
-
     qs('#clear-log-btn').addEventListener('click', async () => {
       await App.session.api('/activity', { method: 'DELETE' });
       await cargarActividad();

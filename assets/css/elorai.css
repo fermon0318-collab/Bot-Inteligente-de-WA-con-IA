@@ -613,7 +613,7 @@ table.data tbody tr:last-child td { border-bottom: none; }
    .badge ganaría a la utilidad `hidden`. Se restablece solo para ellos, sin
    tocar patrones responsive del tipo `hidden sm:block` en elementos neutros. */
 :where(.btn, .badge, .icon-badge, .switch, .check-item, .nav-link, .conv-item,
-       .avatar, .msg-row, .copyable, .faq-q, .step-card, .toast).hidden {
+       .avatar, .msg-row, .copyable, .faq-q, .step-card, .toast, .wa-fab, .wa-fab-bubble).hidden {
   display: none !important;
 }
 @media (min-width: 1024px) {
@@ -621,6 +621,79 @@ table.data tbody tr:last-child td { border-bottom: none; }
 }
 @media (max-width: 1023.98px) {
   :where(.btn, .badge, .icon-badge, .switch, .avatar).max-lg\:hidden { display: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Botón flotante de WhatsApp
+   -------------------------------------------------------------------------- */
+
+.wa-fab {
+  position: fixed;
+  right: 1.25rem; bottom: 1.25rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.7rem;
+}
+
+.wa-fab-toggle {
+  width: 3.4rem; height: 3.4rem;
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; color: #fff;
+  background-image: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 0 14px 30px -10px rgba(5, 150, 105, 0.65);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  animation: wa-fab-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wa-fab-toggle:hover { transform: scale(1.07); box-shadow: 0 18px 36px -10px rgba(5, 150, 105, 0.75); }
+
+.wa-fab-bubble {
+  position: relative;
+  max-width: 16.5rem;
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 22px 44px -18px rgba(30, 27, 75, 0.4);
+  padding: 0.9rem 1.1rem 1rem;
+  animation: wa-fab-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wa-fab-bubble::after {
+  content: "";
+  position: absolute;
+  right: 1.4rem; bottom: -0.45rem;
+  width: 0.9rem; height: 0.9rem;
+  background: #fff;
+  border-right: 1px solid var(--stroke);
+  border-bottom: 1px solid var(--stroke);
+  transform: rotate(45deg);
+}
+.wa-fab-bubble-close {
+  position: absolute; top: 0.5rem; right: 0.5rem;
+  width: 1.5rem; height: 1.5rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+.wa-fab-bubble-close:hover { background: rgba(238, 242, 255, 0.9); color: var(--ink); }
+.wa-fab-bubble-text {
+  font-size: 0.85rem; font-weight: 600; line-height: 1.4;
+  color: var(--ink); padding-right: 1.1rem;
+}
+.wa-fab-bubble-link {
+  margin-top: 0.75rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.45rem;
+  padding: 0.55rem 0.9rem; border-radius: 0.65rem;
+  font-size: 0.8rem; font-weight: 700; color: #fff;
+  background-image: linear-gradient(135deg, #34d399, #059669);
+  transition: filter 0.18s ease;
+}
+.wa-fab-bubble-link:hover { filter: brightness(1.06); }
+
+@keyframes wa-fab-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

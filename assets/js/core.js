@@ -96,12 +96,10 @@
     let currentKey = null;
 
     qs('#whatsapp-fab-close').addEventListener('click', (ev) => {
+      ev.preventDefault();
       ev.stopPropagation();
       bubble.classList.add('hidden');
       if (currentKey) setPref(currentKey, 'dismissed');
-    });
-    qs('#whatsapp-fab-toggle').addEventListener('click', () => {
-      if (bubble.classList.contains('hidden')) bubble.classList.remove('hidden');
     });
 
     return {

@@ -681,15 +681,6 @@ table.data tbody tr:last-child td { border-bottom: none; }
   font-size: 0.85rem; font-weight: 600; line-height: 1.4;
   color: var(--ink); padding-right: 1.1rem;
 }
-.wa-fab-bubble-link {
-  margin-top: 0.75rem;
-  display: flex; align-items: center; justify-content: center; gap: 0.45rem;
-  padding: 0.55rem 0.9rem; border-radius: 0.65rem;
-  font-size: 0.8rem; font-weight: 700; color: #fff;
-  background-image: linear-gradient(135deg, #34d399, #059669);
-  transition: filter 0.18s ease;
-}
-.wa-fab-bubble-link:hover { filter: brightness(1.06); }
 
 @keyframes wa-fab-pop {
   from { opacity: 0; transform: translateY(10px) scale(0.94); }

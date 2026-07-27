@@ -198,6 +198,7 @@
     select.value = App.state.currency;
     select.addEventListener('change', () => {
       App.state.currency = select.value;
+      App.setPref('currency', select.value);
       pintarEstadisticas();
       App.toast(`Montos en ${select.value}`, 'info', 2000);
       document.dispatchEvent(new CustomEvent('elorai:currency', { detail: select.value }));

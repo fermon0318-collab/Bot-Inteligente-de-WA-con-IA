@@ -63,9 +63,50 @@
     return `${(bytes / 1048576).toFixed(1)} MB`;
   }
 
+  /* --- Preferencias locales -------------------------------------------------
+     Ajustes de UI (moneda del panel, zona horaria de remarketing…) que se
+     recuerdan por navegador. No son datos de la cuenta — eso vive en el
+     servidor y viaja con la sesión; esto es solo "cómo lo dejaste la última
+     vez en este dispositivo". Con localStorage bloqueado (modo privado, por
+     ejemplo) simplemente no se recuerda nada, sin romper el panel. */
+  function getPref(key, fallback) {
+    try {
+      const v = localStorage.getItem(`elorai:${key}`);
+      return v === null ? fallback : v;
+    } catch { return fallback; }
+  }
+  function setPref(key, value) {
+    try { localStorage.setItem(`elorai:${key}`, value); } catch { /* modo privado u otro bloqueo */ }
+  }
+  App.getPref = getPref;
+  App.setPref = setPref;
+
+  /* --- Avisos de WhatsApp desechables --------------------------------------
+     Tarjetas "¿quieres que te ayudemos por WhatsApp?" en Cloud API, Métricas
+     de Anuncios, etc. Se acuerdan de si ya las cerraste (por dispositivo) y
+     no vuelven a aparecer. `show()` deja mostrar una más adelante (p. ej. la
+     de "bajo rendimiento" solo cuando de verdad hay métricas flojas). */
+  function initWhatsappCta(id, storageKey) {
+    const node = qs(id);
+    if (!node) return null;
+    const closeBtn = node.querySelector('[data-cta-close]');
+    const dismissed = () => getPref(storageKey, '') === 'dismissed';
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        node.classList.add('hidden');
+        setPref(storageKey, 'dismissed');
+      });
+    }
+    return {
+      show() { if (!dismissed()) node.classList.remove('hidden'); },
+      hide() { node.classList.add('hidden'); },
+    };
+  }
+  App.initWhatsappCta = initWhatsappCta;
+
   /* --- Estado global ------------------------------------------------------ */
   App.state = {
-    currency: 'USD',
+    currency: getPref('currency', 'USD'),
     view: 'dashboard',
     botRunning: true,
     connected: true,

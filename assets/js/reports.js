@@ -123,6 +123,14 @@
      Métricas de anuncios
      ===================================================================== */
   let lastAds = { rows: [], totals: { spend: 0, convos: 0, sales: 0, revenue: 0, roi: 0 } };
+  let adsWhatsappCta = null;
+  let adsLowRoiCta = null;
+
+  // Bajo rendimiento = gastando más de lo que regresa (ROI por debajo de
+  // 100%) con suficiente gasto acumulado para que la señal sea real y no
+  // ruido de una sola campaña recién creada.
+  const LOW_ROI_THRESHOLD = 100;
+  const LOW_ROI_MIN_SPEND = 20;
 
   async function cargarAnuncios() {
     const params = new URLSearchParams({ from: qs('#ads-from').value, to: qs('#ads-to').value });
@@ -161,6 +169,9 @@
     qs('#ads-convos').textContent = num(totals.convos);
     qs('#ads-sales').textContent = num(totals.sales);
     qs('#ads-roi').textContent = totals.spend ? `${totals.roi.toFixed(0)}%` : '—';
+
+    const lowRoi = totals.spend >= LOW_ROI_MIN_SPEND && totals.roi < LOW_ROI_THRESHOLD;
+    if (lowRoi) adsLowRoiCta?.show(); else adsLowRoiCta?.hide();
   }
 
   async function cargarAdsSettings() {
@@ -191,6 +202,10 @@
   }
 
   function initAds() {
+    adsWhatsappCta = App.initWhatsappCta('#cta-ads-whatsapp', 'cta-ads-whatsapp');
+    adsWhatsappCta?.show();
+    adsLowRoiCta = App.initWhatsappCta('#cta-ads-low-roi', 'cta-ads-low-roi');
+
     App.fillCurrencySelect(qs('#capi-currency'));
 
     const today = new Date();

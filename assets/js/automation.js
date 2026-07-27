@@ -13,7 +13,11 @@
   App.SIMPLE_FLOWS = [];
   App.ADVANCED_FLOWS = [];
   App.TRIGGERS = { simple: [], advanced: [] };
-  App.REMARKETING = { enabled: false, hours: 24, minutes: 0, start: '09:00', end: '21:00', tz: 'America/Mexico_City', steps: [] };
+  App.REMARKETING = {
+    enabled: false, hours: 24, minutes: 0, start: '09:00', end: '21:00',
+    tz: App.getPref('remarketing-tz', 'America/Mexico_City'),
+    steps: [],
+  };
 
   /* ========================================================================
      Editor de pasos (compartido por Flujos Simples y Remarketing)
@@ -529,6 +533,7 @@
 
     qs('#rm-enabled').checked = cfg.enabled;
     qs('#rm-tz').value = cfg.tz;
+    App.setPref('remarketing-tz', cfg.tz);
     qs('#rm-hours').value = cfg.hours;
     qs('#rm-minutes').value = cfg.minutes;
     qs('#rm-start').value = cfg.start;
@@ -542,6 +547,9 @@
     App.TIMEZONES.forEach((z) => tz.appendChild(el('option', { value: z, text: z.replace(/_/g, ' ') })));
     qs('#rm-enabled').checked = cfg.enabled;
     tz.value = cfg.tz;
+    // Se recuerda en este navegador aunque no se le dé a "Guardar" todavía,
+    // para que no "vuelva" a la zona horaria por defecto al recargar.
+    tz.addEventListener('change', () => App.setPref('remarketing-tz', tz.value));
     qs('#rm-hours').value = cfg.hours;
     qs('#rm-minutes').value = cfg.minutes;
     qs('#rm-start').value = cfg.start;

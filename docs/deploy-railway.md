@@ -35,24 +35,28 @@ cosas — ya está preparado para eso, no hace falta tocar código.
 
 1. **New** → **GitHub Repo** → selecciona `Bot-Inteligente-de-WA-con-IA`.
 2. Entra a **Settings** del servicio recién creado:
-   - **Root Directory:** `server` (ahí vive `package.json`; así Railway no
-     intenta construir el repo entero).
-   - **Start Command:** déjalo vacío si `server/railway.json` se detecta solo,
-     o pon `npm run migrate && npm start` a mano si Railway no lo recoge —
-     ese archivo ya está en el repo con esa orden.
+   - **Root Directory:** déjalo **vacío** (el repo completo, no `server`).
+     El servidor sirve `index.html`, `dashboard.html` y `assets/` desde la
+     raíz del repositorio (`server/src/config.js` calcula `ROOT` dos
+     niveles arriba de `server/src`), así que si el Root Directory se
+     limita a `server`, esos archivos nunca llegan a la imagen y el sitio
+     responde `ENOENT: no such file or directory, stat '/index.html'`.
+   - **Start Command / Build Command:** no hace falta tocarlos a mano —
+     `server/railway.json` ya trae `buildCommand` y `startCommand` con
+     `--prefix server`, así Nixpacks instala y arranca el backend aunque el
+     contexto de build sea el repo entero.
 
 `npm run migrate` es idempotente (registra en `schema_migrations` lo ya
 aplicado), así que ejecutarlo en cada arranque no hace daño y garantiza que la
 base nunca se quede desactualizada tras un `git push`.
 
-**Sobre el CSS de Tailwind:** con Root Directory en `server`, Railway nunca
-construye el `package.json` de la raíz — por eso `assets/css/tailwind.css`
-va compilado y comiteado al repositorio, no se genera en el despliegue. Si
-cambias clases de Tailwind en el HTML o en `assets/js/`, corre
-`npm run build:css` en tu máquina y sube el resultado junto con tu cambio, o
-el sitio se verá desactualizado hasta el siguiente commit que sí lo incluya.
-(En Hetzner esto no aplica: `deploy/deploy.sh` lo recompila solo en cada
-despliegue.)
+**Sobre el CSS de Tailwind:** Railway no ejecuta `npm run build:css` — por
+eso `assets/css/tailwind.css` va compilado y comiteado al repositorio, no se
+genera en el despliegue. Si cambias clases de Tailwind en el HTML o en
+`assets/js/`, corre `npm run build:css` en tu máquina y sube el resultado
+junto con tu cambio, o el sitio se verá desactualizado hasta el siguiente
+commit que sí lo incluya. (En Hetzner esto no aplica: `deploy/deploy.sh` lo
+recompila solo en cada despliegue.)
 
 ---
 
@@ -112,10 +116,11 @@ exactamente cuál).
 El filesystem del contenedor es efímero: cualquier PDF o imagen que suban tus
 clientes desaparece en el siguiente despliegue si no hay un Volume.
 
-1. Servicio web → **Settings** → **Volumes** → **New Volume**.
-2. Mount path: `/app/uploads` (con Root Directory=`server`, `/app` es la raíz
-   del contenedor, así que esto cae fuera de `server/` y sobrevive a los
-   redeploys).
+1. Servicio **web** (no el de Postgres, que ya tiene su propio volumen
+   integrado) → botón **+** en el lienzo del proyecto (o **Settings → Volumes**
+   si aparece ahí) → **New Volume**.
+2. Mount path: `/app/uploads` (`/app` es la raíz del contenedor, ya con el
+   repo completo dentro).
 3. Añade la variable `UPLOADS_DIR=/app/uploads`.
 
 Sin este paso, Block F sigue funcionando (sube y envía archivos con

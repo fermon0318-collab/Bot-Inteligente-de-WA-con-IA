@@ -121,6 +121,43 @@ export async function attachCard({ accountId, email, plan, cardToken, acceptance
   return { paymentSourceId: source.id, trialEndsAt, sourceStatus: source.status };
 }
 
+/**
+ * Reemplaza la tarjeta guardada de una cuenta con cobro fallido (`past_due`
+ * o `unpaid`) y reintenta el cobro al instante — a diferencia de
+ * `attachCard()`, no toca `trial_ends_at`: esto no es un alta nueva.
+ */
+export async function updateCard({ accountId, email, cardToken, acceptanceToken, personalDataAuthToken }) {
+  const existing = await one('SELECT plan FROM subscriptions WHERE account_id = $1', [accountId]);
+  if (!existing?.plan) {
+    throw Object.assign(new Error('No hay una suscripción que actualizar'), { status: 409, code: 'no_subscription' });
+  }
+
+  const source = await wompiFetch('/payment_sources', {
+    method: 'POST',
+    body: {
+      type: 'CARD',
+      token: cardToken,
+      customer_email: email,
+      acceptance_token: acceptanceToken,
+      ...(personalDataAuthToken ? { accept_personal_auth: personalDataAuthToken } : {}),
+    },
+  });
+
+  await query(
+    `UPDATE subscriptions
+        SET customer_id = $2, customer_email = $3, charge_attempts = 0,
+            last_charge_error = NULL, updated_at = now()
+      WHERE account_id = $1`,
+    [accountId, source.id, email]
+  );
+
+  const sub = await one(
+    'SELECT account_id, plan, customer_id, customer_email FROM subscriptions WHERE account_id = $1',
+    [accountId]
+  );
+  return chargeOne(sub);
+}
+
 /* --- Cobro ------------------------------------------------------------- */
 const MAX_CHARGE_ATTEMPTS = 3;
 
@@ -267,5 +304,5 @@ export async function getStatus(accountId) {
        FROM subscriptions WHERE account_id = $1`,
     [accountId]
   );
-  return row || { status: 'none', plan: null };
+  return { provider: 'wompi', ...(row || { status: 'none', plan: null }) };
 }

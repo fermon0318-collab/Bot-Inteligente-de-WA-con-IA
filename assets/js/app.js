@@ -85,8 +85,9 @@
       ? App.dateShort(subscription.current_period_end)
       : '—';
 
-    // Acceso al portal de Stripe desde el menú de usuario
-    if (subscription.status !== 'bypass' && subscription.status !== 'none') {
+    // Acceso al portal de Stripe desde el menú de usuario — Wompi no tiene
+    // portal de autogestión, así que este botón solo aplica con Stripe.
+    if (subscription.provider === 'stripe' && subscription.status !== 'bypass' && subscription.status !== 'none') {
       const portal = App.el('button', {
         type: 'button',
         class: 'btn btn-ghost w-full !justify-start',
@@ -99,8 +100,13 @@
     // Un cobro fallido no corta el servicio, pero sí se avisa
     if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
       const banner = qs('#alert-banner');
-      qs('#alert-banner-text').textContent =
-        'Tu último cobro no se completó. Actualiza el método de pago para no perder el servicio.';
+      const text = qs('#alert-banner-text');
+      if (subscription.provider === 'wompi') {
+        text.innerHTML = 'Tu último cobro no se completó. ' +
+          '<a href="/onboarding.html?mode=update&next=/dashboard.html" class="underline font-bold">Actualiza tu tarjeta</a> para no perder el servicio.';
+      } else {
+        text.textContent = 'Tu último cobro no se completó. Actualiza el método de pago para no perder el servicio.';
+      }
       banner.classList.remove('hidden');
     }
   }

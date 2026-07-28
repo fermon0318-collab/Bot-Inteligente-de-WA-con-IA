@@ -29,6 +29,20 @@ router.post('/wompi/attach-card', requireAuth, rateLimit({ windowMs: 60_000, max
   } catch (err) { next(err); }
 });
 
+// Cuenta con cobro fallido (past_due/unpaid): cambia la tarjeta y reintenta
+// el cobro al instante, sin reiniciar el trial.
+router.post('/wompi/update-card', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
+  try {
+    if (providerName !== 'wompi') return res.status(404).json({ error: 'not_applicable' });
+    const { cardToken, acceptanceToken, personalDataAuthToken } = req.body || {};
+    const result = await billing.updateCard({
+      accountId: req.user.accountId, email: req.user.email,
+      cardToken, acceptanceToken, personalDataAuthToken,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 /* --- Iniciar suscripción -------------------------------------------------- */
 router.post('/checkout', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
   try {

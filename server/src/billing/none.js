@@ -33,5 +33,5 @@ export async function handleEvent() {
 }
 
 export async function getStatus() {
-  return { status: 'bypass', plan: null };
+  return { provider: 'none', status: 'bypass', plan: null };
 }

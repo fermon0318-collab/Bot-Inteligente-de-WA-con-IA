@@ -82,11 +82,18 @@
 
   let widgetConfig = null;
   let chosenPlan = 'monthly';
+  let updateMode = false;
 
   function showCardStep() {
     qs('#onboarding-form').classList.add('hidden');
     qs('#card-form').classList.remove('hidden');
     if (widgetConfig?.acceptanceLink) qs('#card-accept-link').href = widgetConfig.acceptanceLink;
+    if (updateMode) {
+      qs('#card-form h2').textContent = 'Actualiza tu tarjeta';
+      qs('#card-price-line').parentElement.textContent = 'Al guardarla, reintentamos el cobro pendiente de inmediato.';
+      qs('#card-submit').innerHTML = 'Actualizar y reintentar cobro <i class="fa-solid fa-lock"></i>';
+      return;
+    }
     const price = chosenPlan === 'yearly' ? widgetConfig.prices.yearly : widgetConfig.prices.monthly;
     if (price) {
       qs('#card-price-line').textContent =
@@ -99,11 +106,21 @@
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('plan') === 'yearly') chosenPlan = 'yearly';
+    updateMode = params.get('mode') === 'update';
 
     try {
       widgetConfig = await App.session.api('/billing/wompi/widget-config');
     } catch {
       widgetConfig = null; // proveedor distinto a Wompi (o aún no configurado): se salta el paso de tarjeta
+    }
+
+    if (updateMode) {
+      // Cuenta con cobro fallido: se salta el formulario de perfil y se va
+      // directo a la tarjeta — el negocio ya está registrado.
+      if (!widgetConfig) { window.location.href = '/dashboard.html'; return; }
+      showCardStep();
+      qs('#card-form').addEventListener('submit', onCardSubmit);
+      return;
     }
 
     try {
@@ -169,42 +186,46 @@
       }, 'Creando tu cuenta…');
     });
 
-    qs('#card-form').addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      if (!validateCardForm()) {
-        qs('#card-form .is-invalid')?.focus();
-        return;
+    qs('#card-form').addEventListener('submit', onCardSubmit);
+  }
+
+  async function onCardSubmit(ev) {
+    ev.preventDefault();
+    if (!validateCardForm()) {
+      qs('#card-form .is-invalid')?.focus();
+      return;
+    }
+
+    const submitBtn = qs('#card-submit');
+    await App.withBusy(submitBtn, async () => {
+      try {
+        const [expMonth, expYear] = qs('#card-exp').value.trim().split('/');
+        const cardToken = await tokenizeCard(widgetConfig, {
+          number: qs('#card-number').value,
+          expMonth,
+          expYear,
+          cvc: qs('#card-cvc').value.trim(),
+          cardHolder: qs('#card-holder').value.trim(),
+        });
+
+        const body = {
+          cardToken,
+          acceptanceToken: widgetConfig.acceptanceToken,
+          personalDataAuthToken: widgetConfig.personalDataAuthToken,
+        };
+        if (!updateMode) body.plan = chosenPlan;
+
+        await App.session.api(`/billing/wompi/${updateMode ? 'update-card' : 'attach-card'}`, {
+          method: 'POST',
+          body,
+        });
+
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = params.get('next') || (updateMode ? '/dashboard.html?pago=ok' : '/dashboard.html?trial=ok');
+      } catch (err) {
+        toast(err.message, 'err');
       }
-
-      const submitBtn = qs('#card-submit');
-      await App.withBusy(submitBtn, async () => {
-        try {
-          const [expMonth, expYear] = qs('#card-exp').value.trim().split('/');
-          const cardToken = await tokenizeCard(widgetConfig, {
-            number: qs('#card-number').value,
-            expMonth,
-            expYear,
-            cvc: qs('#card-cvc').value.trim(),
-            cardHolder: qs('#card-holder').value.trim(),
-          });
-
-          await App.session.api('/billing/wompi/attach-card', {
-            method: 'POST',
-            body: {
-              plan: chosenPlan,
-              cardToken,
-              acceptanceToken: widgetConfig.acceptanceToken,
-              personalDataAuthToken: widgetConfig.personalDataAuthToken,
-            },
-          });
-
-          const params = new URLSearchParams(window.location.search);
-          window.location.href = params.get('next') || '/dashboard.html?trial=ok';
-        } catch (err) {
-          toast(err.message, 'err');
-        }
-      }, 'Activando tu prueba gratis…');
-    });
+    }, updateMode ? 'Actualizando tu tarjeta…' : 'Activando tu prueba gratis…');
   }
 
   document.addEventListener('DOMContentLoaded', init);

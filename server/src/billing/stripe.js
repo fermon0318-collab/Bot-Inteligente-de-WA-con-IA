@@ -185,5 +185,5 @@ export async function getStatus(accountId) {
        FROM subscriptions WHERE account_id = $1`,
     [accountId]
   );
-  return row || { status: 'none', plan: null };
+  return { provider: 'stripe', ...(row || { status: 'none', plan: null }) };
 }

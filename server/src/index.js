@@ -49,7 +49,11 @@ app.use(helmet({
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
       imgSrc: ["'self'", 'data:', 'https://lh3.googleusercontent.com', 'https://i.ytimg.com'],
       frameSrc: ['https://www.youtube-nocookie.com'],
-      connectSrc: ["'self'"],
+      // sandbox./production.wompi.co: el navegador tokeniza la tarjeta
+      // directo con Wompi (onboarding.js) — así el número nunca toca este
+      // servidor. Ambos hosts se permiten siempre: cuál se use depende de
+      // qué llave (pub_test_/pub_prod_) esté configurada, no del entorno.
+      connectSrc: ["'self'", 'https://sandbox.wompi.co', 'https://production.wompi.co'],
       formAction: ["'self'", 'https://checkout.stripe.com', 'https://billing.stripe.com'],
       baseUri: ["'self'"],
       frameAncestors: ["'self'"],

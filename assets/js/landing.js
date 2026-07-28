@@ -122,6 +122,12 @@
   const session = window.Elorai && window.Elorai.session;
   if (!session) return;
 
+  // Sin sesión (visitante público): el número de WhatsApp de soporte se pide
+  // a un endpoint sin autenticación, no a /api/me.
+  session.api('/public/support')
+    .then((d) => session.applyWhatsapp(d.whatsapp))
+    .catch(() => {});
+
   /** Aviso discreto arriba del todo, para mensajes de vuelta del servidor. */
   function banner(text, kind = 'info') {
     const colors = {

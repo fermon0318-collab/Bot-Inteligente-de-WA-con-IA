@@ -14,6 +14,12 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 <link rel="stylesheet" href="assets/css/tailwind.css" />
 <link rel="stylesheet" href="assets/css/elorai.css" />
+<style>
+  /* Letra >=16px en los campos: por debajo de eso, iOS Safari hace zoom
+     automático al enfocar y descoloca el formulario. Se acota a esta página
+     (no al panel, donde .input/.select se usan en tablas densas). */
+  #onboarding-form .input, #onboarding-form .select { font-size: 1rem; }
+</style>
 </head>
 <body class="antialiased" style="background: radial-gradient(circle at top, #ede9fe, #f5f3ff 55%, #ffffff);">
 

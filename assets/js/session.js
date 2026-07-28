@@ -107,9 +107,23 @@ window.Elorai = window.Elorai || {};
     none: ['Sin plan', 'badge-muted'],
   };
 
+  /**
+   * Reemplaza el marcador "[WHATSAPP_NUMBER]" en los enlaces de wa.me por el
+   * número real (SUPPORT_WHATSAPP en el servidor) — una sola variable de
+   * entorno corrige el enlace en toda la app en vez de un número quemado por
+   * archivo. Sin número configurado, no toca nada (evita un href vacío peor
+   * que el marcador visible).
+   */
+  function applyWhatsapp(number) {
+    if (!number) return;
+    document.querySelectorAll('a[href*="[WHATSAPP_NUMBER]"]').forEach((a) => {
+      a.setAttribute('href', a.getAttribute('href').replace('[WHATSAPP_NUMBER]', number));
+    });
+  }
+
   App.session = {
     api, currentUser, loginUrl, goToLogin, logout,
-    startCheckout, openBillingPortal, SUBSCRIPTION_LABEL,
+    startCheckout, openBillingPortal, SUBSCRIPTION_LABEL, applyWhatsapp,
   };
 
 })(window.Elorai);

@@ -5,7 +5,7 @@
 (function (App) {
   'use strict';
 
-  const { qs, qsa, el, toast, confirmModal, withBusy } = App;
+  const { qs, qsa, el, toast, confirmModal, withBusy, escapeHtml } = App;
 
   const HOUR_START = 7;
   const HOUR_END = 21; // exclusivo — última fila visible es 20:00–21:00
@@ -20,8 +20,9 @@
     no_asistio: { label: 'No asistió',  dot: '#fb923c', bg: '#ffedd5', text: '#9a3412' },
     pendiente:  { label: 'Pendiente',   dot: '#f87171', bg: '#fee2e2', text: '#991b1b' },
     en_espera:  { label: 'En espera',   dot: '#34d399', bg: '#d1fae5', text: '#065f46' },
+    cancelada:  { label: 'Cancelada',   dot: '#94a3b8', bg: '#f1f5f9', text: '#475569' },
   };
-  const STATUS_ORDER = ['reservado', 'confirmado', 'asiste', 'no_asistio', 'pendiente', 'en_espera'];
+  const STATUS_ORDER = ['reservado', 'confirmado', 'asiste', 'no_asistio', 'pendiente', 'en_espera', 'cancelada'];
 
   const state = {
     mode: 'week',
@@ -169,7 +170,8 @@
     try {
       state.events = await App.session.api(`/agenda/events?${params}`);
     } catch (err) {
-      toast(err.message, 'err');
+      if (err.status === 401) { App.session.goToLogin('/dashboard.html#agenda'); return; }
+      toast(`No se pudo cargar la agenda: ${err.message}`, 'err');
       state.events = { appointments: [], blocks: [] };
     }
     renderGrid();
@@ -181,6 +183,38 @@
       ? days[0].toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: 'long' })
       : `${fmtDateShort(days[0])} – ${fmtDateShort(days[6])} de ${MONTHS[days[6].getMonth()]}`;
     qs('#agenda-range-label').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
+  /* --- Segmentos por día (recorta citas/bloqueos multi-día en cada columna) --- */
+
+  /**
+   * Convierte un evento real (que puede empezar/terminar fuera de este día, o
+   * fuera de las horas visibles) en el segmento que corresponde pintar en la
+   * columna de `day`. startMin/endMin quedan en 0–1440 (todo el día, no solo
+   * el rango visible) para que el reparto de carriles sea correcto; el recorte
+   * a las horas visibles ocurre después, al calcular la posición en píxeles.
+   */
+  function makeSegment(kind, raw, realStart, realEnd, dayStart, dayEnd) {
+    const startMin = realStart <= dayStart ? 0 : minutesOfDay(realStart);
+    const endMinRaw = realEnd >= dayEnd ? 24 * 60 : minutesOfDay(realEnd);
+    return {
+      kind, raw, realStart, realEnd,
+      startMin, endMin: Math.max(endMinRaw, startMin + 1),
+      continuesBefore: realStart < dayStart,
+      continuesAfter: realEnd > dayEnd,
+    };
+  }
+
+  function segmentsForDay(day) {
+    const dayStart = startOfDay(day);
+    const dayEnd = addDays(dayStart, 1);
+    const appts = state.events.appointments
+      .filter((a) => new Date(a.starts_at) < dayEnd && new Date(a.ends_at) > dayStart)
+      .map((a) => makeSegment('appointment', a, new Date(a.starts_at), new Date(a.ends_at), dayStart, dayEnd));
+    const blocks = state.events.blocks
+      .filter((b) => new Date(b.starts_at) < dayEnd && new Date(b.ends_at) > dayStart)
+      .map((b) => makeSegment('block', b, new Date(b.starts_at), new Date(b.ends_at), dayStart, dayEnd));
+    return [...appts, ...blocks];
   }
 
   /* --- Layout de eventos superpuestos (por columna/día) ----------------------- */
@@ -249,6 +283,7 @@
     }
     body.appendChild(hourCol);
 
+    let totalEvents = 0;
     days.forEach((day) => {
       const isToday = sameDay(day, today);
       const col = el('div', {
@@ -257,14 +292,8 @@
         dataset: { date: fmtDateInput(day) },
       });
 
-      const dayAppts = state.events.appointments
-        .filter((a) => sameDay(new Date(a.starts_at), day))
-        .map((a) => ({ kind: 'appointment', raw: a, startMin: minutesOfDay(new Date(a.starts_at)), endMin: minutesOfDay(new Date(a.ends_at)) || 24 * 60 }));
-      const dayBlocks = state.events.blocks
-        .filter((b) => sameDay(new Date(b.starts_at), day))
-        .map((b) => ({ kind: 'block', raw: b, startMin: minutesOfDay(new Date(b.starts_at)), endMin: minutesOfDay(new Date(b.ends_at)) }));
-
-      const laidOut = layoutForDay([...dayAppts, ...dayBlocks]);
+      const laidOut = layoutForDay(segmentsForDay(day));
+      totalEvents += laidOut.length;
       laidOut.forEach((ev) => col.appendChild(renderEventNode(ev, totalHeight)));
 
       col.addEventListener('click', (ev) => onDayColClick(ev, col, day));
@@ -273,36 +302,66 @@
 
     grid.appendChild(body);
     updateNowLine();
+
+    qs('#agenda-empty')?.remove();
+    if (totalEvents === 0) {
+      grid.insertAdjacentElement('afterend', el('p', {
+        id: 'agenda-empty', class: 'text-center text-sm text-ink/45 py-3',
+        text: state.filterStatus || state.filterProfessional
+          ? 'Sin reservas que coincidan con el filtro en este rango.'
+          : 'Sin reservas ni bloqueos en este rango.',
+      }));
+    }
   }
 
   function renderEventNode(ev, totalHeight) {
-    const top = Math.max(0, (ev.startMin - HOUR_START * 60) / 60) * HOUR_H;
-    const height = Math.max(18, ((ev.endMin - ev.startMin) / 60) * HOUR_H);
+    const bandStart = HOUR_START * 60;
+    const bandEnd = HOUR_END * 60;
+    const entirelyBefore = ev.endMin <= bandStart;
+    const entirelyAfter = ev.startMin >= bandEnd;
+    const clampedStart = entirelyBefore ? bandStart : entirelyAfter ? bandEnd : Math.max(ev.startMin, bandStart);
+    const clampedEnd = entirelyBefore ? bandStart : entirelyAfter ? bandEnd : Math.min(ev.endMin, bandEnd);
+
+    const rawTop = ((clampedStart - bandStart) / 60) * HOUR_H;
+    const height = Math.max(18, ((clampedEnd - clampedStart) / 60) * HOUR_H);
+    const top = Math.min(Math.max(rawTop, 0), totalHeight - height);
+
     const width = 100 / ev._laneCount;
     const left = ev._lane * width;
-    const style = `top:${top}px;height:${Math.min(height, totalHeight - top)}px;left:calc(${left}% + 2px);width:calc(${width}% - 4px);`;
+    const clippedTop = ev.continuesBefore || ev.startMin < bandStart;
+    const clippedBottom = ev.continuesAfter || ev.endMin > bandEnd;
+    const clipClass = `${clippedTop ? ' is-clipped-top' : ''}${clippedBottom ? ' is-clipped-bottom' : ''}`;
+    const style = `top:${top}px;height:${height}px;left:calc(${left}% + 2px);width:calc(${width}% - 4px);`;
+    const timeRange = `${fmtTimeInput(ev.realStart)}–${fmtTimeInput(ev.realEnd)}`;
 
     if (ev.kind === 'block') {
       const node = el('div', {
-        class: 'agenda-event is-block', style,
-        title: `Bloqueado · ${ev.raw.label || 'sin motivo'}`,
+        class: `agenda-event is-block${clipClass}`, style, tabindex: '0', role: 'button',
+        'aria-label': `Bloqueo: ${ev.raw.label || 'sin motivo'}, ${timeRange}`,
+        title: `Bloqueado · ${ev.raw.label || 'sin motivo'} · ${timeRange}`,
       }, [
         el('strong', { text: `🔒 ${ev.raw.label || 'Bloqueado'}` }),
-        el('span', { text: `${fmtTimeInput(new Date(ev.raw.starts_at))}–${fmtTimeInput(new Date(ev.raw.ends_at))}` }),
+        el('span', { text: timeRange }),
       ]);
-      node.addEventListener('click', (e) => { e.stopPropagation(); confirmDeleteBlock(ev.raw); });
+      const open = (e) => { e.stopPropagation(); confirmDeleteBlock(ev.raw); };
+      node.addEventListener('click', open);
+      node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
       return node;
     }
 
     const s = STATUS[ev.raw.status] || STATUS.reservado;
     const node = el('div', {
-      class: 'agenda-event', style: `${style}background:${s.bg};color:${s.text};`,
-      title: `${ev.raw.client_name} · ${s.label}`,
+      class: `agenda-event${clipClass}`, style: `${style}background:${s.bg};color:${s.text};`,
+      tabindex: '0', role: 'button',
+      'aria-label': `Reserva de ${ev.raw.client_name}, ${s.label}, ${timeRange}`,
+      title: `${ev.raw.client_name} · ${s.label} · ${timeRange}`,
     }, [
       el('strong', { text: ev.raw.client_name }),
-      el('span', { text: `${fmtTimeInput(new Date(ev.raw.starts_at))} · ${s.label}${ev.raw.service_name ? ` · ${ev.raw.service_name}` : ''}` }),
+      el('span', { text: `${fmtTimeInput(ev.realStart)} · ${s.label}${ev.raw.service_name ? ` · ${ev.raw.service_name}` : ''}` }),
     ]);
-    node.addEventListener('click', (e) => { e.stopPropagation(); openApptModal({ editing: ev.raw }); });
+    const open = (e) => { e.stopPropagation(); openApptModal({ editing: ev.raw }); };
+    node.addEventListener('click', open);
+    node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
     return node;
   }
 
@@ -413,7 +472,7 @@
   }
 
   async function confirmDeleteBlock(block) {
-    const ok = await confirmModal('Quitar bloqueo', `¿Quitar el bloqueo "${block.label || 'sin motivo'}"? Ese horario volverá a estar disponible.`, { confirmText: 'Quitar', danger: true });
+    const ok = await confirmModal('Quitar bloqueo', `¿Quitar el bloqueo "${escapeHtml(block.label || 'sin motivo')}"? Ese horario volverá a estar disponible.`, { confirmText: 'Quitar', danger: true });
     if (!ok) return;
     await App.session.api(`/agenda/blocks/${block.id}`, { method: 'DELETE' });
     toast('Bloqueo eliminado', 'ok');
@@ -550,7 +609,7 @@
       if (!q) { results.classList.add('hidden'); return; }
       t = setTimeout(async () => {
         try {
-          const clients = await App.session.api(`/agenda/clients?q=${encodeURIComponent(q)}`);
+          const { clients, hasMore } = await App.session.api(`/agenda/clients?q=${encodeURIComponent(q)}`);
           results.innerHTML = '';
           if (!clients.length) {
             results.appendChild(el('div', { class: 'px-3 py-2 text-sm text-ink/45', text: 'Sin resultados — crea uno nuevo.' }));
@@ -564,6 +623,12 @@
               });
               results.appendChild(btn);
             });
+            if (hasMore) {
+              results.appendChild(el('div', {
+                class: 'px-3 py-2 text-xs text-ink/40 border-t border-line-soft',
+                text: 'Hay más resultados — sigue escribiendo para afinar la búsqueda.',
+              }));
+            }
           }
           results.classList.remove('hidden');
         } catch (err) { toast(err.message, 'err'); }
@@ -599,24 +664,109 @@
     });
   }
 
-  /* --- Alta rápida de profesionales / servicios -------------------------------- */
+  /* --- Gestión de profesionales / servicios: alta, edición, baja -------------- */
 
-  async function quickAddProfessional() {
-    const name = await App.promptModal('Nuevo profesional', 'Nombre', '', { placeholder: 'Ej. Ana Torres' });
-    if (!name) return;
-    await App.session.api('/agenda/professionals', { method: 'POST', body: { name } });
-    toast('Profesional agregado', 'ok');
-    await loadProfessionals();
+  function manageRow({ item, kind, onSaved, onDeleted }) {
+    const nameInput = el('input', { class: 'input flex-1 !py-1.5 !text-sm', value: item.name });
+    const activeInput = el('input', { type: 'checkbox', class: 'h-4 w-4' });
+    activeInput.checked = item.active;
+    const saveBtn = el('button', { type: 'button', class: 'btn btn-ghost btn-sm', title: 'Guardar', html: '<i class="fa-solid fa-check"></i>' });
+    const children = [
+      nameInput,
+      el('label', { class: 'flex items-center gap-1.5 text-xs font-semibold text-ink/60 flex-none whitespace-nowrap' }, [activeInput, el('span', { text: 'Activo' })]),
+      saveBtn,
+    ];
+
+    if (kind === 'services') {
+      const durationInput = el('input', { type: 'number', min: '5', max: '480', class: 'input !w-16 !py-1.5 !text-sm flex-none', value: String(item.duration_min) });
+      children.splice(1, 0, durationInput);
+      saveBtn.addEventListener('click', () => withBusy(saveBtn, async () => {
+        try {
+          const updated = await App.session.api(`/agenda/services/${item.id}`, {
+            method: 'PUT', body: { name: nameInput.value.trim(), active: activeInput.checked, durationMin: Number(durationInput.value) || 30 },
+          });
+          Object.assign(item, updated);
+          toast('Servicio actualizado', 'ok');
+          onSaved?.();
+        } catch (e) { toast(e.message, 'err'); }
+      }));
+      const delBtn = el('button', { type: 'button', class: 'btn btn-ghost btn-sm', title: 'Eliminar', html: '<i class="fa-solid fa-trash text-red-500"></i>' });
+      delBtn.addEventListener('click', () => withBusy(delBtn, async () => {
+        // Confirmación nativa: el modal genérico de la app es un único elemento
+        // compartido y no admite anidar otro modal encima de este panel.
+        if (!window.confirm(`¿Eliminar el servicio "${item.name}"? Las citas que ya lo usan no se ven afectadas.`)) return;
+        try {
+          await App.session.api(`/agenda/services/${item.id}`, { method: 'DELETE' });
+          toast('Servicio eliminado', 'ok');
+          onDeleted?.();
+        } catch (e) { toast(e.message, 'err'); }
+      }));
+      children.push(delBtn);
+    } else {
+      saveBtn.addEventListener('click', () => withBusy(saveBtn, async () => {
+        try {
+          const updated = await App.session.api(`/agenda/professionals/${item.id}`, {
+            method: 'PUT', body: { name: nameInput.value.trim(), active: activeInput.checked },
+          });
+          Object.assign(item, updated);
+          toast('Profesional actualizado', 'ok');
+          onSaved?.();
+        } catch (e) { toast(e.message, 'err'); }
+      }));
+    }
+
+    return el('div', { class: 'flex items-center gap-2 p-2 rounded-lg border border-line-soft' }, children);
   }
 
-  async function quickAddService() {
-    const name = await App.promptModal('Nuevo servicio', 'Nombre', '', { placeholder: 'Ej. Corte de cabello' });
-    if (!name) return;
-    const durationStr = await App.promptModal('Duración', 'Minutos que dura el servicio', '30', { placeholder: '30' });
-    if (!durationStr) return;
-    await App.session.api('/agenda/services', { method: 'POST', body: { name, durationMin: Number(durationStr) || 30 } });
-    toast('Servicio agregado', 'ok');
-    await loadServices();
+  async function openManage(kind) {
+    const isServices = kind === 'services';
+    let items = isServices ? state.services : state.professionals;
+    const list = el('div', { class: 'space-y-2 max-h-[20rem] overflow-y-auto scroll-thin' });
+    const reloadAndRender = async () => {
+      isServices ? await loadServices() : await loadProfessionals();
+      items = isServices ? state.services : state.professionals;
+      renderRows();
+    };
+    const renderRows = () => {
+      list.innerHTML = '';
+      if (!items.length) list.appendChild(el('p', { class: 'text-sm text-ink/45 text-center py-4', text: 'Todavía no hay ninguno.' }));
+      items.forEach((item) => list.appendChild(manageRow({
+        item, kind,
+        onSaved: () => {},
+        onDeleted: reloadAndRender,
+      })));
+    };
+    renderRows();
+
+    const newName = el('input', { class: 'input flex-1', placeholder: isServices ? 'Nuevo servicio' : 'Nuevo profesional' });
+    const newDuration = isServices ? el('input', { type: 'number', min: '5', max: '480', class: 'input !w-16 flex-none', value: '30' }) : null;
+    const addBtn = el('button', { type: 'button', class: 'btn btn-primary btn-sm flex-none', html: '<i class="fa-solid fa-plus"></i> Agregar' });
+    addBtn.addEventListener('click', () => withBusy(addBtn, async () => {
+      const name = newName.value.trim();
+      if (!name) { toast('Escribe un nombre', 'err'); return; }
+      try {
+        if (isServices) {
+          await App.session.api('/agenda/services', { method: 'POST', body: { name, durationMin: Number(newDuration.value) || 30 } });
+        } else {
+          await App.session.api('/agenda/professionals', { method: 'POST', body: { name } });
+        }
+        newName.value = '';
+        toast(isServices ? 'Servicio agregado' : 'Profesional agregado', 'ok');
+        await reloadAndRender();
+      } catch (e) { toast(e.message, 'err'); }
+    }));
+
+    const body = el('div', { class: 'space-y-3' }, [
+      list,
+      el('div', { class: 'flex items-center gap-2 pt-2 border-t border-line-soft' }, [newName, newDuration, addBtn].filter(Boolean)),
+    ]);
+
+    await App.modal({
+      title: isServices ? 'Servicios' : 'Profesionales',
+      icon: isServices ? 'fa-briefcase' : 'fa-user-gear',
+      body, hideCancel: true, confirmText: 'Cerrar',
+      onConfirm: () => true,
+    });
   }
 
   /* --- Init --------------------------------------------------------------- */
@@ -631,6 +781,13 @@
       state.mode = btn.dataset.mode;
       loadEvents();
     }));
+
+    // En pantallas angostas la semana no cabe (7 columnas): arranca en modo Día.
+    if (window.innerWidth < 640) {
+      state.mode = 'day';
+      const dayBtn = qs('.agenda-mode-btn[data-mode="day"]');
+      qsa('.agenda-mode-btn').forEach((b) => b.classList.toggle('active', b === dayBtn));
+    }
 
     qs('#agenda-prev').addEventListener('click', () => {
       state.anchor = addDays(state.anchor, state.mode === 'day' ? -1 : -7);
@@ -650,8 +807,8 @@
     qs('#agenda-professional-filter').addEventListener('change', (ev) => { state.filterProfessional = ev.target.value; loadEvents(); });
     qs('#agenda-status-filter').addEventListener('change', (ev) => { state.filterStatus = ev.target.value; loadEvents(); });
 
-    qs('#agenda-add-professional').addEventListener('click', () => quickAddProfessional().catch((e) => toast(e.message, 'err')));
-    qs('#agenda-add-service').addEventListener('click', () => quickAddService().catch((e) => toast(e.message, 'err')));
+    qs('#agenda-add-professional').addEventListener('click', () => openManage('professionals').catch((e) => toast(e.message, 'err')));
+    qs('#agenda-add-service').addEventListener('click', () => openManage('services').catch((e) => toast(e.message, 'err')));
 
     // Modal de bloqueo
     qsa('[data-close-agenda-block]').forEach((b) => b.addEventListener('click', () => closeModalEl('#agenda-block-modal')));
@@ -693,6 +850,7 @@
         await Promise.all([loadProfessionals(), loadServices()]);
         await loadEvents();
       } catch (err) {
+        if (err.status === 401) { App.session.goToLogin('/dashboard.html#agenda'); return; }
         toast(err.message, 'err');
       }
     });

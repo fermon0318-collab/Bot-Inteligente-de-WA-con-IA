@@ -80,6 +80,15 @@ app.get('/api/health', async (_req, res) => {
 });
 
 /* --- Rutas ---------------------------------------------------------------- */
+
+// Público a propósito: la landing (sin sesión) necesita el WhatsApp de soporte
+// para sus enlaces "Contactar por WhatsApp" — una sola variable de entorno
+// (SUPPORT_WHATSAPP) lo cambia en todo el sitio, en vez de un número quemado
+// en cada archivo.
+app.get('/api/public/support', (_req, res) => {
+  res.json({ whatsapp: config.support.whatsapp, email: config.support.email });
+});
+
 app.use('/auth', authRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/webhook', webhookRoutes);

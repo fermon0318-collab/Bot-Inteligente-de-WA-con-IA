@@ -386,10 +386,10 @@
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-calendar-days"></i></span>
         <div class="mr-auto">
           <h2 class="text-lg font-extrabold">Agenda</h2>
-          <p class="text-sm opacity-90">Reservas, bloqueos de horario y profesionales — el bot también agenda aquí</p>
+          <p class="text-sm opacity-90">Reservas, bloqueos de horario y profesionales</p>
         </div>
-        <button id="agenda-add-professional" type="button" class="btn btn-sm !bg-white/15 !text-white !border-white/25 hover:!bg-white/25"><i class="fa-solid fa-user-plus"></i> Profesional</button>
-        <button id="agenda-add-service" type="button" class="btn btn-sm !bg-white/15 !text-white !border-white/25 hover:!bg-white/25"><i class="fa-solid fa-briefcase"></i> Servicio</button>
+        <button id="agenda-add-professional" type="button" class="btn btn-sm !bg-white/15 !text-white !border-white/25 hover:!bg-white/25" title="Agregar, renombrar o desactivar profesionales"><i class="fa-solid fa-user-gear"></i> Profesionales</button>
+        <button id="agenda-add-service" type="button" class="btn btn-sm !bg-white/15 !text-white !border-white/25 hover:!bg-white/25" title="Agregar, editar o eliminar servicios"><i class="fa-solid fa-briefcase"></i> Servicios</button>
       </div>
 
       <div class="grid lg:grid-cols-[15rem_1fr] gap-4 mt-4 items-start">
@@ -1133,7 +1133,7 @@
       <i class="fa-solid fa-calendar-check"></i>
       <h3 id="agenda-appt-title" class="text-base font-extrabold">Nueva Reserva</h3>
       <div class="ml-auto flex items-center gap-2">
-        <select id="appt-status" class="select !w-auto !py-1.5 !text-sm !pr-7"></select>
+        <select id="appt-status" class="select !w-auto !py-1.5 !text-sm !pr-7" aria-label="Estado de la reserva"></select>
         <button type="button" class="text-white/80 hover:text-white" data-close-agenda-appt aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>

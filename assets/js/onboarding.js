@@ -67,14 +67,25 @@
       toast(err.message, 'err');
     }
 
+    // Solo dígitos: evita que el navegador acepte letras en un campo que solo admite números.
+    qs('#ob-phone').addEventListener('input', (ev) => {
+      const digitsOnly = ev.target.value.replace(/\D/g, '');
+      if (digitsOnly !== ev.target.value) ev.target.value = digitsOnly;
+    });
+
     qs('#ob-phone-country').addEventListener('change', () => {
       const [, max] = phoneLimits();
-      qs('#ob-phone').maxLength = max + 4; // margen por espacios/guiones que el usuario pueda teclear
+      qs('#ob-phone').maxLength = max;
+      // Revalida de inmediato: un número válido para el país anterior puede no serlo para el nuevo.
+      if (qs('#ob-phone').value) validateForm();
     });
 
     qs('#onboarding-form').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!validateForm()) return;
+      if (!validateForm()) {
+        qs('#onboarding-form .is-invalid')?.focus();
+        return;
+      }
 
       const submitBtn = qs('#ob-submit');
       await App.withBusy(submitBtn, async () => {

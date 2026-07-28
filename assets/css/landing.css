@@ -287,6 +287,8 @@ section[id] { scroll-margin-top: 5.5rem; }
   font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);
   transition: color 0.18s ease, transform 0.18s ease;
   display: inline-block;
+  /* Área táctil de ~44px sin agrandar el texto: relleno + margen negativo que lo compensa. */
+  padding: 0.6rem 0; margin: -0.6rem 0;
 }
 .footer-link:hover { color: #fff; transform: translateX(3px); }
 

@@ -86,6 +86,14 @@ const PHONE_LENGTHS = {
   US: [10, 10], CA: [10, 10], ES: [9, 9], EC: [9, 9], VE: [10, 10], UY: [8, 9],
   PY: [9, 9], BO: [8, 8], GT: [8, 8], DO: [10, 10], PA: [7, 8], CR: [8, 8],
 };
+// Mismos países que ofrece el selector del formulario (assets/js/catalogs.js
+// App.COUNTRIES) — cualquier otro código no pudo venir de la UI real.
+const PHONE_COUNTRY_CODES = new Set([
+  'MX', 'CO', 'AR', 'CL', 'PE', 'BR', 'UY', 'PY', 'BO', 'EC', 'VE', 'GT',
+  'SV', 'HN', 'NI', 'CR', 'PA', 'DO', 'CU', 'PR', 'US', 'CA', 'ES', 'PT',
+  'FR', 'IT', 'DE', 'GB', 'NL', 'BE', 'CH', 'MA', 'NG', 'ZA', 'EG', 'IN',
+  'PK', 'BD', 'ID', 'PH', 'VN', 'CN', 'RU', 'TR', 'AE', 'AU', 'JP', 'KR',
+]);
 
 router.get('/onboarding', async (req, res, next) => {
   try {
@@ -110,7 +118,7 @@ router.post('/onboarding', async (req, res, next) => {
   try {
     const businessType = String(req.body?.businessType || '').trim();
     const teamSize = String(req.body?.teamSize || '').trim();
-    const fullName = String(req.body?.fullName || '').trim();
+    const fullName = String(req.body?.fullName || '').trim().slice(0, 120);
     const phoneCountry = String(req.body?.phoneCountry || '').trim().toUpperCase();
     const phoneNumber = String(req.body?.phoneNumber || '').replace(/\D/g, '');
 
@@ -123,7 +131,7 @@ router.post('/onboarding', async (req, res, next) => {
     if (fullName.length < 3) {
       return res.status(400).json({ error: 'validation', message: 'Escribe tu nombre y apellido.' });
     }
-    if (!/^[A-Z]{2}$/.test(phoneCountry)) {
+    if (!PHONE_COUNTRY_CODES.has(phoneCountry)) {
       return res.status(400).json({ error: 'validation', message: 'Selecciona un país válido.' });
     }
     const [min, max] = PHONE_LENGTHS[phoneCountry] || [7, 15];
@@ -1096,20 +1104,50 @@ router.delete('/media/:id', requireSubscription, async (req, res, next) => {
    Agenda — profesionales, clientes, servicios, bloqueos y reservas
    ========================================================================== */
 
-const APPT_STATUSES = new Set(['reservado', 'confirmado', 'asiste', 'no_asistio', 'pendiente', 'en_espera']);
+const APPT_STATUSES = new Set(['reservado', 'confirmado', 'asiste', 'no_asistio', 'pendiente', 'en_espera', 'cancelada']);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_APPT_MINUTES = 24 * 60;         // una cita no puede durar más de un día
+const MAX_BLOCK_DAYS = 180;               // un bloqueo (vacaciones, licencia…) hasta 6 meses
+const MAX_RANGE_DAYS = 400;               // tope de rango consultable en /agenda/events
+const NAME_MAX = 120;
+const LABEL_MAX = 200;
+const EMAIL_MAX = 200;
+
+function badRequest(message) {
+  const err = new Error(message);
+  err.status = 400;
+  return err;
+}
+function notFound(message = 'No encontrado.') {
+  const err = new Error(message);
+  err.status = 404;
+  return err;
+}
 
 function parseDate(value, field) {
   const d = new Date(value);
-  if (!value || Number.isNaN(d.getTime())) {
-    const err = new Error(`Fecha inválida en "${field}".`);
-    err.status = 400;
-    throw err;
-  }
+  if (!value || Number.isNaN(d.getTime())) throw badRequest(`Fecha inválida en "${field}".`);
   return d;
 }
 
+/** Valida que :id venga como UUID antes de tocar la base — evita 500 por "22P02". */
+function requireUuidParam(req) {
+  if (!UUID_RE.test(req.params.id || '')) throw notFound();
+}
+
+const trunc = (v, max) => String(v ?? '').trim().slice(0, max);
+
+/** ¿La fila con ese id pertenece a esta cuenta? Lanza 404 si no (o si no existe). */
+async function assertOwned(client, table, id, accountId, label) {
+  if (!id) return;
+  if (!UUID_RE.test(id)) throw badRequest(`"${label}" no es válido.`);
+  const { rows } = await client.query(`SELECT 1 FROM ${table} WHERE id = $1 AND account_id = $2`, [id, accountId]);
+  if (!rows[0]) throw notFound(`${label} no encontrado.`);
+}
+
 /** Fila en conflicto (cita u otro bloqueo) para el mismo profesional en ese rango, o null. */
-async function findConflict(client, { accountId, professionalId, startsAt, endsAt, excludeAppointmentId }) {
+async function findConflict(client, { accountId, professionalId, startsAt, endsAt, excludeAppointmentId, excludeBlockId }) {
   const appt = await client.query(
     `SELECT a.id, a.starts_at, a.ends_at, c.name AS client_name
        FROM appointments a JOIN clients c ON c.id = a.client_id
@@ -1126,9 +1164,11 @@ async function findConflict(client, { accountId, professionalId, startsAt, endsA
 
   const block = await client.query(
     `SELECT id, label FROM schedule_blocks
-      WHERE account_id = $1 AND professional_id = $2 AND starts_at < $4 AND ends_at > $3
+      WHERE account_id = $1 AND professional_id = $2
+        AND id <> COALESCE($5, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND starts_at < $4 AND ends_at > $3
       LIMIT 1`,
-    [accountId, professionalId, startsAt, endsAt]
+    [accountId, professionalId, startsAt, endsAt, excludeBlockId || null]
   );
   if (block.rows[0]) {
     return { kind: 'block', message: `Ese horario está bloqueado (${block.rows[0].label || 'sin motivo'}).` };
@@ -1160,7 +1200,7 @@ router.get('/agenda/professionals', async (req, res, next) => {
 
 router.post('/agenda/professionals', requireSubscription, async (req, res, next) => {
   try {
-    const name = String(req.body?.name || '').trim();
+    const name = trunc(req.body?.name, NAME_MAX);
     if (!name) return res.status(400).json({ error: 'validation', message: 'El profesional necesita un nombre.' });
     const row = await one(
       'INSERT INTO professionals (account_id, name) VALUES ($1, $2) RETURNING id, name, active',
@@ -1174,14 +1214,17 @@ router.post('/agenda/professionals', requireSubscription, async (req, res, next)
 
 router.put('/agenda/professionals/:id', requireSubscription, async (req, res, next) => {
   try {
+    requireUuidParam(req);
+    const name = req.body?.name !== undefined ? trunc(req.body.name, NAME_MAX) || null : null;
     const row = await one(
       `UPDATE professionals SET name = COALESCE($3, name), active = COALESCE($4, active)
         WHERE id = $1 AND account_id = $2 RETURNING id, name, active`,
-      [req.params.id, account(req), req.body?.name ?? null, req.body?.active ?? null]
+      [req.params.id, account(req), name, req.body?.active ?? null]
     );
     if (!row) return res.status(404).json({ error: 'not_found' });
     res.json(row);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'validation', message: err.message });
     next(err);
   }
 });
@@ -1201,7 +1244,7 @@ router.get('/agenda/services', async (req, res, next) => {
 
 router.post('/agenda/services', requireSubscription, async (req, res, next) => {
   try {
-    const name = String(req.body?.name || '').trim();
+    const name = trunc(req.body?.name, NAME_MAX);
     const durationMin = Number(req.body?.durationMin) || 30;
     if (!name) return res.status(400).json({ error: 'validation', message: 'El servicio necesita un nombre.' });
     const row = await one(
@@ -1216,23 +1259,32 @@ router.post('/agenda/services', requireSubscription, async (req, res, next) => {
 
 router.put('/agenda/services/:id', requireSubscription, async (req, res, next) => {
   try {
+    requireUuidParam(req);
+    const name = req.body?.name !== undefined ? trunc(req.body.name, NAME_MAX) || null : null;
+    const durationMin = req.body?.durationMin !== undefined
+      ? Math.max(5, Math.min(Number(req.body.durationMin) || 30, 480))
+      : null;
     const row = await one(
       `UPDATE services SET name = COALESCE($3, name), duration_min = COALESCE($4, duration_min), active = COALESCE($5, active)
         WHERE id = $1 AND account_id = $2 RETURNING id, name, duration_min, active`,
-      [req.params.id, account(req), req.body?.name ?? null, req.body?.durationMin ?? null, req.body?.active ?? null]
+      [req.params.id, account(req), name, durationMin, req.body?.active ?? null]
     );
     if (!row) return res.status(404).json({ error: 'not_found' });
     res.json(row);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'validation', message: err.message });
     next(err);
   }
 });
 
 router.delete('/agenda/services/:id', requireSubscription, async (req, res, next) => {
   try {
-    await query('DELETE FROM services WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    requireUuidParam(req);
+    const { rowCount } = await query('DELETE FROM services WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    if (!rowCount) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'not_found' });
     next(err);
   }
 });
@@ -1240,18 +1292,23 @@ router.delete('/agenda/services/:id', requireSubscription, async (req, res, next
 /* --- Clientes ----------------------------------------------------------------
    El buscador del modal "Nueva Reserva" y "+ Nuevo cliente" cuelgan de aquí. */
 
+// Escapa % y _ (comodines de LIKE/ILIKE) para que buscar "50%" no traiga todos los clientes.
+const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 router.get('/agenda/clients', async (req, res, next) => {
   try {
     const q = String(req.query.q || '').trim();
+    const LIMIT = 20;
     const rows = q
       ? await many(
           `SELECT id, name, phone, email FROM clients
-            WHERE account_id = $1 AND (name ILIKE $2 OR phone ILIKE $2 OR email ILIKE $2)
-            ORDER BY name LIMIT 20`,
-          [account(req), `%${q}%`]
+            WHERE account_id = $1 AND (name ILIKE $2 ESCAPE '\\' OR phone ILIKE $2 ESCAPE '\\' OR email ILIKE $2 ESCAPE '\\')
+            ORDER BY name LIMIT $3`,
+          [account(req), `%${escapeLike(q)}%`, LIMIT + 1]
         )
-      : await many('SELECT id, name, phone, email FROM clients WHERE account_id = $1 ORDER BY name LIMIT 20', [account(req)]);
-    res.json(rows);
+      : await many('SELECT id, name, phone, email FROM clients WHERE account_id = $1 ORDER BY name LIMIT $2', [account(req), LIMIT + 1]);
+    const hasMore = rows.length > LIMIT;
+    res.json({ clients: rows.slice(0, LIMIT), hasMore });
   } catch (err) {
     next(err);
   }
@@ -1259,10 +1316,13 @@ router.get('/agenda/clients', async (req, res, next) => {
 
 router.post('/agenda/clients', requireSubscription, async (req, res, next) => {
   try {
-    const name = String(req.body?.name || '').trim();
-    const phone = String(req.body?.phone || '').replace(/[^\d+]/g, '');
-    const email = String(req.body?.email || '').trim();
+    const name = trunc(req.body?.name, NAME_MAX);
+    const phone = trunc(req.body?.phone, 30).replace(/[^\d+]/g, '');
+    const email = trunc(req.body?.email, EMAIL_MAX);
     if (!name) return res.status(400).json({ error: 'validation', message: 'El cliente necesita un nombre.' });
+    if (email && !EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: 'validation', message: 'El email no tiene un formato válido.' });
+    }
 
     const row = await one(
       'INSERT INTO clients (account_id, name, phone, email) VALUES ($1, $2, $3, $4) RETURNING id, name, phone, email',
@@ -1281,9 +1341,14 @@ router.post('/agenda/clients', requireSubscription, async (req, res, next) => {
 
 router.get('/agenda/events', async (req, res, next) => {
   try {
+    if (!req.query.from || !req.query.to) throw badRequest('Faltan "from" y "to".');
     const from = parseDate(req.query.from, 'from');
     const to = parseDate(req.query.to, 'to');
-    const professionalId = req.query.professionalId || null;
+    if (to <= from) throw badRequest('"to" debe ser posterior a "from".');
+    if ((to - from) / 86400000 > MAX_RANGE_DAYS) {
+      throw badRequest(`El rango consultado no puede superar ${MAX_RANGE_DAYS} días.`);
+    }
+    const professionalId = req.query.professionalId && UUID_RE.test(req.query.professionalId) ? req.query.professionalId : null;
     const status = req.query.status && APPT_STATUSES.has(req.query.status) ? req.query.status : null;
 
     const appointments = await many(
@@ -1311,11 +1376,20 @@ router.get('/agenda/events', async (req, res, next) => {
 
     res.json({ appointments, blocks });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'validation', message: err.message });
     next(err);
   }
 });
 
 /* --- Reservas ----------------------------------------------------------------- */
+
+function assertDuration(startsAt, endsAt) {
+  if (endsAt <= startsAt) throw badRequest('La hora de fin debe ser posterior a la de inicio.');
+  const minutes = (endsAt - startsAt) / 60000;
+  if (minutes > MAX_APPT_MINUTES) {
+    throw badRequest(`Una reserva no puede durar más de ${MAX_APPT_MINUTES / 60} horas.`);
+  }
+}
 
 router.post('/agenda/appointments', requireSubscription, async (req, res, next) => {
   try {
@@ -1330,9 +1404,7 @@ router.post('/agenda/appointments', requireSubscription, async (req, res, next) 
     if (!professionalId || !clientId) {
       return res.status(400).json({ error: 'validation', message: 'Falta el profesional o el cliente.' });
     }
-    if (endsAt <= startsAt) {
-      return res.status(400).json({ error: 'validation', message: 'La hora de fin debe ser posterior a la de inicio.' });
-    }
+    assertDuration(startsAt, endsAt);
 
     const occurrences = Array.from({ length: repeatWeeks }, (_, i) => ({
       startsAt: new Date(startsAt.getTime() + i * 7 * 86400000),
@@ -1340,11 +1412,9 @@ router.post('/agenda/appointments', requireSubscription, async (req, res, next) 
     }));
 
     const created = await transaction(async (client) => {
-      const owned = await client.query(
-        'SELECT 1 FROM professionals WHERE id = $1 AND account_id = $2',
-        [professionalId, account(req)]
-      );
-      if (!owned.rows[0]) { const e = new Error('Profesional no encontrado.'); e.status = 404; throw e; }
+      await assertOwned(client, 'professionals', professionalId, account(req), 'Profesional');
+      await assertOwned(client, 'clients', clientId, account(req), 'Cliente');
+      if (serviceId) await assertOwned(client, 'services', serviceId, account(req), 'Servicio');
 
       const rows = [];
       for (const occ of occurrences) {
@@ -1370,13 +1440,14 @@ router.post('/agenda/appointments', requireSubscription, async (req, res, next) 
     await log(account(req), `${created.length > 1 ? `${created.length} reservas creadas` : 'Reserva creada'}`);
     res.status(201).json({ appointments: created });
   } catch (err) {
-    if (err.status) return res.status(err.status).json({ error: 'conflict', message: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.status === 409 ? 'conflict' : 'validation', message: err.message });
     next(err);
   }
 });
 
 router.put('/agenda/appointments/:id', requireSubscription, async (req, res, next) => {
   try {
+    requireUuidParam(req);
     const current = await one(
       'SELECT * FROM appointments WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]
     );
@@ -1389,15 +1460,21 @@ router.put('/agenda/appointments/:id', requireSubscription, async (req, res, nex
     const clientId = req.body?.clientId ?? current.client_id;
     const serviceId = req.body?.serviceId !== undefined ? req.body.serviceId : current.service_id;
 
-    if (new Date(endsAt) <= new Date(startsAt)) {
-      return res.status(400).json({ error: 'validation', message: 'La hora de fin debe ser posterior a la de inicio.' });
-    }
+    assertDuration(new Date(startsAt), new Date(endsAt));
 
     const timeChanged = professionalId !== current.professional_id
       || new Date(startsAt).getTime() !== new Date(current.starts_at).getTime()
       || new Date(endsAt).getTime() !== new Date(current.ends_at).getTime();
+    const clientChanged = clientId !== current.client_id;
+    const serviceChanged = serviceId !== current.service_id;
 
     const row = await transaction(async (client) => {
+      if (professionalId !== current.professional_id) {
+        await assertOwned(client, 'professionals', professionalId, account(req), 'Profesional');
+      }
+      if (clientChanged) await assertOwned(client, 'clients', clientId, account(req), 'Cliente');
+      if (serviceChanged && serviceId) await assertOwned(client, 'services', serviceId, account(req), 'Servicio');
+
       if (timeChanged) {
         const conflict = await findConflict(client, {
           accountId: account(req), professionalId, startsAt, endsAt, excludeAppointmentId: current.id,
@@ -1417,16 +1494,19 @@ router.put('/agenda/appointments/:id', requireSubscription, async (req, res, nex
 
     res.json(row);
   } catch (err) {
-    if (err.status) return res.status(err.status).json({ error: 'conflict', message: err.message });
+    if (err.status) return res.status(err.status).json({ error: err.status === 409 ? 'conflict' : 'validation', message: err.message });
     next(err);
   }
 });
 
 router.delete('/agenda/appointments/:id', requireSubscription, async (req, res, next) => {
   try {
-    await query('DELETE FROM appointments WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    requireUuidParam(req);
+    const { rowCount } = await query('DELETE FROM appointments WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    if (!rowCount) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'not_found' });
     next(err);
   }
 });
@@ -1436,31 +1516,76 @@ router.delete('/agenda/appointments/:id', requireSubscription, async (req, res, 
 router.post('/agenda/blocks', requireSubscription, async (req, res, next) => {
   try {
     const professionalId = String(req.body?.professionalId || '');
-    const label = String(req.body?.label || '').trim();
+    const label = trunc(req.body?.label, LABEL_MAX);
     const startsAt = parseDate(req.body?.startsAt, 'startsAt');
     const endsAt = parseDate(req.body?.endsAt, 'endsAt');
     if (!professionalId) return res.status(400).json({ error: 'validation', message: 'Falta el profesional.' });
     if (endsAt <= startsAt) {
       return res.status(400).json({ error: 'validation', message: 'La hora de fin debe ser posterior a la de inicio.' });
     }
+    if ((endsAt - startsAt) / 86400000 > MAX_BLOCK_DAYS) {
+      return res.status(400).json({ error: 'validation', message: `Un bloqueo no puede durar más de ${MAX_BLOCK_DAYS} días.` });
+    }
 
-    const row = await one(
-      `INSERT INTO schedule_blocks (account_id, professional_id, label, starts_at, ends_at)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, label, starts_at, ends_at, professional_id`,
-      [account(req), professionalId, label, startsAt, endsAt]
-    );
+    const row = await transaction(async (client) => {
+      await assertOwned(client, 'professionals', professionalId, account(req), 'Profesional');
+
+      // Ya hay una reserva en ese rango: bloquear encima la dejaría "atrapada" sin avisar a nadie.
+      const clash = await client.query(
+        `SELECT a.id, a.starts_at, c.name AS client_name
+           FROM appointments a JOIN clients c ON c.id = a.client_id
+          WHERE a.account_id = $1 AND a.professional_id = $2 AND a.starts_at < $4 AND a.ends_at > $3
+          ORDER BY a.starts_at LIMIT 5`,
+        [account(req), professionalId, startsAt, endsAt]
+      );
+      if (clash.rows.length) {
+        const names = [...new Set(clash.rows.map((r) => r.client_name))].join(', ');
+        const e = new Error(
+          clash.rows.length > 1
+            ? `Ese rango ya tiene ${clash.rows.length} reserva(s) (${names}). Reprográmalas o cancélalas antes de bloquear.`
+            : `Ese rango ya tiene una reserva de ${names}. Reprográmala o cancélala antes de bloquear.`
+        );
+        e.status = 409;
+        throw e;
+      }
+
+      // Evita apilar el mismo bloqueo dos veces por doble clic / reintento.
+      const dup = await client.query(
+        `SELECT 1 FROM schedule_blocks
+          WHERE account_id = $1 AND professional_id = $2 AND label = $3 AND starts_at = $4 AND ends_at = $5
+          LIMIT 1`,
+        [account(req), professionalId, label, startsAt, endsAt]
+      );
+      if (dup.rows[0]) {
+        const e = new Error('Ya existe un bloqueo idéntico en ese horario.');
+        e.status = 409;
+        throw e;
+      }
+
+      const { rows: [created] } = await client.query(
+        `INSERT INTO schedule_blocks (account_id, professional_id, label, starts_at, ends_at)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id, label, starts_at, ends_at, professional_id`,
+        [account(req), professionalId, label, startsAt, endsAt]
+      );
+      return created;
+    });
+
     await log(account(req), `Horario bloqueado · ${label || 'sin motivo'}`);
     res.status(201).json(row);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.status === 409 ? 'conflict' : 'validation', message: err.message });
     next(err);
   }
 });
 
 router.delete('/agenda/blocks/:id', requireSubscription, async (req, res, next) => {
   try {
-    await query('DELETE FROM schedule_blocks WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    requireUuidParam(req);
+    const { rowCount } = await query('DELETE FROM schedule_blocks WHERE id = $1 AND account_id = $2', [req.params.id, account(req)]);
+    if (!rowCount) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: 'not_found' });
     next(err);
   }
 });

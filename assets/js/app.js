@@ -51,7 +51,17 @@
       return;
     }
 
-    const { user, subscription } = me;
+    const { user, subscription, support } = me;
+    if (support?.whatsapp) {
+      // Corrige también el mensaje predefinido para cada vista: si `.set()` ya
+      // se llamó antes de que llegara esta respuesta, el enlace visible en
+      // pantalla se arregla con applyWhatsapp; las próximas veces que se
+      // llame usan directamente el href ya corregido aquí.
+      Object.values(App.WA_MESSAGES || {}).forEach((cfg) => {
+        cfg.href = cfg.href.replace('[WHATSAPP_NUMBER]', support.whatsapp);
+      });
+      App.session.applyWhatsapp(support.whatsapp);
+    }
     qs('#user-avatar').textContent = App.initials(user.name || user.email);
     qs('#user-name').textContent = user.name || user.email;
     qs('#user-email-short').textContent = user.email;

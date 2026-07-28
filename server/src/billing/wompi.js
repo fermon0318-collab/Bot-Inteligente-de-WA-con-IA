@@ -52,8 +52,10 @@ export async function getWidgetConfig() {
   const merchant = await wompiFetch(`/merchants/${config.wompi.publicKey}`, { auth: 'public' });
   return {
     publicKey: config.wompi.publicKey,
+    apiBase: config.wompi.apiBase,
     sandbox: config.wompi.sandbox,
     acceptanceToken: merchant?.presigned_acceptance?.acceptance_token || null,
+    acceptanceLink: merchant?.presigned_acceptance?.permalink || null,
     personalDataAuthToken: merchant?.presigned_personal_data_auth?.acceptance_token || null,
     prices: { monthly: config.wompi.priceMonthlyCop, yearly: config.wompi.priceYearlyCop },
     trialDays: config.wompi.trialDays,

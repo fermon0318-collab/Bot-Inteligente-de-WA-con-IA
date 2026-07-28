@@ -28,6 +28,7 @@ import * as adsync from './services/adsync.js';
 import * as capi from './services/capi.js';
 import { startWorker } from './services/outbox.js';
 import * as remarketing from './services/remarketing.js';
+import * as trialBilling from './services/trialBilling.js';
 
 const app = express();
 
@@ -213,6 +214,10 @@ const stopCapi = capi.startWorker();
 // Sincronización con Meta Ads: trae gasto y métricas una vez por hora
 const stopAdsync = adsync.startWorker();
 
+// Cobro de trials vencidos (Wompi): revisa cada hora si hay cuentas que ya
+// cumplieron los 7 días. No hace nada si el proveedor activo no es Wompi.
+const stopTrialBilling = trialBilling.startWorker();
+
 // Si el proceso murió a mitad de un evento, aquí se recupera
 reprocessPending().catch((err) => console.error('[webhook] reproceso inicial:', err.message));
 
@@ -229,6 +234,7 @@ function shutdown(signal) {
   stopRemarketing();
   stopCapi();
   stopAdsync();
+  stopTrialBilling();
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);

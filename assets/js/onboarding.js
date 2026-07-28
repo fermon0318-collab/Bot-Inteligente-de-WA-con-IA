@@ -46,8 +46,65 @@
     ]);
   }
 
+  function validateCardForm() {
+    return validate([
+      { input: '#card-number', test: (v) => v.replace(/\D/g, '').length >= 13, message: 'Escribe un número de tarjeta válido.' },
+      { input: '#card-exp', test: (v) => /^\d{2}\/\d{2}$/.test(v.trim()), message: 'Usa el formato MM/AA.' },
+      { input: '#card-cvc', test: (v) => /^\d{3,4}$/.test(v.trim()), message: 'Escribe el código de seguridad.' },
+      { input: '#card-holder', test: (v) => v.trim().length >= 3, message: 'Escribe el nombre del titular.' },
+      { input: '#card-accept', test: () => qs('#card-accept').checked, message: 'Debes aceptar los términos de Wompi.' },
+    ]);
+  }
+
+  const fmtCOP = (cop) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(cop);
+
+  /** Cambia una tarjeta tokenizada directamente contra la API de Wompi — el
+   *  número nunca pasa por nuestro servidor (alcance PCI reducido a SAQ A). */
+  async function tokenizeCard(widget, { number, expMonth, expYear, cvc, cardHolder }) {
+    const res = await fetch(`${widget.apiBase}/tokens/cards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${widget.publicKey}` },
+      body: JSON.stringify({
+        number: number.replace(/\D/g, ''),
+        cvc,
+        exp_month: expMonth,
+        exp_year: expYear,
+        card_holder: cardHolder,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const detail = json?.error?.messages ? Object.values(json.error.messages).flat().join(' ') : null;
+      throw new Error(detail || 'No pudimos validar la tarjeta. Revisa los datos.');
+    }
+    return json.data.id;
+  }
+
+  let widgetConfig = null;
+  let chosenPlan = 'monthly';
+
+  function showCardStep() {
+    qs('#onboarding-form').classList.add('hidden');
+    qs('#card-form').classList.remove('hidden');
+    if (widgetConfig?.acceptanceLink) qs('#card-accept-link').href = widgetConfig.acceptanceLink;
+    const price = chosenPlan === 'yearly' ? widgetConfig.prices.yearly : widgetConfig.prices.monthly;
+    if (price) {
+      qs('#card-price-line').textContent =
+        `el primer cobro será de ${fmtCOP(price / 100)} al terminar el trial de ${widgetConfig.trialDays} días`;
+    }
+  }
+
   async function init() {
     fillPhoneCountry();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('plan') === 'yearly') chosenPlan = 'yearly';
+
+    try {
+      widgetConfig = await App.session.api('/billing/wompi/widget-config');
+    } catch {
+      widgetConfig = null; // proveedor distinto a Wompi (o aún no configurado): se salta el paso de tarjeta
+    }
 
     try {
       const { profile, email, suggestedName } = await App.session.api('/onboarding');
@@ -100,12 +157,53 @@
               phoneNumber: qs('#ob-phone').value.replace(/\D/g, ''),
             },
           });
-          const params = new URLSearchParams(window.location.search);
-          window.location.href = params.get('next') || '/dashboard.html';
+          if (widgetConfig) {
+            showCardStep();
+          } else {
+            const params = new URLSearchParams(window.location.search);
+            window.location.href = params.get('next') || '/dashboard.html';
+          }
         } catch (err) {
           toast(err.message, 'err');
         }
       }, 'Creando tu cuenta…');
+    });
+
+    qs('#card-form').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!validateCardForm()) {
+        qs('#card-form .is-invalid')?.focus();
+        return;
+      }
+
+      const submitBtn = qs('#card-submit');
+      await App.withBusy(submitBtn, async () => {
+        try {
+          const [expMonth, expYear] = qs('#card-exp').value.trim().split('/');
+          const cardToken = await tokenizeCard(widgetConfig, {
+            number: qs('#card-number').value,
+            expMonth,
+            expYear,
+            cvc: qs('#card-cvc').value.trim(),
+            cardHolder: qs('#card-holder').value.trim(),
+          });
+
+          await App.session.api('/billing/wompi/attach-card', {
+            method: 'POST',
+            body: {
+              plan: chosenPlan,
+              cardToken,
+              acceptanceToken: widgetConfig.acceptanceToken,
+              personalDataAuthToken: widgetConfig.personalDataAuthToken,
+            },
+          });
+
+          const params = new URLSearchParams(window.location.search);
+          window.location.href = params.get('next') || '/dashboard.html?trial=ok';
+        } catch (err) {
+          toast(err.message, 'err');
+        }
+      }, 'Activando tu prueba gratis…');
     });
   }
 

@@ -135,6 +135,53 @@
           Prueba Gratis <i class="fa-solid fa-arrow-right"></i>
         </button>
       </form>
+
+      <!-- Paso 2: tarjeta para el trial de 7 días. Solo se muestra si el
+           proveedor de cobros activo es Wompi; el JS lo revela con .open. -->
+      <form id="card-form" class="mt-6 space-y-4 hidden" novalidate>
+        <div class="text-center">
+          <h2 class="text-xl font-extrabold text-ink">Un último paso</h2>
+          <p class="mt-2 text-sm text-ink/55">
+            Registra tu tarjeta para activar los 7 días gratis. No se te cobra nada hoy —
+            <span id="card-price-line">el primer cobro será al terminar el trial</span>.
+          </p>
+        </div>
+
+        <div>
+          <label class="label" for="card-number">Número de tarjeta</label>
+          <input id="card-number" class="input" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" required />
+          <p class="error-msg" data-error-for="card-number">Escribe un número de tarjeta válido.</p>
+        </div>
+
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="label" for="card-exp">Vencimiento (MM/AA)</label>
+            <input id="card-exp" class="input" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA" required />
+            <p class="error-msg" data-error-for="card-exp">Usa el formato MM/AA.</p>
+          </div>
+          <div class="w-28">
+            <label class="label" for="card-cvc">CVC</label>
+            <input id="card-cvc" class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="123" required />
+            <p class="error-msg" data-error-for="card-cvc">Escribe el código de seguridad.</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="label" for="card-holder">Nombre en la tarjeta</label>
+          <input id="card-holder" class="input" autocomplete="cc-name" placeholder="Como aparece en la tarjeta" required />
+          <p class="error-msg" data-error-for="card-holder">Escribe el nombre del titular.</p>
+        </div>
+
+        <label class="flex items-start gap-2 text-xs text-ink/55">
+          <input id="card-accept" type="checkbox" class="mt-0.5" required />
+          <span>Acepto los <a id="card-accept-link" href="#" target="_blank" class="brand-text font-semibold">términos de uso de datos de Wompi</a> para procesar el pago.</span>
+        </label>
+
+        <button id="card-submit" type="submit" class="btn btn-gradient w-full !py-3 !text-base mt-2">
+          Activar prueba gratis <i class="fa-solid fa-lock"></i>
+        </button>
+        <p class="text-center text-xs text-ink/40">Pago procesado de forma segura por Wompi. Elorai nunca guarda tu tarjeta.</p>
+      </form>
     </div>
 
     <p class="text-center text-xs text-ink/40 mt-5">

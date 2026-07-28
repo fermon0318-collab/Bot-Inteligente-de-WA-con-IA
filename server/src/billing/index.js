@@ -15,7 +15,7 @@
 
 import * as none from './none.js';
 
-const KNOWN = ['none', 'stripe'];
+const KNOWN = ['none', 'stripe', 'wompi'];
 
 const PROVIDER = process.env.BILLING_PROVIDER || 'none';
 
@@ -24,9 +24,12 @@ if (!KNOWN.includes(PROVIDER)) {
   process.exit(1);
 }
 
-// Se importa el adaptador de forma perezosa: stripe.js crea el cliente de
-// Stripe en cuanto se carga, así que cargarlo siempre rompería el arranque
-// en cuanto STRIPE_SECRET_KEY estuviera vacío, aunque no se vaya a usar.
-export const billing = PROVIDER === 'stripe' ? await import('./stripe.js') : none;
+// Se importa el adaptador de forma perezosa: stripe.js/wompi.js validan sus
+// propias variables de entorno en cuanto se cargan, así que cargarlos siempre
+// rompería el arranque aunque no se vayan a usar.
+export const billing =
+  PROVIDER === 'stripe' ? await import('./stripe.js') :
+  PROVIDER === 'wompi' ? await import('./wompi.js') :
+  none;
 
 export const providerName = PROVIDER;

@@ -117,6 +117,29 @@ export const config = {
     trialDays: Number(optional('STRIPE_TRIAL_DAYS', '0')),
   },
 
+  wompi: {
+    publicKey: BILLING_PROVIDER === 'wompi'
+      ? required('WOMPI_PUBLIC_KEY', { hint: 'pub_prod_… o pub_test_…' })
+      : optional('WOMPI_PUBLIC_KEY'),
+    privateKey: BILLING_PROVIDER === 'wompi'
+      ? required('WOMPI_PRIVATE_KEY', { hint: 'prv_prod_… o prv_test_…' })
+      : optional('WOMPI_PRIVATE_KEY'),
+    integritySecret: BILLING_PROVIDER === 'wompi'
+      ? required('WOMPI_INTEGRITY_SECRET', { hint: 'Comercios → Desarrolladores → Secreto de integridad' })
+      : optional('WOMPI_INTEGRITY_SECRET'),
+    eventsSecret: BILLING_PROVIDER === 'wompi'
+      ? required('WOMPI_EVENTS_SECRET', { hint: 'Comercios → Desarrolladores → Secreto de eventos' })
+      : optional('WOMPI_EVENTS_SECRET'),
+    // En pesos colombianos * 100 (amount_in_cents, como pide la API de Wompi).
+    priceMonthlyCop: Number(optional('WOMPI_PRICE_MONTHLY_COP', '0')),
+    priceYearlyCop: Number(optional('WOMPI_PRICE_YEARLY_COP', '0')),
+    trialDays: Number(optional('WOMPI_TRIAL_DAYS', '7')),
+    get sandbox() { return config.wompi.publicKey.startsWith('pub_test_'); },
+    get apiBase() {
+      return config.wompi.sandbox ? 'https://sandbox.wompi.co/v1' : 'https://production.wompi.co/v1';
+    },
+  },
+
   /** Correos que entran al panel sin suscripción activa (fundadores, soporte). */
   bypassEmails: optional('BILLING_BYPASS_EMAILS', '')
     .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),

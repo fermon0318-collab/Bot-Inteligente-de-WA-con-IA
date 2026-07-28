@@ -3,10 +3,31 @@
  */
 
 import { Router } from 'express';
-import { billing } from '../billing/index.js';
+import { billing, providerName } from '../billing/index.js';
 import { requireAuth, rateLimit } from '../middleware/auth.js';
 
 const router = Router();
+
+/* --- Flujo específico de Wompi: tokenizar tarjeta y guardarla ------------- */
+router.get('/wompi/widget-config', requireAuth, async (req, res, next) => {
+  try {
+    if (providerName !== 'wompi') return res.status(404).json({ error: 'not_applicable' });
+    res.json(await billing.getWidgetConfig());
+  } catch (err) { next(err); }
+});
+
+router.post('/wompi/attach-card', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
+  try {
+    if (providerName !== 'wompi') return res.status(404).json({ error: 'not_applicable' });
+    const plan = req.body?.plan === 'yearly' ? 'yearly' : 'monthly';
+    const { cardToken, acceptanceToken, personalDataAuthToken } = req.body || {};
+    const result = await billing.attachCard({
+      accountId: req.user.accountId, email: req.user.email, plan,
+      cardToken, acceptanceToken, personalDataAuthToken,
+    });
+    res.json(result);
+  } catch (err) { next(err); }
+});
 
 /* --- Iniciar suscripción -------------------------------------------------- */
 router.post('/checkout', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
@@ -54,11 +75,14 @@ router.get('/status', requireAuth, async (req, res, next) => {
  * quizá nunca podamos aplicar. Los fallos quedan en el log para revisarlos.
  */
 router.post('/webhook', async (req, res) => {
+  // Stripe firma con un header (`stripe-signature`) sobre el cuerpo crudo;
+  // Wompi mete el checksum dentro del propio JSON (ver billing/wompi.js),
+  // así que verifyWebhook() recibe distintos argumentos según el proveedor.
   const signature = req.headers['stripe-signature'];
   let event;
 
   try {
-    event = billing.verifyWebhook(req.body, signature);
+    event = providerName === 'wompi' ? billing.verifyWebhook(req.body) : billing.verifyWebhook(req.body, signature);
   } catch (err) {
     console.warn('[billing] firma de webhook inválida:', err.message);
     return res.status(400).send('firma inválida');
@@ -69,7 +93,8 @@ router.post('/webhook', async (req, res) => {
   try {
     await billing.handleEvent(event);
   } catch (err) {
-    console.error(`[billing] fallo al procesar ${event.type} (${event.id}):`, err.message);
+    const label = event?.id || event?.data?.transaction?.id || '?';
+    console.error(`[billing] fallo al procesar evento (${label}):`, err.message);
   }
 });
 

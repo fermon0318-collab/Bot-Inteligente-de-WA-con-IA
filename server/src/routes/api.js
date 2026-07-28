@@ -69,9 +69,14 @@ router.get('/me', async (req, res, next) => {
    ========================================================================== */
 
 const BUSINESS_TYPES = new Set([
-  'ecommerce', 'restaurante', 'clinica', 'estetica', 'inmobiliaria', 'educacion',
-  'servicios_profesionales', 'gimnasio', 'productos_digitales', 'agencia_marketing',
-  'freelancer', 'otro',
+  'agencia_marketing', 'barberia', 'baile_danza', 'clases', 'clinica', 'crossfit',
+  'ecommerce', 'educacion', 'electroestimulacion', 'entrenamiento_funcional', 'estetica',
+  'estilista_independiente', 'freelancer', 'gimnasio', 'inmobiliaria',
+  'kinesiologo_fisioterapia', 'maquillaje', 'medicina_alternativa', 'odontologia',
+  'peluqueria', 'personal_trainer', 'pilates', 'podologia', 'productos_digitales',
+  'psicologia', 'quiropractico', 'restaurante', 'salon_belleza', 'salon_cejas_pestanas',
+  'salon_manicura_pedicura', 'servicios_profesionales', 'spa', 'veterinaria',
+  'yoga_meditacion', 'otro',
 ]);
 const TEAM_SIZES = new Set(['independiente', '2', '3-5', '6-15', '16+']);
 // Longitud esperada de teléfono (sin prefijo) por país. Los que no están aquí

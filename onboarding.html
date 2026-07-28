@@ -19,13 +19,29 @@
 
 <div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
 
-<div class="min-h-screen flex items-center justify-center px-4 py-10">
-  <div class="w-full max-w-lg">
+<div class="min-h-screen flex items-center justify-center px-4 py-10 lg:py-6">
+  <div class="w-full max-w-6xl lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
 
+    <!-- Columna izquierda: solo en escritorio -->
+    <div class="hidden lg:block">
+      <div class="flex items-center gap-2.5">
+        <img src="assets/img/elorai-logo.svg" alt="" class="w-10 h-10" />
+        <span class="text-xl font-extrabold text-ink">Elorai</span>
+      </div>
+      <h1 class="mt-8 text-4xl xl:text-5xl font-extrabold tracking-tight text-ink leading-tight">
+        Automatiza tu WhatsApp con <span class="brand-text">inteligencia artificial</span>
+      </h1>
+      <p class="mt-5 text-lg text-ink/60 leading-relaxed max-w-md">
+        Responde a tus clientes, agenda tus citas y no pierdas ninguna venta — todo desde un solo panel.
+      </p>
+    </div>
+
+    <!-- Columna derecha: el formulario -->
+    <div class="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
     <div class="card p-6 sm:p-8">
       <div class="text-center">
-        <img src="assets/img/elorai-logo.svg" alt="Elorai" class="w-14 h-14 mx-auto mb-3" />
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-ink">Completa tu cuenta</h1>
+        <img src="assets/img/elorai-logo.svg" alt="Elorai" class="w-14 h-14 mx-auto mb-3 lg:hidden" />
+        <h1 class="text-2xl font-extrabold text-ink">Completa tu cuenta</h1>
         <p class="mt-2 text-sm sm:text-base font-bold brand-text">¡No te quedes con la duda! Prueba 7 días gratis</p>
         <p class="mt-2 text-sm text-ink/55" id="welcome-line">Ya iniciaste sesión con Google — solo faltan estos datos de tu negocio.</p>
       </div>
@@ -36,17 +52,40 @@
           <label class="label" for="ob-business-type">¿Qué tipo de negocio tienes?</label>
           <select id="ob-business-type" class="select" required>
             <option value="" disabled selected>Selecciona una opción</option>
-            <option value="ecommerce">Ecommerce / Tienda Online</option>
-            <option value="restaurante">Restaurante / Comida</option>
+            <option value="agencia_marketing">Agencia de Marketing</option>
+            <option value="barberia">Barbería</option>
+            <option value="baile_danza">Baile / Danza</option>
+            <option value="clases">Clases</option>
             <option value="clinica">Clínica / Consultorio Médico</option>
+            <option value="crossfit">Crossfit</option>
+            <option value="ecommerce">Ecommerce / Tienda Online</option>
+            <option value="educacion">Educación / Cursos</option>
+            <option value="electroestimulacion">Electroestimulación</option>
+            <option value="entrenamiento_funcional">Entrenamiento Funcional</option>
             <option value="estetica">Centro de Estética</option>
+            <option value="estilista_independiente">Estilista Independiente</option>
+            <option value="freelancer">Freelancer / Independiente</option>
             <option value="gimnasio">Gimnasio / Centro Deportivo</option>
             <option value="inmobiliaria">Inmobiliaria</option>
-            <option value="educacion">Educación / Cursos</option>
-            <option value="servicios_profesionales">Servicios Profesionales (abogados, contadores)</option>
-            <option value="agencia_marketing">Agencia de Marketing</option>
+            <option value="kinesiologo_fisioterapia">Kinesiólogo / Fisioterapeuta</option>
+            <option value="maquillaje">Maquillaje</option>
+            <option value="medicina_alternativa">Medicina Alternativa</option>
+            <option value="odontologia">Odontología</option>
+            <option value="peluqueria">Peluquería</option>
+            <option value="personal_trainer">Personal Trainer</option>
+            <option value="pilates">Pilates</option>
+            <option value="podologia">Podología</option>
             <option value="productos_digitales">Productos Digitales</option>
-            <option value="freelancer">Freelancer / Independiente</option>
+            <option value="psicologia">Psicología</option>
+            <option value="quiropractico">Quiropráctico</option>
+            <option value="restaurante">Restaurante / Comida</option>
+            <option value="salon_belleza">Salón de Belleza</option>
+            <option value="salon_cejas_pestanas">Salón de Cejas y Pestañas</option>
+            <option value="salon_manicura_pedicura">Salón de Manicura y Pedicura</option>
+            <option value="servicios_profesionales">Servicios Profesionales (abogados, contadores)</option>
+            <option value="spa">Spa</option>
+            <option value="veterinaria">Veterinaria</option>
+            <option value="yoga_meditacion">Yoga / Meditación</option>
             <option value="otro">Otro</option>
           </select>
           <p class="error-msg" data-error-for="ob-business-type">Elige el tipo de negocio.</p>
@@ -95,6 +134,8 @@
     <p class="text-center text-xs text-ink/40 mt-5">
       <a href="/auth/logout" class="hover:text-ink/60 font-semibold">¿No eres tú? Cierra sesión</a>
     </p>
+    </div>
+
   </div>
 </div>
 

@@ -191,7 +191,22 @@
 
   /* --- Init --------------------------------------------------------------- */
   function init() {
-    applyChartDefaults();
+    // Chart.js se carga con `defer` desde un CDN para no bloquear el arranque
+    // del panel si la CDN tarda o falla; si todavía no llegó, se construyen
+    // las gráficas en cuanto termine de cargar en vez de renunciar en silencio.
+    if (window.Chart) {
+      applyChartDefaults();
+      buildCharts();
+    } else {
+      const lib = qs('#chartjs-lib');
+      if (lib) {
+        lib.addEventListener('load', () => {
+          applyChartDefaults();
+          buildCharts();
+          pintarEstadisticas();
+        });
+      }
+    }
 
     const select = qs('#currency-select');
     App.fillCurrencySelect(select);
@@ -214,8 +229,6 @@
         }
       }, 'Actualizando…');
     });
-
-    buildCharts();
 
     // Al volver al dashboard, Chart.js necesita recalcular el tamaño del canvas
     App.onView('dashboard', () => {

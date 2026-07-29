@@ -62,11 +62,27 @@ export async function getWidgetConfig() {
   };
 }
 
-/* --- Wompi no tiene checkout alojado ni portal de autogestión ------------ */
-export async function createCheckout() {
-  throw Object.assign(new Error('Wompi no usa checkout alojado; usa POST /api/billing/wompi/attach-card'), {
-    status: 400, code: 'wrong_provider_flow',
-  });
+/* --- Contratación --------------------------------------------------------
+ * Wompi no tiene checkout alojado, pero el resto de la aplicación (botones de
+ * plan de la landing, rebote del muro de pago) espera el mismo contrato que
+ * con Stripe: pedir una URL y mandar ahí al usuario. En vez de romper esa
+ * expectativa, se devuelve la URL de nuestro propio paso de tarjeta.
+ */
+export async function createCheckout({ accountId, plan }) {
+  if (!PRICES_COP[plan]) {
+    throw Object.assign(new Error('Plan no válido'), { status: 400, code: 'invalid_plan' });
+  }
+
+  const sub = await one('SELECT status FROM subscriptions WHERE account_id = $1', [accountId]);
+  const yaTienePlan = sub && (sub.status === 'active' || sub.status === 'trialing');
+
+  // Quien ya tiene plan no vuelve a "contratar": se le lleva a gestionarlo,
+  // que es lo que realmente quiere hacer desde un botón de precios.
+  return {
+    url: yaTienePlan
+      ? `${config.publicUrl}/dashboard.html#billing`
+      : `${config.publicUrl}/onboarding.html?plan=${plan}&step=card`,
+  };
 }
 
 export async function createPortal() {
@@ -97,28 +113,41 @@ export async function attachCard({ accountId, email, plan, cardToken, acceptance
     },
   });
 
-  const trialEndsAt = new Date(Date.now() + config.wompi.trialDays * 86_400_000);
+  // La prueba gratis se concede una sola vez por cuenta. Si ya se concedió
+  // antes (trial_ends_at con valor), volver a pasar por el paso de tarjeta
+  // solo actualiza la tarjeta y el plan: no reinicia el contador ni devuelve
+  // la cuenta a 'trialing'. Sin esto, cualquiera repetiría el trial
+  // indefinidamente reenviando una tarjeta.
+  const previa = await one(
+    'SELECT status, trial_ends_at FROM subscriptions WHERE account_id = $1',
+    [accountId]
+  );
+  const yaUsoTrial = Boolean(previa?.trial_ends_at);
+  const trialEndsAt = yaUsoTrial
+    ? previa.trial_ends_at
+    : new Date(Date.now() + config.wompi.trialDays * 86_400_000);
+  const status = yaUsoTrial ? (previa.status || 'none') : 'trialing';
 
   await query(
     `INSERT INTO subscriptions
        (account_id, provider, customer_id, price_id, plan, status,
         trial_ends_at, charge_attempts, last_charge_error, customer_email, updated_at)
-     VALUES ($1, 'wompi', $2, $3, $4, 'trialing', $5, 0, NULL, $6, now())
+     VALUES ($1, 'wompi', $2, $3, $4, $7, $5, 0, NULL, $6, now())
      ON CONFLICT (account_id) DO UPDATE SET
        provider = 'wompi',
        customer_id = EXCLUDED.customer_id,
        price_id = EXCLUDED.price_id,
        plan = EXCLUDED.plan,
-       status = 'trialing',
+       status = EXCLUDED.status,
        trial_ends_at = EXCLUDED.trial_ends_at,
        charge_attempts = 0,
        last_charge_error = NULL,
        customer_email = EXCLUDED.customer_email,
        updated_at = now()`,
-    [accountId, source.id, String(price), plan, trialEndsAt, email]
+    [accountId, source.id, String(price), plan, trialEndsAt, email, status]
   );
 
-  return { paymentSourceId: source.id, trialEndsAt, sourceStatus: source.status };
+  return { paymentSourceId: source.id, trialEndsAt, sourceStatus: source.status, trialReused: yaUsoTrial };
 }
 
 /**

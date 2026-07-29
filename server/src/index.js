@@ -21,6 +21,7 @@ import { avisarError } from './lib/alert.js';
 import { purgeExpired } from './lib/session.js';
 import { attachSession, requireAuth, subscriptionAccess } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
+import { providerName } from './billing/index.js';
 import billingRoutes from './routes/billing.js';
 import apiRoutes from './routes/api.js';
 import webhookRoutes, { reprocessPending } from './routes/webhook.js';
@@ -132,7 +133,15 @@ app.get('/dashboard.html', requireAuth, async (req, res, next) => {
     const hasProfile = await one('SELECT 1 FROM business_profile WHERE account_id = $1', [req.user.accountId]);
     if (!hasProfile) return res.redirect('/onboarding.html');
     const { allowed } = await subscriptionAccess(req.user);
-    if (!allowed) return res.redirect('/#precios?suscripcion=requerida');
+    if (!allowed) {
+      // Con Wompi el plan no se contrata en la landing sino registrando la
+      // tarjeta aquí mismo. Mandar a /#precios dejaba al usuario en un
+      // callejón sin salida: el botón de allí pide un checkout alojado que
+      // Wompi no tiene.
+      return res.redirect(
+        providerName === 'wompi' ? '/onboarding.html?step=card' : '/#precios?suscripcion=requerida'
+      );
+    }
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(join(ROOT, 'dashboard.html'));
   } catch (err) {

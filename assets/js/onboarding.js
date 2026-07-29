@@ -107,6 +107,9 @@
     const params = new URLSearchParams(window.location.search);
     if (params.get('plan') === 'yearly') chosenPlan = 'yearly';
     updateMode = params.get('mode') === 'update';
+    // ?step=card — viene de contratar un plan o del muro de pago: si el
+    // perfil del negocio ya está completo, no tiene sentido volver a pedirlo.
+    const wantsCard = params.get('step') === 'card';
 
     try {
       widgetConfig = await App.session.api('/billing/wompi/widget-config');
@@ -123,10 +126,12 @@
       return;
     }
 
+    let tienePerfil = false;
     try {
       const { profile, email, suggestedName } = await App.session.api('/onboarding');
       qs('#ob-email').value = email || '';
       if (profile) {
+        tienePerfil = true;
         qs('#ob-business-type').value = profile.businessType;
         qs('#ob-team-size').value = profile.teamSize;
         qs('#ob-name').value = profile.fullName;
@@ -140,6 +145,11 @@
       if (err.status === 401) { window.location.href = '/'; return; }
       toast(err.message, 'err');
     }
+
+    // Perfil ya completo + venía a poner tarjeta: directo al paso de pago.
+    // Si aún no tiene perfil, se queda en el formulario y el flujo normal
+    // lo llevará a la tarjeta al enviarlo.
+    if (wantsCard && widgetConfig && tienePerfil) showCardStep();
 
     // Solo dígitos: evita que el navegador acepte letras en un campo que solo admite números.
     qs('#ob-phone').addEventListener('input', (ev) => {

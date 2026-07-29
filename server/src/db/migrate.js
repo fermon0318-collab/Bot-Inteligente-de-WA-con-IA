@@ -31,6 +31,11 @@ async function run() {
     if (applied.has(file)) continue;
     const sql = readFileSync(join(dir, file), 'utf8');
     const client = await pool.connect();
+    // Los RAISE NOTICE de una migración se pierden si nadie los escucha, y son
+    // justo lo que hace falta para auditar en los logs qué tocó una migración
+    // destructiva (cuántas filas borró, sobre qué cuenta).
+    const onNotice = (msg) => console.log(`  ${msg.message}`);
+    client.on('notice', onNotice);
     try {
       await client.query('BEGIN');
       await client.query(sql);
@@ -44,6 +49,7 @@ async function run() {
       process.exitCode = 1;
       return;
     } finally {
+      client.off('notice', onNotice);
       client.release();
     }
   }

@@ -103,7 +103,7 @@ window.Elorai = window.Elorai || {};
     canceled: ['Cancelada', 'badge-danger'],
     unpaid: ['Impagada', 'badge-danger'],
     incomplete: ['Incompleta', 'badge-warn'],
-    bypass: ['Interna', 'badge-brand'],
+    bypass: ['Gratis de por vida', 'badge-brand'],
     none: ['Sin plan', 'badge-muted'],
   };
 

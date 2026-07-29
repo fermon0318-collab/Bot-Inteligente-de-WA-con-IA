@@ -187,3 +187,70 @@ export async function getStatus(accountId) {
   );
   return { provider: 'stripe', ...(row || { status: 'none', plan: null }) };
 }
+
+/* --- Facturación autogestionada ------------------------------------------
+ * Con Stripe esto también está en el Customer Portal, pero el panel de Elorai
+ * ofrece las mismas acciones sin salir del sitio.
+ */
+export async function listInvoices(accountId, { limit = 50 } = {}) {
+  const row = await one('SELECT customer_id FROM subscriptions WHERE account_id = $1', [accountId]);
+  if (!row?.customer_id) return [];
+
+  const list = await client.invoices.list({ customer: row.customer_id, limit });
+  return list.data.map((inv) => ({
+    id: inv.id,
+    transaction_id: inv.number || inv.id,
+    amount_cents: inv.amount_paid ?? inv.amount_due,
+    currency: (inv.currency || 'usd').toUpperCase(),
+    plan: inv.lines?.data?.[0]?.price?.id === PRICES.yearly ? 'yearly' : 'monthly',
+    status: inv.status === 'paid' ? 'APPROVED' : String(inv.status || '').toUpperCase(),
+    period_start: inv.period_start ? new Date(inv.period_start * 1000) : null,
+    period_end: inv.period_end ? new Date(inv.period_end * 1000) : null,
+    created_at: new Date(inv.created * 1000),
+    pdf_url: inv.invoice_pdf || null,
+  }));
+}
+
+async function setCancelAtPeriodEnd(accountId, value) {
+  const row = await one('SELECT subscription_id FROM subscriptions WHERE account_id = $1', [accountId]);
+  if (!row?.subscription_id) {
+    throw Object.assign(new Error('No hay una suscripción que gestionar'), { status: 409, code: 'no_subscription' });
+  }
+  const sub = await client.subscriptions.update(row.subscription_id, { cancel_at_period_end: value });
+  await query(
+    'UPDATE subscriptions SET cancel_at_period_end = $2, updated_at = now() WHERE account_id = $1',
+    [accountId, sub.cancel_at_period_end]
+  );
+  return {
+    status: sub.status,
+    cancel_at_period_end: sub.cancel_at_period_end,
+    current_period_end: new Date(sub.current_period_end * 1000),
+  };
+}
+
+export const cancelSubscription = (accountId) => setCancelAtPeriodEnd(accountId, true);
+export const resumeSubscription = (accountId) => setCancelAtPeriodEnd(accountId, false);
+
+/** Cambia de plan mensual ↔ anual. Stripe prorratea el saldo automáticamente. */
+export async function changePlan(accountId, plan) {
+  const price = PRICES[plan];
+  if (!price) throw Object.assign(new Error('Plan no válido'), { status: 400, code: 'invalid_plan' });
+
+  const row = await one('SELECT subscription_id FROM subscriptions WHERE account_id = $1', [accountId]);
+  if (!row?.subscription_id) {
+    throw Object.assign(new Error('No hay una suscripción que cambiar'), { status: 409, code: 'no_subscription' });
+  }
+
+  const current = await client.subscriptions.retrieve(row.subscription_id);
+  const item = current.items.data[0];
+  const sub = await client.subscriptions.update(row.subscription_id, {
+    items: [{ id: item.id, price }],
+    proration_behavior: 'create_prorations',
+  });
+
+  await query(
+    'UPDATE subscriptions SET plan = $2, price_id = $3, updated_at = now() WHERE account_id = $1',
+    [accountId, plan, price]
+  );
+  return { status: sub.status, plan, effective: 'immediate' };
+}

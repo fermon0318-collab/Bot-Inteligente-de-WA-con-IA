@@ -35,3 +35,19 @@ export async function handleEvent() {
 export async function getStatus() {
   return { provider: 'none', status: 'bypass', plan: null };
 }
+
+export async function listInvoices() {
+  return [];
+}
+
+export async function cancelSubscription() {
+  throw notConfigured();
+}
+
+export async function resumeSubscription() {
+  throw notConfigured();
+}
+
+export async function changePlan() {
+  throw notConfigured();
+}

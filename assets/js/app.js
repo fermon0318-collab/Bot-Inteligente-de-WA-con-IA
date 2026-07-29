@@ -68,22 +68,30 @@
     qs('#user-menu-name').textContent = user.name || user.email;
     qs('#user-menu-email').textContent = user.email;
 
-    const menu = qs('#user-menu');
+    // Otros módulos (Facturación) necesitan saber quién está dentro.
+    App.state.user = user;
+    App.state.subscription = subscription;
+
     const [label, badgeClass] = session.SUBSCRIPTION_LABEL[subscription.status]
       || session.SUBSCRIPTION_LABEL.none;
 
-    const planCell = menu.querySelector('.badge.badge-brand');
-    if (planCell) planCell.textContent = subscription.plan ? PLAN_LABEL[subscription.plan] : '—';
+    qs('#user-menu-plan').textContent = subscription.plan ? PLAN_LABEL[subscription.plan] : '—';
 
-    const statusCell = menu.querySelector('.badge.badge-ok');
-    if (statusCell) {
-      statusCell.className = `badge ${badgeClass}`;
-      statusCell.textContent = label;
-    }
+    const statusCell = qs('#user-menu-status');
+    statusCell.className = `badge ${badgeClass}`;
+    statusCell.textContent = label;
 
-    qs('#user-menu-expiry').textContent = subscription.current_period_end
-      ? App.dateShort(subscription.current_period_end)
-      : '—';
+    // Durante la prueba lo que importa no es "vence" sino cuándo se cobra.
+    const trialing = subscription.status === 'trialing';
+    const expiryDate = trialing ? subscription.trial_ends_at : subscription.current_period_end;
+    qs('#user-menu-expiry-label').textContent = trialing ? 'Primer cobro' : 'Vence';
+    qs('#user-menu-expiry').textContent = expiryDate ? App.dateShort(expiryDate) : '—';
+
+    // Cuenta regresiva de la prueba gratis en el propio menú
+    if (App.paintTrialInMenu) App.paintTrialInMenu(subscription);
+
+    // Una cuenta gratuita de por vida no tiene nada que facturar.
+    qs('#user-menu-billing').classList.toggle('hidden', subscription.status === 'bypass');
 
     // Acceso al portal de Stripe desde el menú de usuario — Wompi no tiene
     // portal de autogestión, así que este botón solo aplica con Stripe.
@@ -125,6 +133,7 @@
     App.automation.init();
     App.settings.init();
     App.agenda.init();
+    App.billing.init();
 
     // Botón flotante de WhatsApp: un mensaje por vista, no una tarjeta metida
     // en el contenido. Cada vista con oferta de ayuda registra su propio

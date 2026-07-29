@@ -12,6 +12,7 @@ import { billing } from '../billing/index.js';
 import { config } from '../config.js';
 import { many, one, query, transaction } from '../db/pool.js';
 import { decrypt, encrypt, mask } from '../lib/crypto.js';
+import { destroySession } from '../lib/session.js';
 import { requireAuth, requireSubscription } from '../middleware/auth.js';
 import * as adsync from '../services/adsync.js';
 import * as capi from '../services/capi.js';
@@ -46,7 +47,14 @@ async function log(accountId, message, level = 'info') {
 
 router.get('/me', async (req, res, next) => {
   try {
+    const bypass = config.bypassEmails.includes(req.user.email.toLowerCase());
     const subscription = await billing.getStatus(account(req));
+
+    // Una cuenta gratuita de por vida puede tener (o no) una fila en
+    // subscriptions; lo que manda es el bypass, igual que en
+    // subscriptionAccess(). Sin esto el panel le mostraría "Sin plan".
+    if (bypass) subscription.status = 'bypass';
+
     res.json({
       user: {
         id: req.user.id,
@@ -57,8 +65,34 @@ router.get('/me', async (req, res, next) => {
       },
       subscription,
       support: config.support,
-      bypass: config.bypassEmails.includes(req.user.email.toLowerCase()),
+      bypass,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Eliminar la cuenta y todo lo que cuelga de ella.
+ *
+ * Es irreversible: el borrado de `accounts` arrastra en cascada
+ * conversaciones, contactos, agenda, flujos y credenciales. Se exige repetir
+ * el correo propio en el cuerpo para que un clic accidental no pueda vaciar
+ * una cuenta con meses de historial.
+ */
+router.delete('/account', async (req, res, next) => {
+  try {
+    const confirm = String(req.body?.confirmEmail || '').trim().toLowerCase();
+    if (confirm !== req.user.email.toLowerCase()) {
+      return res.status(400).json({
+        error: 'confirmation_mismatch',
+        message: 'Escribe tu correo exactamente como aparece para confirmar el borrado.',
+      });
+    }
+
+    await query('DELETE FROM accounts WHERE id = $1', [account(req)]);
+    await destroySession(req, res);
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

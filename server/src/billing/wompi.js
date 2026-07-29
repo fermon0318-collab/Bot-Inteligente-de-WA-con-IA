@@ -158,6 +158,87 @@ export async function updateCard({ accountId, email, cardToken, acceptanceToken,
   return chargeOne(sub);
 }
 
+/* --- Facturas ------------------------------------------------------------
+ * Wompi no emite facturas: cada cobro es una transacción suelta. Guardamos
+ * nuestro propio historial (una fila por intento, aprobado o no) para que el
+ * usuario lo vea en Configuración → Facturación.
+ */
+async function recordInvoice({ accountId, transactionId, amountCents, plan, status }) {
+  await query(
+    `INSERT INTO billing_invoices
+       (account_id, provider, transaction_id, amount_cents, currency, plan, status)
+     VALUES ($1, 'wompi', $2, $3, 'COP', $4, $5)
+     ON CONFLICT (transaction_id) DO UPDATE SET status = EXCLUDED.status`,
+    [accountId, transactionId, amountCents, plan, status]
+  );
+}
+
+/** Historial de facturas de la cuenta, lo más reciente primero. */
+export async function listInvoices(accountId, { limit = 50 } = {}) {
+  const { rows } = await query(
+    `SELECT id, transaction_id, amount_cents, currency, plan, status,
+            period_start, period_end, created_at
+       FROM billing_invoices
+      WHERE account_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2`,
+    [accountId, limit]
+  );
+  return rows;
+}
+
+/* --- Cancelar / reanudar -------------------------------------------------
+ * No se corta el acceso al instante: la cuenta sigue activa hasta que termina
+ * el periodo ya pagado. Lo único que cambia es que el cobro del día 7 (o la
+ * renovación) deja de dispararse.
+ */
+export async function cancelSubscription(accountId) {
+  const row = await one(
+    `UPDATE subscriptions
+        SET cancel_at_period_end = true, updated_at = now()
+      WHERE account_id = $1
+      RETURNING status, plan, current_period_end, trial_ends_at, cancel_at_period_end`,
+    [accountId]
+  );
+  if (!row) throw Object.assign(new Error('No hay una suscripción que cancelar'), { status: 409, code: 'no_subscription' });
+  return row;
+}
+
+/**
+ * Cambia de plan mensual ↔ anual.
+ *
+ * Wompi no prorratea (no tiene el concepto), así que el cambio se aplica al
+ * siguiente cobro: durante el trial cambia lo que se cobrará el día 7, y con
+ * una suscripción activa cambia lo que se cobrará en la renovación. Nunca se
+ * cobra ni se devuelve nada en el momento.
+ */
+export async function changePlan(accountId, plan) {
+  const price = PRICES_COP[plan];
+  if (!price) throw Object.assign(new Error('Plan no válido'), { status: 400, code: 'invalid_plan' });
+
+  const row = await one(
+    `UPDATE subscriptions
+        SET plan = $2, price_id = $3, updated_at = now()
+      WHERE account_id = $1
+      RETURNING status, plan, current_period_end, trial_ends_at, cancel_at_period_end`,
+    [accountId, plan, String(price)]
+  );
+  if (!row) throw Object.assign(new Error('No hay una suscripción que cambiar'), { status: 409, code: 'no_subscription' });
+  return { ...row, effective: 'next_charge' };
+}
+
+export async function resumeSubscription(accountId) {
+  const row = await one(
+    `UPDATE subscriptions
+        SET cancel_at_period_end = false, updated_at = now()
+      WHERE account_id = $1
+      RETURNING status, plan, current_period_end, trial_ends_at, cancel_at_period_end`,
+    [accountId]
+  );
+  if (!row) throw Object.assign(new Error('No hay una suscripción que reanudar'), { status: 409, code: 'no_subscription' });
+  return row;
+}
+
 /* --- Cobro ------------------------------------------------------------- */
 const MAX_CHARGE_ATTEMPTS = 3;
 
@@ -189,8 +270,13 @@ async function chargeOne(sub) {
       [sub.account_id, tx.id]
     );
 
+    await recordInvoice({
+      accountId: sub.account_id, transactionId: String(tx.id),
+      amountCents: amount, plan: sub.plan, status: tx.status,
+    });
+
     if (tx.status === 'APPROVED') {
-      await activateAfterCharge(sub.account_id, sub.plan);
+      await activateAfterCharge(sub.account_id, sub.plan, tx.id);
     } else if (tx.status === 'DECLINED' || tx.status === 'ERROR') {
       await markChargeFailed(sub.account_id, `transacción ${tx.status.toLowerCase()}`);
     }
@@ -199,11 +285,15 @@ async function chargeOne(sub) {
     return { accountId: sub.account_id, transactionId: tx.id, status: tx.status };
   } catch (err) {
     await markChargeFailed(sub.account_id, err.message);
+    await recordInvoice({
+      accountId: sub.account_id, transactionId: null,
+      amountCents: amount, plan: sub.plan, status: 'ERROR',
+    });
     return { accountId: sub.account_id, error: err.message };
   }
 }
 
-async function activateAfterCharge(accountId, plan) {
+async function activateAfterCharge(accountId, plan, transactionId = null) {
   const periodDays = plan === 'yearly' ? 365 : 30;
   await query(
     `UPDATE subscriptions
@@ -212,6 +302,14 @@ async function activateAfterCharge(accountId, plan) {
      WHERE account_id = $1`,
     [accountId]
   );
+  if (transactionId) {
+    await query(
+      `UPDATE billing_invoices
+          SET period_start = now(), period_end = now() + interval '${periodDays} days'
+        WHERE transaction_id = $1`,
+      [String(transactionId)]
+    );
+  }
 }
 
 async function markChargeFailed(accountId, reason) {
@@ -228,17 +326,37 @@ async function markChargeFailed(accountId, reason) {
   }
 }
 
-/** Llamada por la tarea programada diaria. Cobra todos los trials vencidos. */
+/**
+ * Llamada por la tarea programada. Cobra todos los trials vencidos.
+ *
+ * Se excluyen los que pidieron cancelar (`cancel_at_period_end`): siguen
+ * disfrutando el trial hasta el último día, pero no se les cobra al final —
+ * que es justo lo que significa cancelar durante la prueba.
+ */
 export async function chargeTrialsDue() {
   const { rows } = await query(
     `SELECT account_id, plan, customer_id, customer_email
        FROM subscriptions
-      WHERE status = 'trialing' AND trial_ends_at <= now()`
+      WHERE status = 'trialing'
+        AND trial_ends_at <= now()
+        AND cancel_at_period_end = false`
   );
   const results = [];
   for (const sub of rows) {
     results.push(await chargeOne(sub));
   }
+
+  // Los que cancelaron y ya vencieron pasan a 'canceled' — sin cobro.
+  const { rows: canceled } = await query(
+    `UPDATE subscriptions
+        SET status = 'canceled', updated_at = now()
+      WHERE status = 'trialing' AND trial_ends_at <= now() AND cancel_at_period_end = true
+      RETURNING account_id`
+  );
+  for (const row of canceled) {
+    results.push({ accountId: row.account_id, status: 'CANCELED' });
+  }
+
   return results;
 }
 
@@ -288,8 +406,13 @@ export async function handleEvent(event) {
     return { orphan: true };
   }
 
+  await recordInvoice({
+    accountId: sub.account_id, transactionId: String(tx.id),
+    amountCents: tx.amount_in_cents ?? 0, plan: sub.plan, status: tx.status,
+  });
+
   if (tx.status === 'APPROVED') {
-    await activateAfterCharge(sub.account_id, sub.plan);
+    await activateAfterCharge(sub.account_id, sub.plan, tx.id);
   } else if (tx.status === 'DECLINED' || tx.status === 'ERROR' || tx.status === 'VOIDED') {
     await markChargeFailed(sub.account_id, `transacción ${tx.status.toLowerCase()}`);
   }
@@ -304,5 +427,13 @@ export async function getStatus(accountId) {
        FROM subscriptions WHERE account_id = $1`,
     [accountId]
   );
-  return { provider: 'wompi', ...(row || { status: 'none', plan: null }) };
+  return {
+    provider: 'wompi',
+    // El panel necesita los precios para pintar el módulo de Facturación
+    // sin tener que pedirlos por separado.
+    prices: { monthly: config.wompi.priceMonthlyCop, yearly: config.wompi.priceYearlyCop },
+    currency: 'COP',
+    trialDays: config.wompi.trialDays,
+    ...(row || { status: 'none', plan: null }),
+  };
 }

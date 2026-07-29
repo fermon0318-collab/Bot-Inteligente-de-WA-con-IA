@@ -305,6 +305,7 @@
     'flows-advanced': ['Flujos Avanzados', 'Conversaciones con ramificaciones'],
     'remarketing': ['Remarketing', 'Recuperación de contactos'],
     'triggers': ['Disparadores', 'Palabras clave que activan flujos'],
+    'billing': ['Facturación', 'Plan, pagos, facturas y cancelación'],
     'payments': ['Pagos y Acceso', 'Verificación y entrega automática'],
     'ai-config': ['Configurar IA', 'Modelo, prompt y comportamiento'],
     'tutorials': ['Tutoriales', 'Videos guía de Elorai'],
@@ -366,7 +367,9 @@
     qs('#sidebar-close').addEventListener('click', closeSidebar);
     qs('#sidebar-overlay').addEventListener('click', closeSidebar);
 
-    // Menú de usuario
+    // Menú de usuario. Cualquier acción que abra un modal o cambie de vista
+    // debe cerrarlo antes (closeUserMenu): si se queda abierto, el panel
+    // flotante tapa el contenido y se come los clics de lo que hay debajo.
     const menuBtn = qs('#user-menu-btn');
     const menu = qs('#user-menu');
     menuBtn.addEventListener('click', (ev) => {
@@ -507,9 +510,15 @@
     finally { button.disabled = false; button.innerHTML = original; }
   }
 
+  /** Cierra el menú flotante de usuario del encabezado. */
+  function closeUserMenu() {
+    qs('#user-menu').classList.add('hidden');
+    qs('#user-menu-btn').setAttribute('aria-expanded', 'false');
+  }
+
   /* --- Exportación -------------------------------------------------------- */
   Object.assign(App, {
-    qs, qsa, el, escapeHtml,
+    qs, qsa, el, escapeHtml, closeUserMenu,
     money, num, pct, timeAgo, clock, dateShort, initials, fileSize,
     toast, showLoader, hideLoader,
     modal, confirmModal, promptModal, closeModal,

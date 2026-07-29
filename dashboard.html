@@ -92,6 +92,7 @@
     <div>
       <p class="nav-group-title">Configuración</p>
       <ul class="space-y-1">
+        <li><button class="nav-link" data-view="billing"><i class="fa-solid fa-file-invoice-dollar"></i><span>Facturación</span></button></li>
         <li><button class="nav-link" data-view="payments"><i class="fa-solid fa-credit-card"></i><span>Pagos y Acceso</span></button></li>
         <li><button class="nav-link" data-view="ai-config"><i class="fa-solid fa-brain"></i><span>Configurar IA</span></button></li>
         <li><button class="nav-link" data-view="tutorials"><i class="fa-solid fa-graduation-cap"></i><span>Tutoriales</span></button></li>
@@ -142,28 +143,48 @@
             <i class="fa-solid fa-chevron-down text-xs text-ink/40"></i>
           </button>
 
-          <div id="user-menu" class="hidden absolute right-0 mt-2 w-64 rounded-xl bg-white border border-accent-200 shadow-2xl overflow-hidden z-40">
+          <div id="user-menu" class="hidden absolute right-0 mt-2 w-72 rounded-xl bg-white border border-accent-200 shadow-2xl overflow-hidden z-40">
             <div class="brand-gradient px-4 py-3 text-white">
               <p class="text-sm font-bold" id="user-menu-name">Administrador</p>
               <p class="text-xs opacity-90 break-all" id="user-menu-email">admin@elorai.io</p>
             </div>
+
+            <!-- Cuenta regresiva de la prueba gratis: solo visible durante el trial -->
+            <div id="user-menu-trial" class="hidden px-4 py-3 bg-accent-50 border-b border-accent-100">
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-2xl font-extrabold brand-text" id="user-menu-trial-days">7</span>
+                <span class="text-sm font-bold text-ink/70" id="user-menu-trial-unit">días de prueba gratis</span>
+              </div>
+              <p class="text-xs text-ink/50 mt-0.5" id="user-menu-trial-note">Después se cobra tu plan automáticamente.</p>
+              <div class="mt-2 h-1.5 rounded-full bg-accent-200 overflow-hidden">
+                <div id="user-menu-trial-bar" class="h-full brand-gradient rounded-full transition-all" style="width:100%"></div>
+              </div>
+            </div>
+
             <div class="px-4 py-3 space-y-2 text-sm">
               <div class="flex items-center justify-between">
                 <span class="text-ink/60">Plan</span>
-                <span class="badge badge-brand">Pro</span>
+                <span class="badge badge-brand" id="user-menu-plan">—</span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-ink/60">Estado</span>
-                <span class="badge badge-ok"><span class="dot dot-ok"></span>Activo</span>
+                <span class="badge badge-ok" id="user-menu-status"><span class="dot dot-ok"></span>Activo</span>
               </div>
-              <div class="flex items-center justify-between">
-                <span class="text-ink/60">Vence</span>
-                <span class="font-semibold text-ink" id="user-menu-expiry">12/09/2026</span>
+              <div class="flex items-center justify-between" id="user-menu-expiry-row">
+                <span class="text-ink/60" id="user-menu-expiry-label">Vence</span>
+                <span class="font-semibold text-ink" id="user-menu-expiry">—</span>
               </div>
             </div>
-            <div class="border-t border-accent-100 p-2">
-              <button id="logout-btn" type="button" class="btn btn-ghost w-full !justify-start text-red-600 hover:!text-red-700">
+
+            <div class="border-t border-accent-100 p-2 space-y-0.5">
+              <button id="user-menu-billing" type="button" class="btn btn-ghost w-full !justify-start">
+                <i class="fa-solid fa-file-invoice-dollar"></i> Facturación
+              </button>
+              <button id="logout-btn" type="button" class="btn btn-ghost w-full !justify-start">
                 <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+              </button>
+              <button id="delete-account-btn" type="button" class="btn btn-ghost w-full !justify-start text-red-600 hover:!text-red-700">
+                <i class="fa-solid fa-trash-can"></i> Eliminar cuenta
               </button>
             </div>
           </div>
@@ -891,6 +912,114 @@
     </section>
 
     <!-- ═══════════════════ 13. PAGOS Y ACCESO ═══════════════════ -->
+    <!-- ═══════════════════ FACTURACIÓN ═══════════════════ -->
+    <section id="view-billing" class="view">
+      <div class="section-head flex flex-wrap items-center gap-3">
+        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+        <div class="mr-auto">
+          <h2 class="text-lg font-extrabold">Facturación</h2>
+          <p class="text-sm opacity-90">Tu plan, método de pago, facturas y cancelación</p>
+        </div>
+      </div>
+
+      <!-- Aviso de cuenta gratuita de por vida / sin pasarela -->
+      <div id="bill-bypass" class="hidden card p-4 lg:p-5 mt-4 border-accent-300 bg-accent-50">
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-award text-brand-600 text-xl mt-0.5"></i>
+          <div>
+            <h3 class="text-sm font-extrabold text-ink">Cuenta gratuita de por vida</h3>
+            <p class="text-sm text-ink/60 mt-1">Esta cuenta tiene acceso completo a Elorai sin ningún cobro. No hay plan que gestionar ni facturas que emitir.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="bill-main">
+        <!-- Plan actual -->
+        <div class="card p-4 lg:p-5 mt-4">
+          <div class="flex flex-wrap items-start gap-3">
+            <div class="mr-auto">
+              <h3 class="text-sm font-extrabold text-ink"><i class="fa-solid fa-cube text-accent-600 mr-1.5"></i>Tu plan</h3>
+              <div class="flex flex-wrap items-baseline gap-2 mt-2">
+                <span class="text-2xl font-extrabold text-ink" id="bill-plan-name">—</span>
+                <span class="badge" id="bill-plan-status">—</span>
+              </div>
+              <p class="text-sm text-ink/60 mt-1" id="bill-plan-price">—</p>
+              <p class="text-sm text-ink/55 mt-1" id="bill-plan-renewal">—</p>
+            </div>
+            <div class="flex flex-col gap-2 w-full sm:w-auto">
+              <button id="bill-change-plan" type="button" class="btn btn-gradient">
+                <i class="fa-solid fa-arrows-rotate"></i> Cambiar de plan
+              </button>
+              <button id="bill-resume" type="button" class="btn btn-ghost hidden">
+                <i class="fa-solid fa-rotate-left"></i> Reactivar suscripción
+              </button>
+            </div>
+          </div>
+
+          <!-- Cuenta regresiva del trial -->
+          <div id="bill-trial" class="hidden mt-4 p-3 rounded-xl bg-accent-50 border border-accent-100">
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-xl font-extrabold brand-text" id="bill-trial-days">—</span>
+              <span class="text-sm font-bold text-ink/70" id="bill-trial-unit">días de prueba gratis</span>
+            </div>
+            <p class="text-xs text-ink/50 mt-0.5" id="bill-trial-note">—</p>
+            <div class="mt-2 h-1.5 rounded-full bg-accent-200 overflow-hidden">
+              <div id="bill-trial-bar" class="h-full brand-gradient rounded-full transition-all" style="width:100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Método de pago -->
+        <div class="card p-4 lg:p-5 mt-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="mr-auto">
+              <h3 class="text-sm font-extrabold text-ink"><i class="fa-solid fa-credit-card text-accent-600 mr-1.5"></i>Método de pago</h3>
+              <p class="text-sm text-ink/60 mt-1" id="bill-card-line">Tarjeta registrada con Wompi.</p>
+              <p class="text-xs text-ink/45 mt-0.5">Elorai nunca guarda el número de tu tarjeta: lo custodia Wompi.</p>
+            </div>
+            <button id="bill-update-card" type="button" class="btn btn-ghost">
+              <i class="fa-solid fa-pen"></i> Actualizar tarjeta
+            </button>
+          </div>
+          <p id="bill-card-error" class="hidden text-sm text-red-600 font-semibold mt-3">
+            <i class="fa-solid fa-triangle-exclamation"></i> <span id="bill-card-error-text"></span>
+          </p>
+        </div>
+
+        <!-- Facturas -->
+        <div class="card p-4 lg:p-5 mt-4">
+          <div class="flex items-center gap-2 mb-3">
+            <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-receipt text-accent-600 mr-1.5"></i>Facturas</h3>
+            <span class="badge badge-muted"><span id="bill-invoice-count">0</span> registros</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Estado</th><th>Referencia</th></tr></thead>
+              <tbody id="bill-invoices-tbody"></tbody>
+            </table>
+          </div>
+          <p id="bill-invoices-empty" class="hidden text-sm text-ink/50 text-center py-6">
+            Todavía no hay cobros. Tu primera factura aparecerá aquí cuando termine la prueba gratis.
+          </p>
+        </div>
+
+        <!-- Cancelación -->
+        <div class="card p-4 lg:p-5 mt-4 border-red-200">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="mr-auto">
+              <h3 class="text-sm font-extrabold text-red-700"><i class="fa-solid fa-circle-xmark mr-1.5"></i>Cancelar suscripción</h3>
+              <p class="text-sm text-ink/60 mt-1" id="bill-cancel-note">
+                Mantienes el acceso hasta el final del periodo que ya pagaste. No se te vuelve a cobrar.
+              </p>
+            </div>
+            <button id="bill-cancel" type="button" class="btn btn-ghost text-red-600 hover:!text-red-700">
+              <i class="fa-solid fa-circle-xmark"></i> Cancelar suscripción
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="view-payments" class="view">
       <div class="section-head flex flex-wrap items-center gap-3">
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-credit-card"></i></span>
@@ -1222,6 +1351,7 @@
 <script src="assets/js/reports.js"></script>
 <script src="assets/js/automation.js"></script>
 <script src="assets/js/settings.js"></script>
+<script src="assets/js/billing.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

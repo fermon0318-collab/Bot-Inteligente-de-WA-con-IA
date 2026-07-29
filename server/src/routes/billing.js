@@ -4,14 +4,21 @@
 
 import { Router } from 'express';
 import { billing, providerName } from '../billing/index.js';
+import { config } from '../config.js';
 import { requireAuth, rateLimit } from '../middleware/auth.js';
 
 const router = Router();
+
+/** Cuentas gratuitas de por vida (fundadores, soporte): nunca se les cobra. */
+const isBypass = (req) => config.bypassEmails.includes(req.user.email.toLowerCase());
 
 /* --- Flujo específico de Wompi: tokenizar tarjeta y guardarla ------------- */
 router.get('/wompi/widget-config', requireAuth, async (req, res, next) => {
   try {
     if (providerName !== 'wompi') return res.status(404).json({ error: 'not_applicable' });
+    // A una cuenta gratuita de por vida no se le pide tarjeta: devolver 404
+    // hace que el onboarding se salte ese paso sin ninguna lógica extra.
+    if (isBypass(req)) return res.status(404).json({ error: 'not_applicable' });
     res.json(await billing.getWidgetConfig());
   } catch (err) { next(err); }
 });
@@ -72,10 +79,43 @@ router.post('/portal', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), as
 /* --- Estado para el panel ------------------------------------------------- */
 router.get('/status', requireAuth, async (req, res, next) => {
   try {
-    res.json(await billing.getStatus(req.user.accountId));
+    const status = await billing.getStatus(req.user.accountId);
+    // Mismo criterio que /api/me y subscriptionAccess(): en una cuenta
+    // gratuita de por vida manda el bypass, no lo que diga la tabla.
+    if (isBypass(req)) status.status = 'bypass';
+    res.json(status);
   } catch (err) {
     next(err);
   }
+});
+
+/* --- Módulo de Facturación del panel -------------------------------------- */
+router.get('/invoices', requireAuth, async (req, res, next) => {
+  try {
+    res.json({ invoices: await billing.listInvoices(req.user.accountId) });
+  } catch (err) { next(err); }
+});
+
+router.post('/cancel', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
+  try {
+    if (isBypass(req)) {
+      return res.status(409).json({ error: 'bypass_account', message: 'Esta cuenta es gratuita de por vida: no hay nada que cancelar.' });
+    }
+    res.json(await billing.cancelSubscription(req.user.accountId));
+  } catch (err) { next(err); }
+});
+
+router.post('/resume', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
+  try {
+    res.json(await billing.resumeSubscription(req.user.accountId));
+  } catch (err) { next(err); }
+});
+
+router.post('/plan', requireAuth, rateLimit({ windowMs: 60_000, max: 10 }), async (req, res, next) => {
+  try {
+    const plan = req.body?.plan === 'yearly' ? 'yearly' : 'monthly';
+    res.json(await billing.changePlan(req.user.accountId, plan));
+  } catch (err) { next(err); }
 });
 
 /**

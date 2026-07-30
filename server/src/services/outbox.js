@@ -77,9 +77,15 @@ async function dispatch(item) {
     await fail(item, 'La cuenta no tiene Cloud API configurada', true);
     return 'failed';
   }
-  if (!cfg.botRunning) {
-    // El bot está detenido: se deja pendiente para cuando lo reactiven, en vez
-    // de descartar un mensaje que el operador sí quería enviar.
+  // "Detener el bot" pausa las respuestas AUTOMÁTICAS (flujos e IA) — no debe
+  // bloquear un mensaje que un operador humano escribió a mano en Chat en
+  // Vivo. Antes esto no distinguía: con el bot detenido (el valor por
+  // defecto de cualquier cuenta nueva, hasta que alguien pulsa "Iniciar
+  // bot"), un envío manual quedaba reintentando cada 5 min para siempre, sin
+  // loguear nada ni avisar en "Actividad reciente" — invisible del todo.
+  if (!cfg.botRunning && item.origin !== 'manual') {
+    // Se deja pendiente para cuando lo reactiven, en vez de descartar un
+    // mensaje automático que sigue siendo válido.
     await query(
       `UPDATE outbox SET attempts = attempts - 1, scheduled_at = now() + interval '5 minutes',
               last_error = 'bot detenido'

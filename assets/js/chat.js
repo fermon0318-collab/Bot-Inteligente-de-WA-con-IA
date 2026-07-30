@@ -241,6 +241,76 @@
       }
     }
 
+    /* --- Nuevo contacto (botón "+") ----------------------------------------
+     * Para cuando el negocio necesita escribirle primero a alguien, en vez de
+     * esperar a que el contacto escriba primero.
+     */
+    async function nuevoContacto() {
+      const countrySelect = el('select', { class: 'select !w-auto flex-none', style: 'min-width:6.5rem' });
+      App.COUNTRIES.forEach((c) => countrySelect.appendChild(
+        el('option', { value: c.dial.replace('+', ''), text: `${c.name} ${c.dial}` })
+      ));
+      countrySelect.value = '57'; // Colombia por defecto: es donde opera Elorai hoy
+
+      const phoneInput = el('input', { class: 'input flex-1', placeholder: '300 1234567', inputmode: 'numeric' });
+      phoneInput.addEventListener('input', () => {
+        const digits = phoneInput.value.replace(/\D/g, '');
+        if (digits !== phoneInput.value) phoneInput.value = digits;
+      });
+
+      const nameInput = el('input', { class: 'input', placeholder: 'Nombre (opcional)' });
+      const err = el('p', { class: 'error-msg', text: 'Escribe un teléfono válido.' });
+
+      const body = el('div', { class: 'space-y-3' }, [
+        el('div', {}, [
+          el('label', { class: 'label', text: 'Teléfono' }),
+          el('div', { class: 'flex gap-2' }, [countrySelect, phoneInput]),
+          err,
+        ]),
+        el('div', {}, [
+          el('label', { class: 'label', text: 'Nombre' }),
+          nameInput,
+        ]),
+      ]);
+
+      const phone = await App.modal({
+        title: 'Agregar contacto', icon: 'fa-user-plus', body, confirmText: 'Iniciar conversación',
+        onConfirm: () => {
+          const digits = phoneInput.value.trim();
+          if (digits.length < 6) {
+            phoneInput.classList.add('is-invalid');
+            err.classList.add('show');
+            return false;
+          }
+          return countrySelect.value + digits;
+        },
+      });
+      if (!phone) return;
+
+      try {
+        const contact = await App.session.api('/contacts', {
+          method: 'POST', body: { phone, name: nameInput.value.trim() },
+        });
+
+        // Un contacto recién creado (o retomado) tiene last_message_at
+        // reciente, así que entra en "Conversaciones activas" — pero si ya
+        // existía con actividad vieja puede no llegar a tiempo al refresco.
+        // Se agrega a la lista igual, en vez de dejar el botón "+" sin efecto.
+        await cargarConversaciones();
+        if (!data.some((c) => c.id === contact.id)) {
+          data.unshift({
+            id: contact.id, name: contact.name || contact.phone, phone: contact.phone,
+            status: contact.status, ad: contact.adName, aiEnabled: contact.aiEnabled,
+            lastAt: contact.lastAt, preview: '', messages: null,
+          });
+          renderList();
+        }
+        select(contact.id);
+      } catch (err2) {
+        App.toast(err2.message, 'err');
+      }
+    }
+
     /* --- Emojis ----------------------------------------------------------- */
     function initEmoji() {
       const pop = id('emoji-pop');
@@ -263,6 +333,10 @@
     /* --- Acciones de cabecera -------------------------------------------- */
     function initActions() {
       id('back').addEventListener('click', goBackToList);
+
+      // Solo existe en el panel de Chat en Vivo (id('new-contact') es null
+      // en el histórico, que no tiene este botón).
+      if (id('new-contact')) id('new-contact').addEventListener('click', nuevoContacto);
 
       id('form').addEventListener('submit', send);
 

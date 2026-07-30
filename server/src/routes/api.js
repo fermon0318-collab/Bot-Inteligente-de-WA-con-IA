@@ -818,6 +818,40 @@ router.post('/contacts/:id/paid', requireSubscription, async (req, res, next) =>
   }
 });
 
+/**
+ * Alta manual de un contacto desde Chat en Vivo, para cuando el negocio
+ * necesita escribirle primero a alguien (el botón "+"). Si el teléfono ya
+ * existe se devuelve ese mismo contacto en vez de fallar — abrir el chat de
+ * alguien que ya conocíamos no debería ser un error.
+ */
+router.post('/contacts', requireSubscription, async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim().slice(0, 120);
+    const phone = String(req.body?.phone || '').replace(/\D/g, '');
+
+    // Igual que valida el número de WhatsApp de la propia cuenta en el
+    // onboarding: entre 7 y 15 dígitos cubre cualquier país sin atarse a uno.
+    if (phone.length < 7 || phone.length > 15) {
+      return res.status(400).json({ error: 'validation', message: 'Escribe un teléfono válido, con el código de país incluido.' });
+    }
+
+    const row = await one(
+      `INSERT INTO contacts (account_id, phone, name, source)
+       VALUES ($1, $2, $3, 'manual')
+       ON CONFLICT (account_id, phone) DO UPDATE SET
+         name = CASE WHEN contacts.name = '' THEN EXCLUDED.name ELSE contacts.name END
+       RETURNING id, name, phone, status, ad_name AS "adName", ai_enabled AS "aiEnabled",
+                 last_message_at AS "lastAt"`,
+      [account(req), phone, name]
+    );
+
+    await log(account(req), `Contacto agregado a mano: ${row.phone}`, 'ok');
+    res.status(201).json(row);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/conversations', async (req, res, next) => {
   try {
     const scope = req.query.scope === 'history' ? 'history' : 'live';

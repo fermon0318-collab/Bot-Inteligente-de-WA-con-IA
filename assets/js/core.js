@@ -305,6 +305,7 @@
     'flows-advanced': ['Flujos Avanzados', 'Conversaciones con ramificaciones'],
     'remarketing': ['Remarketing', 'Recuperación de contactos'],
     'triggers': ['Disparadores', 'Palabras clave que activan flujos'],
+    'templates': ['Plantillas', 'Mensajes aprobados por Meta para escribir fuera de 24 h'],
     'billing': ['Facturación', 'Plan, pagos, facturas y cancelación'],
     'payments': ['Pagos y Acceso', 'Verificación y entrega automática'],
     'ai-config': ['Configurar IA', 'Modelo, prompt y comportamiento'],

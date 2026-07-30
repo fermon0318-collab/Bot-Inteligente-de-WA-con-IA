@@ -38,6 +38,7 @@
       data = rows.map((c) => ({
         id: c.id, name: c.name || c.phone, phone: c.phone, status: c.status,
         ad: c.adName, aiEnabled: c.aiEnabled, lastAt: c.lastAt,
+        lastInboundAt: c.lastInboundAt,
         preview: c.preview || '', messages: null,
       }));
       // El endpoint no devuelve el total exacto: se estima por si la página vino llena
@@ -217,6 +218,7 @@
       renderHeader();
       renderMessages();
       renderList();
+      pintarAvisoVentana();
 
       // Los mensajes se piden al abrir, no antes: cargar todos sería absurdo
       try {
@@ -290,6 +292,116 @@
         if (r.outsideWindow) App.toast(r.warning, 'warn', 8000);
       } catch (err) {
         App.toast(`No se pudo enviar: ${err.message}`, 'err');
+      }
+    }
+
+    /* --- Ventana de 24 h y plantillas ---------------------------------------
+     * Meta solo entrega texto libre dentro de las 24 h siguientes al último
+     * mensaje DEL CLIENTE. Pasado ese plazo el mensaje se rechaza en sus
+     * servidores y el cliente nunca lo ve, así que conviene avisarlo antes de
+     * escribir, no después.
+     */
+    const VENTANA_MS = 24 * 3600 * 1000;
+
+    function ventanaCerrada() {
+      if (!current) return false;
+      if (!current.lastInboundAt) return true; // nunca escribió: nunca hubo ventana
+      return Date.now() - new Date(current.lastInboundAt).getTime() > VENTANA_MS;
+    }
+
+    function pintarAvisoVentana() {
+      const aviso = id('window-warning');
+      if (!aviso) return;
+      aviso.classList.toggle('hidden', !ventanaCerrada());
+    }
+
+    /** Modal para elegir plantilla y rellenar sus datos. */
+    async function enviarPlantilla() {
+      if (!current) return;
+
+      let plantillas = [];
+      try {
+        plantillas = await App.session.api('/templates');
+      } catch (err) {
+        App.toast(err.message, 'err');
+        return;
+      }
+
+      if (!plantillas.length) {
+        const ir = await App.confirmModal(
+          'Todavía no tienes plantillas',
+          'Para escribirle a alguien pasadas 24 h, Meta exige una plantilla que ellos hayan aprobado. ' +
+          'En Configuración → Plantillas tienes textos listos para copiar y registrar.',
+          { confirmText: 'Ir a Plantillas', icon: 'fa-file-lines' }
+        );
+        if (ir) App.navigate('templates');
+        return;
+      }
+
+      const select = el('select', { class: 'select' });
+      plantillas.forEach((t) => select.appendChild(
+        el('option', { value: t.id, text: `${t.name}${t.category === 'MARKETING' ? ' (promoción)' : ''}` })));
+
+      const campos = el('div', { class: 'space-y-2 mt-3' });
+      const vista = el('p', { class: 'text-sm text-ink/70 bg-accent-50 rounded-xl p-3 mt-3 whitespace-pre-line' });
+
+      // Se repinta cada vez que cambia la plantilla: cada una pide datos
+      // distintos y la vista previa muestra cómo quedará el mensaje real.
+      function refrescar() {
+        const t = plantillas.find((x) => x.id === select.value);
+        campos.innerHTML = '';
+        if (!t) return;
+        for (let i = 0; i < t.variables; i++) {
+          const etiqueta = (t.varLabels && t.varLabels[i]) || `Dato ${i + 1}`;
+          const input = el('input', { class: 'input', placeholder: etiqueta, dataset: { idx: String(i) } });
+          input.addEventListener('input', previsualizar);
+          campos.appendChild(el('div', {}, [el('label', { class: 'label', text: etiqueta }), input]));
+        }
+        previsualizar();
+      }
+
+      function valores() {
+        return [...campos.querySelectorAll('input')].map((i) => i.value.trim());
+      }
+
+      function previsualizar() {
+        const t = plantillas.find((x) => x.id === select.value);
+        if (!t) return;
+        const vals = valores();
+        vista.textContent = String(t.body).replace(/\{\{(\d+)\}\}/g,
+          (_, n) => vals[Number(n) - 1] || `[${(t.varLabels && t.varLabels[Number(n) - 1]) || 'dato'}]`);
+      }
+
+      select.addEventListener('change', refrescar);
+
+      const body = el('div', {}, [
+        el('label', { class: 'label', text: 'Plantilla aprobada' }), select,
+        campos,
+        el('p', { class: 'label mt-3', text: 'Así lo recibirá el cliente' }), vista,
+      ]);
+      refrescar();
+
+      const ok = await App.modal({
+        title: 'Enviar plantilla', icon: 'fa-file-lines', body, confirmText: 'Enviar',
+        onConfirm: () => {
+          const t = plantillas.find((x) => x.id === select.value);
+          const vals = valores();
+          if (!t || vals.length !== t.variables || vals.some((v) => !v)) {
+            App.toast('Completa todos los datos de la plantilla.', 'warn');
+            return false;
+          }
+          return { templateId: t.id, values: vals };
+        },
+      });
+      if (!ok) return;
+
+      try {
+        await App.session.api(`/conversations/${current.id}/template`, { method: 'POST', body: ok });
+        const t = plantillas.find((x) => x.id === ok.templateId);
+        pushMessage(String(t.body).replace(/\{\{(\d+)\}\}/g, (_, n) => ok.values[Number(n) - 1]), 'out');
+        App.toast('Plantilla enviada. Cuando el cliente responda podrás escribirle normal.', 'ok', 6000);
+      } catch (err) {
+        App.toast(err.message, 'err');
       }
     }
 
@@ -389,6 +501,11 @@
       // Solo existe en el panel de Chat en Vivo (id('new-contact') es null
       // en el histórico, que no tiene este botón).
       if (id('new-contact')) id('new-contact').addEventListener('click', nuevoContacto);
+
+      // Dos accesos al mismo flujo: el icono de la barra (siempre) y el botón
+      // del aviso de ventana cerrada (solo cuando hace falta de verdad).
+      if (id('template')) id('template').addEventListener('click', enviarPlantilla);
+      if (id('window-template')) id('window-template').addEventListener('click', enviarPlantilla);
 
       id('form').addEventListener('submit', send);
 
@@ -497,6 +614,7 @@
           current.messages = mergeServerMessages(server);
           renderHeader();
           renderMessages();
+          pintarAvisoVentana();
         }
       }
     }

@@ -134,6 +134,7 @@
     App.automation.init();
     App.settings.init();
     App.agenda.init();
+    App.templates.init();
     App.billing.init();
 
     // Botón flotante de WhatsApp: un mensaje por vista, no una tarjeta metida

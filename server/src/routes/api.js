@@ -866,8 +866,11 @@ router.get('/conversations', async (req, res, next) => {
       : "AND last_message_at <= now() - interval '24 hours'";
 
     const rows = await many(
+      // last_inbound_at decide si el chat sigue dentro de la ventana de 24 h
+      // de Meta: fuera de ella el texto libre no se entrega y hay que usar
+      // una plantilla, así que el panel necesita saberlo para avisar antes.
       `SELECT c.id, c.name, c.phone, c.status, c.ad_name AS "adName", c.ai_enabled AS "aiEnabled",
-              c.last_message_at AS "lastAt",
+              c.last_message_at AS "lastAt", c.last_inbound_at AS "lastInboundAt",
               (SELECT body FROM messages m WHERE m.contact_id = c.id ORDER BY created_at DESC LIMIT 1) AS preview
          FROM contacts c
         WHERE c.account_id = $1 ${window}
@@ -954,6 +957,143 @@ router.get('/messages/:id/media', async (req, res, next) => {
     if (err.code === 'ENOENT') return res.status(404).json({ error: 'file_missing' });
     next(err);
   }
+});
+
+/* ==========================================================================
+   Plantillas de WhatsApp
+
+   Meta las identifica por su NOMBRE dentro de la WABA de la cuenta, así que
+   aquí no se crean plantillas: se registran las que el negocio ya aprobó en
+   Meta Business Manager, para poder elegirlas y rellenarlas desde el panel.
+   ========================================================================== */
+
+router.get('/templates', async (req, res, next) => {
+  try {
+    const rows = await many(
+      `SELECT id, name, language, category, body, variables, var_labels AS "varLabels"
+         FROM wa_templates WHERE account_id = $1 ORDER BY name`,
+      [account(req)]
+    );
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
+router.post('/templates', requireSubscription, async (req, res, next) => {
+  try {
+    // Meta exige minúsculas, dígitos y guiones bajos: si no coincide exacto
+    // con lo aprobado allí, el envío falla con un error poco descriptivo.
+    const name = String(req.body?.name || '').trim().toLowerCase();
+    if (!/^[a-z0-9_]{1,512}$/.test(name)) {
+      return res.status(400).json({
+        error: 'validation',
+        message: 'El nombre debe coincidir con el de Meta: solo minúsculas, números y guiones bajos.',
+      });
+    }
+
+    const body = String(req.body?.body || '').trim();
+    if (!body) return res.status(400).json({ error: 'validation', message: 'Falta el texto de la plantilla.' });
+
+    const language = String(req.body?.language || 'es').trim() || 'es';
+    const category = String(req.body?.category || 'UTILITY').trim().toUpperCase();
+    const varLabels = Array.isArray(req.body?.varLabels) ? req.body.varLabels.map((s) => String(s).slice(0, 80)) : [];
+    // El número de variables se deduce del propio texto, no se confía en el
+    // cliente: si no cuadra, Meta rechaza el envío entero.
+    const variables = new Set([...body.matchAll(/\{\{(\d+)\}\}/g)].map((m) => m[1])).size;
+
+    const row = await one(
+      `INSERT INTO wa_templates (account_id, name, language, category, body, variables, var_labels)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+       ON CONFLICT (account_id, name, language) DO UPDATE SET
+         category = EXCLUDED.category, body = EXCLUDED.body,
+         variables = EXCLUDED.variables, var_labels = EXCLUDED.var_labels
+       RETURNING id, name, language, category, body, variables, var_labels AS "varLabels"`,
+      [account(req), name, language, category, body, variables, JSON.stringify(varLabels)]
+    );
+    res.status(201).json(row);
+  } catch (err) { next(err); }
+});
+
+router.delete('/templates/:id', requireSubscription, async (req, res, next) => {
+  try {
+    const { rowCount } = await query(
+      'DELETE FROM wa_templates WHERE id = $1 AND account_id = $2',
+      [req.params.id, account(req)]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/* --- Recordatorios automáticos de la Agenda ------------------------------- */
+router.get('/templates/reminder', async (req, res, next) => {
+  try {
+    const row = await one(
+      `SELECT reminder_enabled AS "enabled", reminder_hours AS "hours",
+              reminder_template_id AS "templateId"
+         FROM bot_settings WHERE account_id = $1`,
+      [account(req)]
+    );
+    res.json(row || { enabled: false, hours: 24, templateId: null });
+  } catch (err) { next(err); }
+});
+
+router.put('/templates/reminder', requireSubscription, async (req, res, next) => {
+  try {
+    const enabled = Boolean(req.body?.enabled);
+    const hours = Math.min(168, Math.max(1, Number(req.body?.hours) || 24));
+    const templateId = req.body?.templateId || null;
+
+    // Activar sin plantilla dejaría el recordatorio encendido pero mudo: es
+    // preferible rechazarlo aquí que dejar al negocio creyendo que avisa.
+    if (enabled && !templateId) {
+      return res.status(400).json({
+        error: 'validation',
+        message: 'Elige la plantilla que se enviará como recordatorio.',
+      });
+    }
+    if (templateId) {
+      const tpl = await one('SELECT id FROM wa_templates WHERE id = $1 AND account_id = $2',
+        [templateId, account(req)]);
+      if (!tpl) return res.status(404).json({ error: 'not_found', message: 'Esa plantilla no existe.' });
+    }
+
+    await query(
+      `UPDATE bot_settings
+          SET reminder_enabled = $2, reminder_hours = $3, reminder_template_id = $4, updated_at = now()
+        WHERE account_id = $1`,
+      [account(req), enabled, hours, templateId]
+    );
+    await log(account(req), enabled
+      ? `Recordatorios de cita activados (${hours} h antes)`
+      : 'Recordatorios de cita desactivados', 'ok');
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/** Envía una plantilla a un contacto — la vía válida fuera de las 24 h. */
+router.post('/conversations/:id/template', requireSubscription, async (req, res, next) => {
+  try {
+    const tpl = await one(
+      'SELECT name, language, body, variables FROM wa_templates WHERE id = $1 AND account_id = $2',
+      [req.body?.templateId, account(req)]
+    );
+    if (!tpl) return res.status(404).json({ error: 'not_found', message: 'Esa plantilla no existe.' });
+
+    const values = Array.isArray(req.body?.values) ? req.body.values.map((v) => String(v).trim()) : [];
+    if (values.length !== tpl.variables || values.some((v) => !v)) {
+      return res.status(400).json({
+        error: 'validation',
+        message: `Esta plantilla necesita ${tpl.variables} dato(s), todos completos.`,
+      });
+    }
+
+    const result = await engine.sendTemplateTo({
+      accountId: account(req), contactId: req.params.id, template: tpl, values,
+    });
+    if (result.error) return res.status(404).json({ error: result.error });
+
+    res.status(202).json({ ok: true, queued: result.queued });
+  } catch (err) { next(err); }
 });
 
 /** Envío manual desde Chat en Vivo. Entra por la misma cola que el bot. */

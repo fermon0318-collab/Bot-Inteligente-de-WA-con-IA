@@ -346,6 +346,45 @@ export async function stopAutomation({ accountId, contactId }) {
 }
 
 /** Envío manual desde el panel: entra por la misma cola que todo lo demás. */
+/**
+ * Rellena el cuerpo de una plantilla con los valores del operador, solo para
+ * guardarlo legible en el historial. Lo que Meta envía es la plantilla que
+ * tiene registrada; esto es lo que se ve en Chat en Vivo.
+ */
+export function renderTemplate(body, values) {
+  return String(body || '').replace(/\{\{(\d+)\}\}/g, (_, n) => values[Number(n) - 1] ?? `{{${n}}}`);
+}
+
+/**
+ * Envía una plantilla aprobada. Es la única vía para escribirle a alguien
+ * cuando ya pasaron 24 h desde su último mensaje: fuera de esa ventana Meta
+ * rechaza el texto libre y el cliente nunca llega a verlo.
+ */
+export async function sendTemplateTo({ accountId, contactId, template, values = [] }) {
+  const contact = await one(
+    'SELECT id FROM contacts WHERE id = $1 AND account_id = $2',
+    [contactId, accountId]
+  );
+  if (!contact) return { error: 'contacto_inexistente' };
+
+  // Meta espera los valores en el orden de {{1}}, {{2}}… dentro de "body".
+  const components = values.length
+    ? [{ type: 'body', parameters: values.map((v) => ({ type: 'text', text: String(v) })) }]
+    : [];
+
+  const item = await enqueue({
+    accountId, contactId,
+    kind: 'template',
+    // El texto ya resuelto es lo que verá el operador en el historial
+    body: renderTemplate(template.body, values),
+    payload: { name: template.name, language: template.language, components },
+    origin: 'manual',
+  });
+
+  drain({ limit: 5 }).catch((err) => console.error('[engine] drain inmediato tras plantilla:', err.message));
+  return { queued: item.id };
+}
+
 export async function sendManual({ accountId, contactId, body, mediaName }) {
   const contact = await one(
     'SELECT last_inbound_at FROM contacts WHERE id = $1 AND account_id = $2',

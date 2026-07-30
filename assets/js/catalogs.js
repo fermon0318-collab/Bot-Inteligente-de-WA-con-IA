@@ -166,4 +166,165 @@ principal en una línea y pregunta cómo prefiere pagar.`;
     '✨','🎉','🎊','💜','💙','❤️','⭐','✅','❌','⚠️','📎','📄','📷','🎥','🎵','💰','💳','🏦','🛒','📦',
     '🚀','⏰','📅','📌','🔔','💬','🤖','👋','😇','🥳'];
 
+  /* --- Catálogo de plantillas de WhatsApp -----------------------------------
+     Pasadas 24 h desde el último mensaje del cliente, Meta rechaza el texto
+     libre: solo pasa una plantilla que ellos aprobaron antes. Estas son
+     propuestas listas para copiar y pegar en Meta Business Manager →
+     WhatsApp Manager → Plantillas de mensajes.
+
+     Todas son categoría UTILITY (utilidad) salvo las marcadas: es la que
+     corresponde a avisos sobre algo que el cliente ya contrató o pidió, se
+     aprueba con más facilidad y cuesta menos que MARKETING. Meta rechaza
+     como UTILITY cualquier cosa que sea promoción encubierta.
+
+     `name` va en minúsculas con guiones bajos porque es el formato que exige
+     Meta, y debe coincidir EXACTAMENTE con el nombre que se registre allí.
+     ------------------------------------------------------------------------ */
+  App.WA_TEMPLATE_CATALOG = [
+    /* ---------- Citas y reservas ---------- */
+    {
+      name: 'recordatorio_cita', category: 'UTILITY', group: 'Citas y reservas',
+      title: 'Recordatorio de cita',
+      desc: 'Avisa al cliente antes de su cita. Es la que usa la Agenda para recordar sola.',
+      body: 'Hola {{1}}, te recordamos tu cita de {{2}} el {{3}} a las {{4}}. ¿Nos confirmas tu asistencia?',
+      varLabels: ['Nombre del cliente', 'Servicio o clase', 'Fecha', 'Hora'],
+    },
+    {
+      name: 'confirmacion_reserva', category: 'UTILITY', group: 'Citas y reservas',
+      title: 'Confirmación de reserva',
+      desc: 'Se envía apenas queda agendada una cita.',
+      body: '¡Listo {{1}}! Tu reserva de {{2}} quedó confirmada para el {{3}} a las {{4}}. Si necesitas cambiarla, respóndenos por aquí.',
+      varLabels: ['Nombre del cliente', 'Servicio o clase', 'Fecha', 'Hora'],
+    },
+    {
+      name: 'reagendar_cita', category: 'UTILITY', group: 'Citas y reservas',
+      title: 'Proponer nueva fecha',
+      desc: 'Cuando hay que mover una cita ya acordada.',
+      body: 'Hola {{1}}, necesitamos mover tu cita del {{2}}. ¿Te sirve el {{3}} a las {{4}}? Cuéntanos y lo dejamos listo.',
+      varLabels: ['Nombre del cliente', 'Fecha original', 'Nueva fecha', 'Nueva hora'],
+    },
+    {
+      name: 'cita_cancelada', category: 'UTILITY', group: 'Citas y reservas',
+      title: 'Aviso de cancelación',
+      desc: 'Avisa que una cita se canceló y ofrece reagendar.',
+      body: 'Hola {{1}}, lamentamos avisarte que tu cita del {{2}} a las {{3}} fue cancelada. Escríbenos y buscamos otro horario que te sirva.',
+      varLabels: ['Nombre del cliente', 'Fecha', 'Hora'],
+    },
+    {
+      name: 'cliente_no_asistio', category: 'UTILITY', group: 'Citas y reservas',
+      title: 'No asistió a la cita',
+      desc: 'Retoma el contacto con quien faltó, sin reclamo.',
+      body: 'Hola {{1}}, te esperábamos el {{2}} y no pudimos verte. ¿Quieres que reprogramemos? Respóndenos y lo organizamos.',
+      varLabels: ['Nombre del cliente', 'Fecha de la cita'],
+    },
+
+    /* ---------- Pagos y cobros ---------- */
+    {
+      name: 'recordatorio_pago', category: 'UTILITY', group: 'Pagos',
+      title: 'Recordatorio de pago',
+      desc: 'Cobro pendiente de algo que el cliente ya contrató.',
+      body: 'Hola {{1}}, te recordamos que tienes un pago pendiente de {{2}} por {{3}}. Si ya lo hiciste, mándanos el comprobante por aquí.',
+      varLabels: ['Nombre del cliente', 'Concepto', 'Monto'],
+    },
+    {
+      name: 'pago_confirmado', category: 'UTILITY', group: 'Pagos',
+      title: 'Pago confirmado',
+      desc: 'Acuse de que el pago se recibió.',
+      body: '¡Gracias {{1}}! Confirmamos tu pago de {{2}} por {{3}}. Cualquier cosa que necesites, escríbenos.',
+      varLabels: ['Nombre del cliente', 'Monto', 'Concepto'],
+    },
+    {
+      name: 'mensualidad_por_vencer', category: 'UTILITY', group: 'Pagos',
+      title: 'Mensualidad por vencer',
+      desc: 'Para negocios con plan o membresía mensual.',
+      body: 'Hola {{1}}, tu {{2}} vence el {{3}}. Para no perder tu cupo, puedes renovar respondiendo por aquí.',
+      varLabels: ['Nombre del cliente', 'Plan o membresía', 'Fecha de vencimiento'],
+    },
+    {
+      name: 'comprobante_no_valido', category: 'UTILITY', group: 'Pagos',
+      title: 'Comprobante ilegible',
+      desc: 'Cuando el comprobante enviado no se puede verificar.',
+      body: 'Hola {{1}}, no pudimos validar el comprobante que nos enviaste. ¿Podrías reenviarlo mostrando el monto, la fecha y la referencia completa?',
+      varLabels: ['Nombre del cliente'],
+    },
+
+    /* ---------- Pedidos y entregas ---------- */
+    {
+      name: 'pedido_confirmado', category: 'UTILITY', group: 'Pedidos',
+      title: 'Pedido confirmado',
+      desc: 'Confirma que el pedido entró y quedó en proceso.',
+      body: '¡Gracias {{1}}! Recibimos tu pedido {{2}} y ya está en preparación. Te avisamos apenas salga.',
+      varLabels: ['Nombre del cliente', 'Número de pedido'],
+    },
+    {
+      name: 'pedido_en_camino', category: 'UTILITY', group: 'Pedidos',
+      title: 'Pedido en camino',
+      desc: 'Aviso de despacho con fecha estimada.',
+      body: 'Hola {{1}}, tu pedido {{2}} va en camino y llega aproximadamente el {{3}}. Cualquier duda, respóndenos por aquí.',
+      varLabels: ['Nombre del cliente', 'Número de pedido', 'Fecha estimada'],
+    },
+    {
+      name: 'pedido_listo_retiro', category: 'UTILITY', group: 'Pedidos',
+      title: 'Listo para recoger',
+      desc: 'El pedido espera en el local.',
+      body: 'Hola {{1}}, tu pedido {{2}} ya está listo para recoger en {{3}}. Te esperamos.',
+      varLabels: ['Nombre del cliente', 'Número de pedido', 'Dirección o sucursal'],
+    },
+
+    /* ---------- Atención y seguimiento ---------- */
+    {
+      name: 'retomar_conversacion', category: 'UTILITY', group: 'Atención',
+      title: 'Retomar una conversación',
+      desc: 'La más útil del día a día: reabre el chat con alguien de hace días, sin vender nada.',
+      body: 'Hola {{1}}, te escribimos de {{2}} para retomar tu consulta. ¿Sigues interesado? Respóndenos y seguimos por aquí.',
+      varLabels: ['Nombre del cliente', 'Nombre del negocio'],
+    },
+    {
+      name: 'respuesta_pendiente', category: 'UTILITY', group: 'Atención',
+      title: 'Tenemos tu respuesta',
+      desc: 'Cuando quedó algo pendiente de averiguar y ya hay respuesta.',
+      body: 'Hola {{1}}, ya tenemos la información que nos pediste sobre {{2}}. Respóndenos y te contamos los detalles.',
+      varLabels: ['Nombre del cliente', 'Tema consultado'],
+    },
+    {
+      name: 'documento_faltante', category: 'UTILITY', group: 'Atención',
+      title: 'Falta un dato o documento',
+      desc: 'Para trámites que quedaron incompletos.',
+      body: 'Hola {{1}}, para continuar con {{2}} nos falta {{3}}. ¿Nos lo puedes enviar por aquí?',
+      varLabels: ['Nombre del cliente', 'Trámite o servicio', 'Dato o documento faltante'],
+    },
+    {
+      name: 'encuesta_satisfaccion', category: 'UTILITY', group: 'Atención',
+      title: 'Cómo te fue',
+      desc: 'Seguimiento tras un servicio prestado.',
+      body: 'Hola {{1}}, ¿cómo te fue con {{2}}? Nos ayuda mucho saber tu opinión — puedes contarnos respondiendo aquí.',
+      varLabels: ['Nombre del cliente', 'Servicio recibido'],
+    },
+
+    /* ---------- Avisos operativos ---------- */
+    {
+      name: 'cambio_horario', category: 'UTILITY', group: 'Avisos',
+      title: 'Cambio de horario',
+      desc: 'Avisa un cambio que afecta al cliente.',
+      body: 'Hola {{1}}, te avisamos que {{2}} cambia de horario: ahora es {{3}}. Si necesitas ajustar algo, escríbenos.',
+      varLabels: ['Nombre del cliente', 'Clase, servicio o sucursal', 'Nuevo horario'],
+    },
+    {
+      name: 'cierre_temporal', category: 'UTILITY', group: 'Avisos',
+      title: 'Cierre temporal',
+      desc: 'Vacaciones, festivos o mantenimiento.',
+      body: 'Hola {{1}}, te contamos que estaremos cerrados del {{2}} al {{3}}. Volvemos con todo y quedamos atentos por aquí.',
+      varLabels: ['Nombre del cliente', 'Fecha de inicio', 'Fecha de regreso'],
+    },
+
+    /* ---------- Promoción (categoría distinta) ---------- */
+    {
+      name: 'promocion_general', category: 'MARKETING', group: 'Promoción',
+      title: 'Promoción',
+      desc: 'MARKETING: cuesta más y el cliente puede tener desactivadas las promociones. Úsala poco — es la que más reportes de spam genera, y eso sí puede costarte el número.',
+      body: 'Hola {{1}}, tenemos {{2}} hasta el {{3}}. Si te interesa, respóndenos y te damos los detalles.',
+      varLabels: ['Nombre del cliente', 'Promoción', 'Fecha límite'],
+    },
+  ];
+
 })(window.Elorai);

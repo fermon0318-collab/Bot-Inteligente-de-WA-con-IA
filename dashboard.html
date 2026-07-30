@@ -92,6 +92,7 @@
     <div>
       <p class="nav-group-title">Configuración</p>
       <ul class="space-y-1">
+        <li><button class="nav-link" data-view="templates"><i class="fa-solid fa-file-lines"></i><span>Plantillas</span></button></li>
         <li><button class="nav-link" data-view="billing"><i class="fa-solid fa-file-invoice-dollar"></i><span>Facturación</span></button></li>
         <li><button class="nav-link" data-view="payments"><i class="fa-solid fa-credit-card"></i><span>Pagos y Acceso</span></button></li>
         <li><button class="nav-link" data-view="ai-config"><i class="fa-solid fa-brain"></i><span>Configurar IA</span></button></li>
@@ -526,10 +527,26 @@
                 <div class="emoji-pop scroll-thin" id="live-emoji-pop"></div>
                 <button type="button" class="btn btn-ghost btn-icon" data-emoji-toggle="live" aria-label="Emojis"><i class="fa-regular fa-face-smile"></i></button>
                 <button type="button" class="btn btn-ghost btn-icon" id="live-attach" aria-label="Adjuntar archivo"><i class="fa-solid fa-paperclip"></i></button>
+                <button type="button" class="btn btn-ghost btn-icon" id="live-template" aria-label="Enviar plantilla" title="Enviar plantilla aprobada"><i class="fa-solid fa-file-lines"></i></button>
                 <input type="file" id="live-file-input" class="hidden" />
                 <input id="live-input" class="input" placeholder="Escribe un mensaje…" autocomplete="off" />
                 <button type="submit" class="btn btn-gradient btn-icon" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
               </form>
+
+              <!-- Aviso de ventana cerrada: aparece cuando pasaron 24 h desde
+                   el último mensaje del cliente y el texto libre ya no llega -->
+              <div id="live-window-warning" class="hidden px-3 pb-3 -mt-1">
+                <div class="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                  <i class="fa-solid fa-clock text-amber-500 mt-0.5"></i>
+                  <p class="text-xs text-amber-800 flex-1">
+                    Pasaron más de 24 h desde el último mensaje de este cliente. Meta <strong>no entrega</strong> mensajes normales —
+                    usa una plantilla aprobada para reabrir la conversación.
+                  </p>
+                  <button type="button" id="live-window-template" class="btn btn-gradient !py-1 !px-2.5 !text-xs shrink-0">
+                    Enviar plantilla
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -579,10 +596,26 @@
                 <div class="emoji-pop scroll-thin" id="hist-emoji-pop"></div>
                 <button type="button" class="btn btn-ghost btn-icon" data-emoji-toggle="hist" aria-label="Emojis"><i class="fa-regular fa-face-smile"></i></button>
                 <button type="button" class="btn btn-ghost btn-icon" id="hist-attach" aria-label="Adjuntar archivo"><i class="fa-solid fa-paperclip"></i></button>
+                <button type="button" class="btn btn-ghost btn-icon" id="hist-template" aria-label="Enviar plantilla" title="Enviar plantilla aprobada"><i class="fa-solid fa-file-lines"></i></button>
                 <input type="file" id="hist-file-input" class="hidden" />
                 <input id="hist-input" class="input" placeholder="Retomar la conversación…" autocomplete="off" />
                 <button type="submit" class="btn btn-gradient btn-icon" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
               </form>
+
+              <!-- En el histórico esto es lo habitual, no la excepción: por
+                   definición son conversaciones de hace más de 24 h. -->
+              <div id="hist-window-warning" class="hidden px-3 pb-3 -mt-1">
+                <div class="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                  <i class="fa-solid fa-clock text-amber-500 mt-0.5"></i>
+                  <p class="text-xs text-amber-800 flex-1">
+                    Pasaron más de 24 h desde el último mensaje de este cliente. Meta <strong>no entrega</strong> mensajes normales —
+                    usa una plantilla aprobada para reabrir la conversación.
+                  </p>
+                  <button type="button" id="hist-window-template" class="btn btn-gradient !py-1 !px-2.5 !text-xs shrink-0">
+                    Enviar plantilla
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -916,6 +949,89 @@
     </section>
 
     <!-- ═══════════════════ 13. PAGOS Y ACCESO ═══════════════════ -->
+    <!-- ═══════════════════ PLANTILLAS ═══════════════════ -->
+    <section id="view-templates" class="view">
+      <div class="section-head flex flex-wrap items-center gap-3">
+        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-file-lines"></i></span>
+        <div class="mr-auto">
+          <h2 class="text-lg font-extrabold">Plantillas de WhatsApp</h2>
+          <p class="text-sm opacity-90">Para escribirle a un cliente cuando pasaron más de 24 h</p>
+        </div>
+      </div>
+
+      <div class="card p-4 lg:p-5 mt-4 border-amber-200 bg-amber-50/50">
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-circle-info text-amber-500 text-lg mt-0.5"></i>
+          <div class="text-sm text-ink/75 leading-relaxed">
+            <p class="font-bold text-ink">Por qué hacen falta</p>
+            <p class="mt-1">
+              Pasadas 24 h desde el último mensaje del cliente, Meta <strong>rechaza</strong> cualquier mensaje normal:
+              no llega, y el cliente nunca se entera. La única forma de escribirle primero es una plantilla que Meta
+              haya aprobado antes. En cuanto el cliente responde, se abre otra ventana de 24 h y puedes escribirle normal.
+            </p>
+            <p class="mt-2">
+              Abajo tienes textos listos. Cópialos en
+              <strong>Meta Business Manager → WhatsApp Manager → Plantillas de mensajes</strong>, espera la aprobación
+              (suele tardar minutos) y luego regístralos aquí con el mismo nombre.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plantillas ya registradas -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <div class="flex items-center gap-2 mb-3">
+          <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-circle-check text-accent-600 mr-1.5"></i>Tus plantillas registradas</h3>
+          <span class="badge badge-muted"><span id="tpl-count">0</span></span>
+        </div>
+        <div id="tpl-mine" class="space-y-2"></div>
+        <p id="tpl-mine-empty" class="hidden text-sm text-ink/50 text-center py-5">
+          Todavía no registraste ninguna. Elige una de abajo para empezar.
+        </p>
+      </div>
+
+      <!-- Recordatorios automáticos de la agenda -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <h3 class="text-sm font-extrabold text-ink"><i class="fa-solid fa-bell text-accent-600 mr-1.5"></i>Recordatorios automáticos de citas</h3>
+        <p class="text-sm text-ink/60 mt-1">
+          Envía solo la plantilla de recordatorio antes de cada cita de tu Agenda, sin que tengas que acordarte.
+        </p>
+        <div class="grid sm:grid-cols-3 gap-3 mt-3">
+          <div class="flex items-center gap-2">
+            <label class="switch"><input type="checkbox" id="tpl-reminder-on" /><span class="slider"></span></label>
+            <span class="text-sm font-semibold text-ink">Activar</span>
+          </div>
+          <div>
+            <label class="label" for="tpl-reminder-hours">Avisar con</label>
+            <select id="tpl-reminder-hours" class="select">
+              <option value="2">2 horas antes</option>
+              <option value="4">4 horas antes</option>
+              <option value="12">12 horas antes</option>
+              <option value="24" selected>1 día antes</option>
+              <option value="48">2 días antes</option>
+            </select>
+          </div>
+          <div>
+            <label class="label" for="tpl-reminder-template">Plantilla a usar</label>
+            <select id="tpl-reminder-template" class="select"></select>
+          </div>
+        </div>
+        <p class="hint mt-2">
+          La plantilla recibe, en este orden: nombre del cliente, servicio, fecha y hora.
+        </p>
+        <button id="tpl-reminder-save" type="button" class="btn btn-gradient mt-3">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar recordatorios
+        </button>
+      </div>
+
+      <!-- Catálogo listo para copiar -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-book text-accent-600 mr-1.5"></i>Plantillas listas para usar</h3>
+        <p class="text-sm text-ink/60 mb-3">Copia el texto, apruébalo en Meta y regístralo con un clic.</p>
+        <div id="tpl-catalog" class="space-y-4"></div>
+      </div>
+    </section>
+
     <!-- ═══════════════════ FACTURACIÓN ═══════════════════ -->
     <section id="view-billing" class="view">
       <div class="section-head flex flex-wrap items-center gap-3">
@@ -1361,6 +1477,7 @@
 <script src="assets/js/reports.js?v=2"></script>
 <script src="assets/js/automation.js?v=2"></script>
 <script src="assets/js/settings.js?v=2"></script>
+<script src="assets/js/templates.js?v=2"></script>
 <script src="assets/js/billing.js?v=2"></script>
 <script src="assets/js/app.js?v=2"></script>
 </body>

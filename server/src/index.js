@@ -28,6 +28,7 @@ import webhookRoutes, { reprocessPending } from './routes/webhook.js';
 import * as adsync from './services/adsync.js';
 import * as capi from './services/capi.js';
 import { startWorker } from './services/outbox.js';
+import * as reminders from './services/reminders.js';
 import * as remarketing from './services/remarketing.js';
 import * as trialBilling from './services/trialBilling.js';
 
@@ -234,6 +235,9 @@ const stopCapi = capi.startWorker();
 // Sincronización con Meta Ads: trae gasto y métricas una vez por hora
 const stopAdsync = adsync.startWorker();
 
+// Recordatorios de citas: avisa por plantilla antes de cada cita agendada
+const stopReminders = reminders.startWorker();
+
 // Cobro de trials vencidos (Wompi): revisa cada hora si hay cuentas que ya
 // cumplieron los 7 días. No hace nada si el proveedor activo no es Wompi.
 const stopTrialBilling = trialBilling.startWorker();
@@ -255,6 +259,7 @@ function shutdown(signal) {
   stopCapi();
   stopAdsync();
   stopTrialBilling();
+  stopReminders();
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);

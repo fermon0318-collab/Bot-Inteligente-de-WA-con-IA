@@ -14,7 +14,7 @@
 import { many, one, query } from '../db/pool.js';
 import * as ai from './ai.js';
 import * as flows from './flows.js';
-import { enqueue } from './outbox.js';
+import { drain, enqueue } from './outbox.js';
 import * as receipts from './receipts.js';
 import * as wa from './whatsapp.js';
 
@@ -310,6 +310,12 @@ export async function sendManual({ accountId, contactId, body, mediaName }) {
     mediaName: mediaName || null,
     origin: 'manual',
   });
+
+  // Un mensaje manual es una acción del operador, en vivo: no tiene sentido
+  // hacerlo esperar hasta 3 s por el siguiente tick del trabajador periódico.
+  // Se dispara un intento inmediato sin bloquear la respuesta — si falla
+  // (Graph API caída, etc.), el trabajador normal lo retoma igual.
+  drain({ limit: 5 }).catch((err) => console.error('[engine] drain inmediato tras envío manual:', err.message));
 
   return { queued: item.id, outsideWindow };
 }

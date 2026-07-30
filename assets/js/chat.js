@@ -107,9 +107,14 @@
         }
         const outgoing = m.from !== 'in';
         msgBox.appendChild(el('div', { class: `msg-row ${outgoing ? 'out' : ''}` },
-          el('div', { class: `bubble ${m.from === 'in' ? 'in' : m.from === 'bot' ? 'bot' : 'out'}` }, [
+          el('div', { class: `bubble ${m.from === 'in' ? 'in' : m.from === 'bot' ? 'bot' : 'out'} ${m.pending ? 'opacity-60' : ''}` }, [
             el('span', { class: 'whitespace-pre-line', text: m.text }),
-            el('span', { class: 'meta', text: `${m.from === 'bot' ? '🤖 IA · ' : m.from === 'out' ? '👤 Manual · ' : ''}${App.clock(m.at)}` }),
+            el('span', {
+              class: 'meta',
+              text: m.pending
+                ? 'Enviando…'
+                : `${m.from === 'bot' ? '🤖 IA · ' : m.from === 'out' ? '👤 Manual · ' : ''}${App.clock(m.at)}`,
+            }),
           ])));
       });
       msgBox.scrollTop = msgBox.scrollHeight;
@@ -164,9 +169,12 @@
 
       // Los mensajes se piden al abrir, no antes: cargar todos sería absurdo
       try {
-        current.messages = (await App.session.api(`/conversations/${convId}/messages`))
+        const server = (await App.session.api(`/conversations/${convId}/messages`))
           .map((m) => ({ from: m.direction, text: m.body, at: m.at }));
-        if (current && current.id === convId) renderMessages();
+        if (current && current.id === convId) {
+          current.messages = mergeServerMessages(server);
+          renderMessages();
+        }
       } catch (err) {
         App.toast(`No se pudieron cargar los mensajes: ${err.message}`, 'err');
       }
@@ -180,10 +188,36 @@
     /* --- Envío de mensajes ----------------------------------------------- */
     function pushMessage(text, from) {
       current.messages = current.messages || [];
-      current.messages.push({ from, text, at: new Date().toISOString() });
+      // pending: true hasta que el servidor lo confirme (ver mergeServerMessages) —
+      // el mensaje pasó por la cola de salida y puede tardar unos segundos en
+      // enviarse de verdad, pero el operador ya lo ve escrito.
+      current.messages.push({ from, text, at: new Date().toISOString(), pending: true });
       current.lastAt = current.messages[current.messages.length - 1].at;
       renderMessages();
       renderList();
+    }
+
+    /**
+     * Combina lo que devuelve el servidor con los mensajes que se pintaron al
+     * instante (pushMessage) y que todavía no salieron de la cola. Sin esto,
+     * cada refresco de los 10 s reemplazaba el array entero y un mensaje
+     * enviado hacía un segundo desaparecía de la pantalla hasta que el
+     * siguiente refresco lo trajera ya confirmado — parecía que se hubiera
+     * borrado, cuando en realidad solo estaba en camino.
+     */
+    function mergeServerMessages(serverMessages) {
+      const pendientes = (current.messages || []).filter((m) => {
+        if (!m.pending) return false;
+        // Más de 60 s sin confirmarse: si de verdad falló (número inválido,
+        // token vencido…), "Actividad reciente" ya lo avisó — aquí se deja
+        // de proteger para no dejar una burbuja fantasma en el chat para
+        // siempre. Si sí se envió, el propio filtro de abajo la reemplaza.
+        if (Date.now() - new Date(m.at).getTime() > 60_000) return false;
+        // Ya llegó del servidor con el mismo texto/dirección: se descarta la
+        // copia local optimista a favor de la real (evita el duplicado).
+        return !serverMessages.some((s) => s.from === m.from && s.text === m.text);
+      });
+      return [...serverMessages, ...pendientes].sort((a, b) => new Date(a.at) - new Date(b.at));
     }
 
     async function send(ev) {
@@ -321,13 +355,19 @@
     /** Recarga la lista y, si hay un chat abierto, sus mensajes — sin tocar el campo de texto. */
     async function refrescar() {
       const openId = current?.id;
+      // cargarConversaciones() reconstruye `data` con objetos nuevos (sin
+      // mensajes): hay que guardar los pendientes ANTES de perder la
+      // referencia al `current` de esta conversación.
+      const pendientesPrevios = openId === current?.id ? current.messages : null;
       await cargarConversaciones();
       if (openId) {
         const stillThere = data.find((c) => c.id === openId);
         if (stillThere) {
           current = stillThere;
-          current.messages = (await App.session.api(`/conversations/${openId}/messages`))
+          current.messages = pendientesPrevios;
+          const server = (await App.session.api(`/conversations/${openId}/messages`))
             .map((m) => ({ from: m.direction, text: m.body, at: m.at }));
+          current.messages = mergeServerMessages(server);
           renderHeader();
           renderMessages();
         }

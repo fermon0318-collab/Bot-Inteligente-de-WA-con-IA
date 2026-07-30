@@ -19,6 +19,7 @@ import * as capi from '../services/capi.js';
 import * as engine from '../services/engine.js';
 import * as media from '../services/media.js';
 import * as receipts from '../services/receipts.js';
+import * as storage from '../services/storage.js';
 import { ALLOWED, MAX_BYTES } from '../services/storage.js';
 
 const router = Router();
@@ -883,7 +884,12 @@ router.get('/conversations', async (req, res, next) => {
 router.get('/conversations/:id/messages', async (req, res, next) => {
   try {
     const rows = await many(
-      `SELECT m.id, m.direction, m.body, m.media_url AS "mediaUrl", m.created_at AS "at"
+      // `media_url` es la ruta interna en disco y NO se expone: el navegador
+      // solo recibe si hay adjunto y de qué tipo, y lo pide por
+      // /api/messages/:id/media, que valida la cuenta.
+      `SELECT m.id, m.direction, m.body, m.created_at AS "at",
+              m.media_type AS "mediaType", m.media_name AS "mediaName",
+              (m.media_url IS NOT NULL) AS "hasMedia"
          FROM messages m
          JOIN contacts c ON c.id = m.contact_id AND c.account_id = $2
         WHERE m.contact_id = $1
@@ -911,6 +917,41 @@ router.put('/conversations/:id/ai', requireSubscription, async (req, res, next) 
     );
     res.json({ ok: true, enabled });
   } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Sirve el adjunto de un mensaje (lo que envió el cliente por WhatsApp).
+ *
+ * La ruta en disco nunca viaja al navegador: se pide por id de mensaje y aquí
+ * se comprueba que ese mensaje pertenece a la cuenta de quien pregunta. Sin
+ * ese JOIN, cualquiera con sesión podría leer los archivos de otro negocio
+ * cambiando el id en la URL.
+ */
+router.get('/messages/:id/media', async (req, res, next) => {
+  try {
+    const row = await one(
+      `SELECT m.media_url, m.media_mime, m.media_name, m.media_type
+         FROM messages m
+        WHERE m.id = $1 AND m.account_id = $2`,
+      [req.params.id, account(req)]
+    );
+    if (!row?.media_url) return res.status(404).json({ error: 'not_found' });
+
+    const buffer = await storage.read(row.media_url);
+
+    res.setHeader('Content-Type', row.media_mime || 'application/octet-stream');
+    // Privado: es contenido de un cliente, no debe quedar en cachés compartidas.
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    // Los PDF se descargan con su nombre; imagen/audio/video se ven en línea.
+    if (row.media_type === 'pdf') {
+      const safe = String(row.media_name || 'documento.pdf').replace(/[^\w.\- ]/g, '_');
+      res.setHeader('Content-Disposition', `inline; filename="${safe}"`);
+    }
+    res.send(buffer);
+  } catch (err) {
+    if (err.code === 'ENOENT') return res.status(404).json({ error: 'file_missing' });
     next(err);
   }
 });

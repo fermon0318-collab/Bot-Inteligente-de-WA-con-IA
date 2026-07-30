@@ -16,6 +16,7 @@ import * as ai from './ai.js';
 import * as flows from './flows.js';
 import { drain, enqueue } from './outbox.js';
 import * as receipts from './receipts.js';
+import * as storage from './storage.js';
 import * as wa from './whatsapp.js';
 
 /** Escribe en la terminal de actividad del panel. */
@@ -76,12 +77,52 @@ function textOf(message) {
 
 /** El adjunto, si lo hay: para el bloque de verificación de pagos. */
 function attachmentOf(message) {
-  for (const kind of ['image', 'document', 'audio', 'video']) {
+  // 'sticker' va al final porque no es un adjunto "de negocio" (nunca es un
+  // comprobante), pero sí hay que guardarlo para poder pintarlo en el chat.
+  for (const kind of ['image', 'document', 'audio', 'video', 'sticker']) {
     if (message[kind]?.id) {
       return { kind, mediaId: message[kind].id, mimeType: message[kind].mime_type, filename: message[kind].filename };
     }
   }
   return null;
+}
+
+/**
+ * Descarga el adjunto de un mensaje entrante y lo deja guardado, para que el
+ * panel pueda mostrarlo.
+ *
+ * Las URLs que devuelve Meta caducan y requieren el token de la cuenta, así
+ * que no sirve de nada guardarlas: hay que traerse el archivo. Nunca lanza —
+ * el mensaje ya está registrado con su texto, y quedarse sin la imagen es
+ * mucho mejor que perder el mensaje entero o romper el webhook.
+ */
+async function guardarAdjunto({ accountId, messageId, attachment, token }) {
+  try {
+    const archivo = await wa.downloadMedia({ token, mediaId: attachment.mediaId });
+
+    // Meta manda el mime con parámetros ("audio/ogg; codecs=opus"), y las
+    // notas de voz siempre vienen así. Sin recortarlos, el tipo no coincide
+    // con la lista de permitidos y se rechazaría cada nota de voz.
+    const mime = String(archivo.mimeType || attachment.mimeType || '').split(';')[0].trim();
+
+    const guardado = await storage.save({
+      accountId,
+      buffer: archivo.buffer,
+      mimeType: mime,
+      originalName: attachment.filename || '',
+    });
+
+    await query(
+      `UPDATE messages
+          SET media_url = $2, media_type = $3, media_mime = $4, media_name = $5
+        WHERE id = $1`,
+      [messageId, guardado.storagePath, guardado.type, mime, attachment.filename || null]
+    );
+    return { saved: true, type: guardado.type };
+  } catch (err) {
+    console.warn(`[engine] no se pudo guardar el adjunto del mensaje ${messageId}: ${err.message}`);
+    return { saved: false, error: err.message };
+  }
 }
 
 /* ==========================================================================
@@ -131,6 +172,20 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
     contactId: contact.id, accountId, text, attachment,
     isNew: contact.is_new, actions: [],
   };
+
+  /* 3.5 · El adjunto se guarda SIEMPRE, antes de cualquier salida temprana.
+     Que el bot esté detenido o la automatización pausada solo significa que
+     no se responde solo — el operador tiene que poder ver igualmente la foto
+     o escuchar el audio que le mandaron desde Chat en Vivo. */
+  if (attachment) {
+    const cfgMedia = await wa.accountConfig(accountId);
+    if (cfgMedia?.token) {
+      const r = await guardarAdjunto({
+        accountId, messageId: inserted.id, attachment, token: cfgMedia.token,
+      });
+      result.actions.push(r.saved ? `adjunto_guardado:${r.type}` : 'adjunto_no_guardado');
+    }
+  }
 
   /* 1 · El bot puede estar apagado: se guarda el mensaje pero no se responde */
   if (!account.bot_running) {

@@ -510,6 +510,35 @@
     finally { button.disabled = false; button.innerHTML = original; }
   }
 
+  /* --- Visor de imágenes del chat ------------------------------------------
+     Se cablea perezosamente: el visor solo existe en dashboard.html, así que
+     en la landing y el onboarding esto simplemente no hace nada. */
+  function openMediaViewer(src) {
+    const viewer = qs('#media-viewer');
+    if (!viewer) return;
+    qs('#media-viewer-img').src = src;
+    viewer.classList.add('open');
+  }
+
+  function closeMediaViewer() {
+    const viewer = qs('#media-viewer');
+    if (!viewer) return;
+    viewer.classList.remove('open');
+    // Se suelta la imagen para no dejarla en memoria mientras no se usa
+    qs('#media-viewer-img').src = '';
+  }
+
+  function initMediaViewer() {
+    const viewer = qs('#media-viewer');
+    if (!viewer) return;
+    qs('#media-viewer-close').addEventListener('click', closeMediaViewer);
+    // Clic en el fondo (no en la imagen) también cierra
+    viewer.addEventListener('click', (ev) => { if (ev.target === viewer) closeMediaViewer(); });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && viewer.classList.contains('open')) closeMediaViewer();
+    });
+  }
+
   /** Cierra el menú flotante de usuario del encabezado. */
   function closeUserMenu() {
     qs('#user-menu').classList.add('hidden');
@@ -519,6 +548,7 @@
   /* --- Exportación -------------------------------------------------------- */
   Object.assign(App, {
     qs, qsa, el, escapeHtml, closeUserMenu,
+    openMediaViewer, closeMediaViewer, initMediaViewer,
     money, num, pct, timeAgo, clock, dateShort, initials, fileSize,
     toast, showLoader, hideLoader,
     modal, confirmModal, promptModal, closeModal,

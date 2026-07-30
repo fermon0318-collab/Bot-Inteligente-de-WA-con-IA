@@ -520,7 +520,7 @@
                 <button id="live-mark-paid" type="button" class="btn btn-success btn-sm"><i class="fa-solid fa-circle-check"></i><span class="hidden sm:inline">Marcar como Pagado</span></button>
               </div>
 
-              <div id="live-messages" class="flex-1 overflow-y-auto scroll-thin p-4 bg-accent-50/40"></div>
+              <div id="live-messages" class="flex-1 overflow-y-auto scroll-thin p-4 chat-canvas"></div>
 
               <form id="live-form" class="p-3 border-t border-accent-200/60 flex items-end gap-2 relative">
                 <div class="emoji-pop scroll-thin" id="live-emoji-pop"></div>
@@ -574,7 +574,7 @@
                 <span id="hist-ad-badge" class="badge badge-brand hidden"><i class="fa-solid fa-bullhorn"></i><span id="hist-ad-name"></span></span>
                 <button id="hist-mark-paid" type="button" class="btn btn-success btn-sm"><i class="fa-solid fa-circle-check"></i><span class="hidden sm:inline">Marcar como Pagado</span></button>
               </div>
-              <div id="hist-messages" class="flex-1 overflow-y-auto scroll-thin p-4 bg-accent-50/40"></div>
+              <div id="hist-messages" class="flex-1 overflow-y-auto scroll-thin p-4 chat-canvas"></div>
               <form id="hist-form" class="p-3 border-t border-accent-200/60 flex items-end gap-2 relative">
                 <div class="emoji-pop scroll-thin" id="hist-emoji-pop"></div>
                 <button type="button" class="btn btn-ghost btn-icon" data-emoji-toggle="hist" aria-label="Emojis"><i class="fa-regular fa-face-smile"></i></button>
@@ -1194,6 +1194,12 @@
       <p class="hidden sm:block">v1.0.0</p>
     </div>
   </footer>
+</div>
+
+<!-- Visor de imágenes del chat: se abre al tocar una foto recibida -->
+<div id="media-viewer" class="media-viewer" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+  <button type="button" id="media-viewer-close" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+  <img id="media-viewer-img" src="" alt="" />
 </div>
 
 <!-- ══════════════════════════ Modal genérico ══════════════════════════ -->

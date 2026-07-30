@@ -93,6 +93,44 @@
       }
     }
 
+    /**
+     * Construye el adjunto de un mensaje: foto, video, audio o documento.
+     *
+     * El archivo se pide por id de mensaje (/api/messages/:id/media) porque la
+     * ruta en disco nunca sale del servidor y esa ruta comprueba que el
+     * mensaje sea de esta cuenta. Devuelve null si el mensaje no trae adjunto.
+     */
+    function mediaNode(m) {
+      if (!m.hasMedia || !m.id) return null;
+      const src = `/api/messages/${m.id}/media`;
+
+      if (m.mediaType === 'image') {
+        const img = el('img', { src, alt: m.mediaName || 'Imagen recibida', loading: 'lazy' });
+        img.addEventListener('click', () => App.openMediaViewer(src));
+        return el('div', { class: 'bubble-media' }, img);
+      }
+
+      if (m.mediaType === 'video') {
+        return el('div', { class: 'bubble-media' },
+          el('video', { src, controls: 'controls', preload: 'metadata' }));
+      }
+
+      if (m.mediaType === 'audio') {
+        // preload="metadata" para que se vea la duración sin descargar el
+        // audio entero de cada nota de voz del historial.
+        return el('div', { class: 'bubble-media' },
+          el('audio', { src, controls: 'controls', preload: 'metadata' }));
+      }
+
+      // pdf y cualquier otro documento
+      return el('a', {
+        class: 'bubble-doc', href: src, target: '_blank', rel: 'noopener',
+      }, [
+        el('i', { class: 'fa-solid fa-file-pdf' }),
+        el('span', { text: m.mediaName || 'Documento' }),
+      ]);
+    }
+
     /* --- Mensajes -------------------------------------------------------- */
     function renderMessages() {
       msgBox.innerHTML = '';
@@ -103,19 +141,32 @@
         if (day !== lastDay) {
           lastDay = day;
           msgBox.appendChild(el('div', { class: 'flex justify-center my-3' },
-            el('span', { class: 'badge badge-muted', text: App.dateShort(m.at) })));
+            el('span', { class: 'chat-day', text: App.dateShort(m.at) })));
         }
         const outgoing = m.from !== 'in';
+        const partes = [];
+
+        // El adjunto va arriba del texto, como en WhatsApp: la foto primero y
+        // el pie de foto debajo.
+        const media = mediaNode(m);
+        if (media) partes.push(media);
+
+        // Con adjunto, el texto suele ser el relleno que puso el motor
+        // ("📷 Imagen"): repetirlo debajo de la propia imagen sobra.
+        const esRelleno = m.hasMedia && /^(📷|🎤|🎥|📎|🙂)/.test(m.text || '');
+        if (m.text && !esRelleno) {
+          partes.push(el('span', { class: 'whitespace-pre-line', text: m.text }));
+        }
+
+        partes.push(el('span', {
+          class: 'meta',
+          text: m.pending
+            ? 'Enviando…'
+            : `${m.from === 'bot' ? '🤖 IA · ' : m.from === 'out' ? '👤 Manual · ' : ''}${App.clock(m.at)}`,
+        }));
+
         msgBox.appendChild(el('div', { class: `msg-row ${outgoing ? 'out' : ''}` },
-          el('div', { class: `bubble ${m.from === 'in' ? 'in' : m.from === 'bot' ? 'bot' : 'out'} ${m.pending ? 'opacity-60' : ''}` }, [
-            el('span', { class: 'whitespace-pre-line', text: m.text }),
-            el('span', {
-              class: 'meta',
-              text: m.pending
-                ? 'Enviando…'
-                : `${m.from === 'bot' ? '🤖 IA · ' : m.from === 'out' ? '👤 Manual · ' : ''}${App.clock(m.at)}`,
-            }),
-          ])));
+          el('div', { class: `bubble ${m.from === 'in' ? 'in' : m.from === 'bot' ? 'bot' : 'out'} ${m.pending ? 'opacity-60' : ''}` }, partes)));
       });
       msgBox.scrollTop = msgBox.scrollHeight;
     }
@@ -170,7 +221,8 @@
       // Los mensajes se piden al abrir, no antes: cargar todos sería absurdo
       try {
         const server = (await App.session.api(`/conversations/${convId}/messages`))
-          .map((m) => ({ from: m.direction, text: m.body, at: m.at }));
+          .map((m) => ({ id: m.id, from: m.direction, text: m.body, at: m.at,
+                         hasMedia: m.hasMedia, mediaType: m.mediaType, mediaName: m.mediaName }));
         if (current && current.id === convId) {
           current.messages = mergeServerMessages(server);
           renderMessages();
@@ -440,7 +492,8 @@
           current = stillThere;
           current.messages = pendientesPrevios;
           const server = (await App.session.api(`/conversations/${openId}/messages`))
-            .map((m) => ({ from: m.direction, text: m.body, at: m.at }));
+            .map((m) => ({ id: m.id, from: m.direction, text: m.body, at: m.at,
+                         hasMedia: m.hasMedia, mediaType: m.mediaType, mediaName: m.mediaName }));
           current.messages = mergeServerMessages(server);
           renderHeader();
           renderMessages();

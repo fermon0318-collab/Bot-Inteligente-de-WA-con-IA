@@ -406,17 +406,114 @@ table.data tbody tr:last-child td { border-bottom: none; }
   background-image: linear-gradient(135deg, var(--brand-soft), var(--brand-3));
 }
 
-.msg-row { display: flex; margin-bottom: 0.7rem; }
+/* --------------------------------------------------------------------------
+   Conversación — estética de WhatsApp a propósito
+   El operador viene de usar WhatsApp Business todo el día: replicar el fondo
+   empapelado, el verde de los mensajes propios y el blanco de los recibidos
+   hace que el cambio de herramienta no se sienta como aprender otra cosa.
+   Los colores son los de WhatsApp (#e7ffdb / #efeae2), no los de la marca:
+   aquí la familiaridad vale más que la coherencia cromática del panel.
+   -------------------------------------------------------------------------- */
+
+.chat-canvas {
+  background-color: #efeae2;
+  /* Empapelado tenue tipo WhatsApp, en SVG embebido para no pedir un archivo */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23000' fill-opacity='0.035'%3E%3Cpath d='M12 18c1.5-3 4-4 6-2s1 5-1 6-4 0-5-2zM40 8c2-1 4 0 4 2s-2 3-4 2-2-3 0-4zM48 40c1.5-2 4-1.5 5 .5s-.5 4-2.5 4-3.5-2-2.5-4.5zM20 46c2-2 5-1 5 2s-3 4-5 2-2-3 0-4zM32 28c1.8-1.4 4 0 4 2.2s-2.2 3.2-4 2-1.6-3 0-4.2z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.msg-row { display: flex; margin-bottom: 0.35rem; }
 .msg-row.out { justify-content: flex-end; }
 .bubble {
-  max-width: min(78%, 34rem); padding: 0.6rem 0.85rem; border-radius: 1rem;
-  font-size: 0.875rem; line-height: 1.45; box-shadow: 0 4px 12px -6px rgba(30, 27, 75, 0.3);
+  position: relative;
+  max-width: min(80%, 30rem);
+  padding: 0.4rem 0.55rem 0.35rem;
+  border-radius: 0.5rem;
+  font-size: 0.885rem; line-height: 1.35;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
   word-break: break-word;
+  color: #111b21;
 }
-.bubble.in { background: #fff; border: 1px solid var(--stroke-soft); border-bottom-left-radius: 0.3rem; }
-.bubble.out { color: #fff; background-image: linear-gradient(120deg, var(--brand-1), var(--brand-2)); border-bottom-right-radius: 0.3rem; }
-.bubble.bot { color: #fff; background-image: linear-gradient(120deg, var(--brand-2), var(--brand-3)); border-bottom-right-radius: 0.3rem; }
-.bubble .meta { display: block; font-size: 0.68rem; opacity: 0.75; margin-top: 0.25rem; }
+/* Recibidos: blanco, esquina superior izquierda recortada */
+.bubble.in { background: #fff; border-top-left-radius: 0; }
+/* Enviados a mano y por el bot: el verde de WhatsApp.
+   El bot se distingue por su etiqueta "🤖 IA", no por otro color — así el
+   hilo se lee como una sola conversación del negocio, igual que en la app. */
+.bubble.out, .bubble.bot { background: #e7ffdb; border-top-right-radius: 0; }
+
+/* La hora va abajo a la derecha, dentro de la burbuja, como en WhatsApp */
+.bubble .meta {
+  display: block; text-align: right;
+  font-size: 0.6875rem; color: rgba(17, 27, 33, 0.45);
+  margin-top: 0.1rem; line-height: 1;
+}
+
+/* Colita de la burbuja, como el pico de los globos de WhatsApp */
+.bubble::after {
+  content: ''; position: absolute; top: 0; width: 0.5rem; height: 0.5rem;
+}
+.bubble.in::after {
+  left: -0.45rem;
+  background: #fff;
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+}
+.bubble.out::after, .bubble.bot::after {
+  right: -0.45rem;
+  background: #e7ffdb;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Separador de fecha: pastilla flotante translúcida, como en la app */
+.chat-day {
+  display: inline-block; padding: 0.25rem 0.7rem; border-radius: 0.5rem;
+  background: #fff; color: rgba(17, 27, 33, 0.6);
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+/* --- Adjuntos dentro de la burbuja --------------------------------------- */
+.bubble-media { margin: -0.15rem -0.2rem 0.25rem; border-radius: 0.4rem; overflow: hidden; }
+.bubble-media img, .bubble-media video {
+  /* El tope tiene que ser ABSOLUTO, no en porcentaje: la burbuja se
+     dimensiona por el ancho natural de su contenido, y un `max-width: 100%`
+     no acota ese cálculo (depende del ancho del padre, que aún se está
+     resolviendo). Con un porcentaje, una foto de 400 px estiraba la burbuja
+     a 400 px mientras la imagen se recortaba a 320 px, dejando una franja
+     vacía al lado. Tampoco se usa `width: 100%`, para que una foto pequeña o
+     un sticker no se estiren ni se vean pixelados. */
+  display: block; max-width: 20rem; max-height: 22rem;
+  width: auto; height: auto;
+  background: rgba(0, 0, 0, 0.04);
+}
+.bubble-media img { cursor: zoom-in; }
+/* En pantallas estrechas la burbuja mide ~80% del ancho: 20rem se saldría. */
+@media (max-width: 640px) {
+  .bubble-media img, .bubble-media video { max-width: 13rem; }
+}
+.bubble-media audio { display: block; width: 15rem; max-width: 100%; }
+.bubble-doc {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding: 0.5rem 0.6rem; border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.05); color: inherit; text-decoration: none;
+  margin: -0.15rem -0.2rem 0.25rem;
+}
+.bubble-doc:hover { background: rgba(0, 0, 0, 0.09); }
+.bubble-doc i { font-size: 1.35rem; color: #d3392f; flex: none; }
+.bubble-doc span { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Visor de imagen a pantalla completa */
+.media-viewer {
+  position: fixed; inset: 0; z-index: 90;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.9); padding: 1.5rem;
+}
+.media-viewer.open { display: flex; }
+.media-viewer img { max-width: 100%; max-height: 100%; border-radius: 0.5rem; }
+.media-viewer button {
+  position: absolute; top: 1rem; right: 1rem;
+  width: 2.5rem; height: 2.5rem; border-radius: 999px; border: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 1.1rem;
+}
+.media-viewer button:hover { background: rgba(255, 255, 255, 0.28); }
 
 .emoji-pop {
   position: absolute; bottom: 3.4rem; left: 0; z-index: 30;

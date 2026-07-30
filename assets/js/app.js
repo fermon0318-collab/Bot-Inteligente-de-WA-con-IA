@@ -122,6 +122,7 @@
   function boot() {
     paintSession();
     App.initShell();
+    App.initMediaViewer();
     App.initCopyButtons();
 
     if (isDemo) qs('#demo-banner').classList.remove('hidden');

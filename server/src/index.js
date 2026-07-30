@@ -170,7 +170,14 @@ app.get('/onboarding.html', requireAuth, async (req, res, next) => {
 app.use('/assets', express.static(join(ROOT, 'assets'), {
   maxAge: '7d',
   setHeaders(res, filePath) {
-    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    // El código y los estilos NO se pueden cachear a ciegas: el HTML se sirve
+    // con no-store, así que tras un despliegue el navegador recibe el markup
+    // nuevo pero seguiría ejecutando el JS viejo hasta 7 días — botones que
+    // aparecen pero no responden, arreglos que "no llegan". `no-cache` no
+    // significa "no guardar": guarda igual, pero revalida antes de usar, y
+    // con el ETag que ya manda express.static eso resuelve en un 304 de
+    // apenas unos bytes. Las imágenes y fuentes sí conservan la caché larga.
+    if (/\.(js|css|html)$/.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
   },
 }));
 

@@ -485,6 +485,25 @@ table.data tbody tr:last-child td { border-bottom: none; }
   background: rgba(0, 0, 0, 0.04);
 }
 .bubble-media img { cursor: zoom-in; }
+
+/* --- Código QR de Modo App -------------------------------------------------
+   Regla explícita, NO clases de Tailwind con corchetes (`max-w-[16rem]`):
+   este proyecto sirve `assets/css/tailwind.css` ya compilado — no hay JIT en
+   producción — así que una clase que no existiera en el HTML cuando se
+   generó ese archivo con `npm run build:css` queda simplemente ausente,
+   aunque el código fuente la use. Es lo que le pasó a este QR: llevaba solo
+   `w-full` sin ningún tope, se estiraba al ancho del contenedor y un PNG de
+   320 px reescalado así se ve pixelado y roto en bloques, imposible de
+   escanear. Al no depender de una clase generada, este bug no puede repetirse
+   aunque alguien vuelva a olvidar recompilar Tailwind. */
+.qr-code-img {
+  /* Ancho fluido con tope absoluto y una relación de aspecto fija: en vez de
+     fijar alto y ancho por separado (que rompería el cuadrado en pantallas
+     estrechas), se deja que el ancho encoja con el contenedor y el alto lo
+     sigue siempre en proporción 1:1 — que es la forma real de un QR. */
+  display: block; width: 100%; max-width: 16rem; aspect-ratio: 1 / 1;
+  height: auto; margin: 0 auto; object-fit: contain;
+}
 /* En pantallas estrechas la burbuja mide ~80% del ancho: 20rem se saldría. */
 @media (max-width: 640px) {
   .bubble-media img, .bubble-media video { max-width: 13rem; }

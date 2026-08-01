@@ -185,6 +185,10 @@ async function upsertUser({ googleSub, email, name, avatarUrl }) {
         'No pudimos validar el comprobante. Revisa que se vea el monto, la fecha y la referencia completa, y vuelve a enviarlo.',
       ]
     );
+    // Fila de Modo App con los límites por defecto. Se crea siempre aunque el
+    // canal activo sea Cloud API: así el panel puede leer el estado sin tener
+    // que distinguir entre "nunca vinculado" y "fila inexistente".
+    await client.query('INSERT INTO wa_app_sessions (account_id) VALUES ($1)', [accountId]);
 
     console.log(`[auth] cuenta creada para ${email}`);
     return created.rows[0];

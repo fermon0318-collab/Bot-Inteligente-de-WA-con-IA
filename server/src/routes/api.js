@@ -21,6 +21,9 @@ import * as media from '../services/media.js';
 import * as receipts from '../services/receipts.js';
 import * as storage from '../services/storage.js';
 import { ALLOWED, MAX_BYTES } from '../services/storage.js';
+import * as pacing from '../wa/app/pacing.js';
+import * as policy from '../wa/app/policy.js';
+import * as appSession from '../wa/app/session.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -240,6 +243,8 @@ function publicSettings(row) {
       timezone: row.rm_timezone,
     },
     currency: row.currency,
+    /** Canal activo: 'cloud' (Cloud API) o 'app' (Modo App). */
+    channel: row.wa_channel || 'cloud',
   };
 }
 
@@ -385,9 +390,21 @@ router.post('/settings/cloud-api/discover', requireSubscription, async (req, res
 router.post('/settings/bot/:action(start|stop)', requireSubscription, async (req, res, next) => {
   try {
     const running = req.params.action === 'start';
-    const row = await one('SELECT wa_token_enc, wa_phone_number_id FROM bot_settings WHERE account_id = $1', [account(req)]);
+    const row = await one(
+      'SELECT wa_token_enc, wa_phone_number_id, wa_channel FROM bot_settings WHERE account_id = $1',
+      [account(req)]
+    );
 
-    if (running && (!row?.wa_token_enc || !row.wa_phone_number_id)) {
+    // Cada canal tiene su propio requisito para poder arrancar.
+    if (running && row?.wa_channel === 'app') {
+      const sesion = await appSession.getSessionRow(account(req));
+      if (sesion?.status !== 'connected') {
+        return res.status(400).json({
+          error: 'validation',
+          message: 'Vincula tu teléfono en Modo App antes de iniciar el bot.',
+        });
+      }
+    } else if (running && (!row?.wa_token_enc || !row.wa_phone_number_id)) {
       return res.status(400).json({ error: 'validation', message: 'Configura Cloud API antes de iniciar el bot.' });
     }
 
@@ -397,6 +414,216 @@ router.post('/settings/bot/:action(start|stop)', requireSubscription, async (req
       running ? 'ok' : 'warn');
 
     res.json({ ok: true, running });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ==========================================================================
+   Modo App — WhatsApp vinculado por código QR
+   ========================================================================== */
+
+/** Estado completo: sesión, límites, consumo y avisos de políticas. */
+router.get('/settings/app-mode', async (req, res, next) => {
+  try {
+    const accountId = account(req);
+    const [disponible, sesion, consumo, avisos, settings] = await Promise.all([
+      appSession.available(),
+      appSession.getSessionRow(accountId),
+      pacing.usage(accountId),
+      policy.openEvents(accountId),
+      one('SELECT wa_channel FROM bot_settings WHERE account_id = $1', [accountId]),
+    ]);
+
+    // El QR solo se entrega mientras está vivo: uno caducado no sirve de nada
+    // y lo único que consigue es que el cliente escanee en vano.
+    const qrVigente = sesion?.qr_png && sesion.qr_expires_at
+      && new Date(sesion.qr_expires_at).getTime() > Date.now();
+
+    res.json({
+      available: disponible.ok,
+      unavailableReason: disponible.ok ? null : disponible.message,
+      channel: settings?.wa_channel || 'cloud',
+      session: sesion && {
+        status: sesion.status,
+        provider: sesion.provider,
+        displayPhone: sesion.display_phone,
+        pushName: sesion.push_name,
+        lastError: sesion.last_error,
+        connectedAt: sesion.connected_at,
+        lastSeenAt: sesion.last_seen_at,
+        paused: sesion.paused,
+        pausedReason: sesion.paused_reason,
+        qr: qrVigente ? sesion.qr_png : null,
+        qrExpiresAt: qrVigente ? sesion.qr_expires_at : null,
+      },
+      limits: sesion && {
+        minGapSeconds: sesion.min_gap_seconds,
+        maxGapSeconds: sesion.max_gap_seconds,
+        perMinuteLimit: sesion.per_minute_limit,
+        dailyLimit: sesion.daily_limit,
+      },
+      bounds: {
+        minGapSeconds: pacing.MIN_GAP_SECONDS,
+        maxGapSeconds: pacing.MAX_GAP_SECONDS,
+        maxPerMinute: pacing.MAX_PER_MINUTE,
+      },
+      usage: consumo,
+      policy: {
+        events: avisos.map((e) => ({
+          id: e.id, code: e.code, severity: e.severity, score: e.score,
+          message: e.message, detail: e.detail, at: e.created_at,
+        })),
+        // Semáforo del panel: 0 tranquilo, 100 a punto de perder la cuenta.
+        risk: avisos.reduce((max, e) => Math.max(max, e.score), 0),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Inicia la vinculación. Devuelve el estado; el QR se recoge en /qr, que es
+ * lo que el panel consulta cada pocos segundos mientras el usuario escanea.
+ */
+router.post('/settings/app-mode/connect', requireSubscription, async (req, res, next) => {
+  try {
+    const accountId = account(req);
+    const disponible = await appSession.available();
+    if (!disponible.ok) {
+      return res.status(503).json({ error: 'unavailable', message: disponible.message });
+    }
+
+    const forceQr = req.body?.forceQr === true;
+    const result = await appSession.connect(accountId, { forceQr });
+
+    await log(accountId, forceQr
+      ? 'Modo App · vinculación reiniciada, esperando código QR'
+      : 'Modo App · abriendo sesión', 'info');
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** El código QR vigente, si lo hay. El panel lo sondea mientras se vincula. */
+router.get('/settings/app-mode/qr', async (req, res, next) => {
+  try {
+    const sesion = await appSession.getSessionRow(account(req));
+    const vigente = sesion?.qr_png && sesion.qr_expires_at
+      && new Date(sesion.qr_expires_at).getTime() > Date.now();
+
+    res.json({
+      status: sesion?.status || 'disconnected',
+      qr: vigente ? sesion.qr_png : null,
+      expiresAt: vigente ? sesion.qr_expires_at : null,
+      displayPhone: sesion?.display_phone || '',
+      lastError: sesion?.last_error || null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Desvincula el teléfono.
+ *
+ * Cierra la sesión también en el teléfono del cliente y borra las
+ * credenciales guardadas: el historial y los contactos siguen en su WhatsApp,
+ * lo único que desaparece es el permiso de Elorai para escribir por él.
+ */
+router.post('/settings/app-mode/disconnect', requireSubscription, async (req, res, next) => {
+  try {
+    const accountId = account(req);
+    await appSession.disconnect(accountId, { logout: true });
+    // Sin sesión no hay canal: se apaga el bot para que la cola no acumule
+    // mensajes que no puede entregar.
+    await query('UPDATE bot_settings SET bot_running = false WHERE account_id = $1', [accountId]);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Ajusta el ritmo de envío. El backend recorta lo que salga del rango seguro. */
+router.put('/settings/app-mode/limits', requireSubscription, async (req, res, next) => {
+  try {
+    const limites = pacing.sanitizeLimits(req.body || {});
+    await query(
+      `UPDATE wa_app_sessions
+          SET min_gap_seconds = $2, max_gap_seconds = $3,
+              per_minute_limit = $4, daily_limit = $5, updated_at = now()
+        WHERE account_id = $1`,
+      [account(req), limites.minGapSeconds, limites.maxGapSeconds,
+       limites.perMinuteLimit, limites.dailyLimit]
+    );
+    await log(account(req),
+      `Modo App · ritmo ${limites.minGapSeconds}-${limites.maxGapSeconds} s, `
+      + `${limites.perMinuteLimit}/min, ${limites.dailyLimit}/día`, 'ok');
+    res.json({ ok: true, limits: limites });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Reanuda los envíos tras una pausa del guardián de políticas. */
+router.post('/settings/app-mode/resume', requireSubscription, async (req, res, next) => {
+  try {
+    await policy.resumeSending(account(req));
+    await log(account(req), 'Modo App · envíos reanudados tras el aviso de políticas', 'warn');
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Marca un aviso como leído sin reanudar los envíos. */
+router.post('/settings/app-mode/policy/:id/ack', requireSubscription, async (req, res, next) => {
+  try {
+    const ok = await policy.acknowledge(account(req), Number(req.params.id));
+    if (!ok) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Cambia el canal activo entre Cloud API y Modo App.
+ *
+ * Solo uno a la vez: los dos encendidos sobre el mismo número duplicarían cada
+ * respuesta. Al cambiar se detiene el bot a propósito, para que el cliente
+ * revise la pantalla del canal nuevo antes de volver a arrancarlo.
+ */
+router.put('/settings/channel', requireSubscription, async (req, res, next) => {
+  try {
+    const channel = String(req.body?.channel || '').trim();
+    if (!['cloud', 'app'].includes(channel)) {
+      return res.status(400).json({ error: 'validation', message: 'Canal no válido.' });
+    }
+
+    const accountId = account(req);
+
+    if (channel === 'app') {
+      const disponible = await appSession.available();
+      if (!disponible.ok) {
+        return res.status(503).json({ error: 'unavailable', message: disponible.message });
+      }
+    }
+
+    await query(
+      'UPDATE bot_settings SET wa_channel = $2, bot_running = false, updated_at = now() WHERE account_id = $1',
+      [accountId, channel]
+    );
+    await log(accountId,
+      channel === 'app'
+        ? 'Canal cambiado a Modo App · el bot queda detenido hasta que vincules el teléfono'
+        : 'Canal cambiado a WhatsApp Cloud API · el bot queda detenido',
+      'warn');
+
+    res.json({ ok: true, channel });
   } catch (err) {
     next(err);
   }

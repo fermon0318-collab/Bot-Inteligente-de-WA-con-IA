@@ -12,7 +12,7 @@ import { decrypt } from '../lib/crypto.js';
 import * as capi from './capi.js';
 import { normalize, runFlow } from './flows.js';
 import { enqueue } from './outbox.js';
-import * as wa from './whatsapp.js';
+import * as providers from './providers/index.js';
 
 const INSTRUCCIONES = `Analiza esta imagen de un comprobante de pago o transferencia bancaria.
 
@@ -223,9 +223,12 @@ async function entregar({ accountId, contactId, reciboId, motivoAprobacion, regl
  *  lecturas de IA por ellas. */
 const COOLDOWN_MINUTOS = 2;
 
-export async function processReceipt({ accountId, contactId, messageId, attachment }) {
-  const cfg = await wa.accountConfig(accountId);
-  if (!cfg?.token) return { status: 'error', reason: 'Cloud API sin configurar' };
+export async function processReceipt({ accountId, contactId, messageId, attachment, rawMessage = null }) {
+  // El comprobante hay que bajarlo, y cada canal lo baja distinto: Cloud API
+  // se lo pide a Meta con el id y el token, Modo App lo descifra del mensaje
+  // original. El proveedor absorbe la diferencia.
+  const provider = await providers.forAccount(accountId);
+  if (!provider.ready) return { status: 'error', reason: provider.reason };
 
   const reciente = await one(
     `SELECT id FROM payment_receipts
@@ -272,7 +275,7 @@ export async function processReceipt({ accountId, contactId, messageId, attachme
   // 2 · Descargar
   let archivo;
   try {
-    archivo = await wa.downloadMedia({ token: cfg.token, mediaId: attachment.mediaId });
+    archivo = await provider.downloadMedia({ mediaId: attachment.mediaId, raw: rawMessage });
   } catch (err) {
     return rechazar(recibo.id, `No se pudo descargar: ${err.message}`);
   }

@@ -18,6 +18,18 @@
     "helmet": "^8.0.0",
     "multer": "^2.2.0",
     "pg": "^8.13.1",
+    "qrcode": "^1.5.4",
     "stripe": "^17.5.0"
+  },
+  "//optionalDependencies": [
+    "Baileys implementa Modo App. Va como opcional a propósito: cuando Meta",
+    "cambia el protocolo de WhatsApp Web y una versión rompe al instalar o al",
+    "cargar, Elorai arranca igual y solo Modo App queda 'no disponible'. La",
+    "versión está clavada (sin ^) porque aquí una actualización silenciosa",
+    "puede tirar las sesiones de todos los clientes: se sube a mano tras",
+    "probarla. Ver docs/bloque-h-modo-app.md."
+  ],
+  "optionalDependencies": {
+    "baileys": "6.7.24"
   }
 }

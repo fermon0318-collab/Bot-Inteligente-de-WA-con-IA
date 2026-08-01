@@ -13,8 +13,7 @@
 
 import { many, one, query, transaction } from '../db/pool.js';
 import { avisarError } from '../lib/alert.js';
-import * as media from './media.js';
-import * as wa from './whatsapp.js';
+import * as providers from './providers/index.js';
 
 const MAX_ATTEMPTS = 5;
 /** Espera antes del reintento n: 30 s, 2 min, 8 min, 32 min. */
@@ -69,29 +68,45 @@ async function claimDue(limit) {
   );
 }
 
+/** Deja el mensaje pendiente para más tarde sin gastar un intento. */
+async function postpone(item, reason, seconds) {
+  await query(
+    `UPDATE outbox SET attempts = attempts - 1,
+            scheduled_at = now() + make_interval(secs => $3), last_error = $2
+      WHERE id = $1`,
+    [item.id, reason, Math.max(1, Math.round(seconds))]
+  );
+}
+
 /** Despacha un mensaje concreto. Devuelve 'sent' | 'retry' | 'failed'. */
 async function dispatch(item) {
-  const cfg = await wa.accountConfig(item.account_id);
+  // El canal (Cloud API o Modo App) lo decide la cuenta, no este código: aquí
+  // solo se pide "el proveedor de esta cuenta" y se le habla siempre igual.
+  const provider = await providers.forAccount(item.account_id);
 
-  if (!cfg?.token || !cfg.phoneNumberId) {
-    await fail(item, 'La cuenta no tiene Cloud API configurada', true);
-    return 'failed';
+  if (!provider.ready) {
+    if (!provider.readyRetryable) {
+      await fail(item, provider.reason, true);
+      return 'failed';
+    }
+    // Sesión caída o envíos en pausa: el mensaje espera. Perderlo sería peor
+    // que entregarlo tarde.
+    await postpone(item, provider.reason, 120);
+    return 'retry';
   }
+
+  const settings = await one('SELECT bot_running FROM bot_settings WHERE account_id = $1', [item.account_id]);
+
   // "Detener el bot" pausa las respuestas AUTOMÁTICAS (flujos e IA) — no debe
   // bloquear un mensaje que un operador humano escribió a mano en Chat en
   // Vivo. Antes esto no distinguía: con el bot detenido (el valor por
   // defecto de cualquier cuenta nueva, hasta que alguien pulsa "Iniciar
   // bot"), un envío manual quedaba reintentando cada 5 min para siempre, sin
   // loguear nada ni avisar en "Actividad reciente" — invisible del todo.
-  if (!cfg.botRunning && item.origin !== 'manual') {
+  if (!settings?.bot_running && item.origin !== 'manual') {
     // Se deja pendiente para cuando lo reactiven, en vez de descartar un
     // mensaje automático que sigue siendo válido.
-    await query(
-      `UPDATE outbox SET attempts = attempts - 1, scheduled_at = now() + interval '5 minutes',
-              last_error = 'bot detenido'
-        WHERE id = $1`,
-      [item.id]
-    );
+    await postpone(item, 'bot detenido', 300);
     return 'retry';
   }
 
@@ -102,6 +117,23 @@ async function dispatch(item) {
   }
 
   const to = contact.phone.replace(/\D/g, '');
+
+  /* --- Ritmo -------------------------------------------------------------
+     En Cloud API siempre deja pasar. En Modo App es la puerta que impide las
+     ráfagas, respeta la pausa entre mensajes y descarta duplicados.
+     --------------------------------------------------------------------- */
+  const quota = await provider.beforeSend({ contactId: item.contact_id, body: item.body });
+  if (!quota.allow) {
+    if (quota.drop) {
+      await query(
+        `UPDATE outbox SET status = 'canceled', last_error = $2 WHERE id = $1`,
+        [item.id, quota.reason]
+      );
+      return 'failed';
+    }
+    await postpone(item, quota.reason, quota.retryInSeconds || 60);
+    return 'retry';
+  }
 
   try {
     let messageId = null;
@@ -116,27 +148,38 @@ async function dispatch(item) {
         return 'failed';
       }
 
-      // Si no tiene media_id o caducó, se sube ahora en vez de fallar
-      const mediaId = await media.ensureUploaded(item.account_id, file.id);
-
-      messageId = await wa.sendMedia({
-        token: cfg.token, phoneNumberId: cfg.phoneNumberId, to,
-        mediaId,
+      messageId = await provider.sendMedia({
+        to,
+        mediaFileId: file.id,
         kind: file.file_type === 'pdf' ? 'document' : file.file_type,
         filename: file.name,
         caption: item.body || undefined,
       });
+    } else if (item.kind === 'template' && !provider.capabilities.templates) {
+      // Las plantillas solo existen porque Cloud API las exige fuera de la
+      // ventana de 24 h. En un canal que no tiene esa ventana, el texto sale
+      // tal cual en vez de fallar por una restricción que aquí no aplica.
+      if (!item.body) {
+        await fail(item, 'Este canal no admite plantillas y el mensaje no tiene texto', true);
+        return 'failed';
+      }
+      messageId = await provider.sendText({ to, body: item.body });
     } else if (item.kind === 'template') {
       const tpl = item.payload || {};
-      messageId = await wa.sendTemplate({
-        token: cfg.token, phoneNumberId: cfg.phoneNumberId, to,
-        name: tpl.name, language: tpl.language, components: tpl.components,
+      messageId = await provider.sendTemplate({
+        to, name: tpl.name, language: tpl.language, components: tpl.components,
       });
     } else {
-      messageId = await wa.sendText({
-        token: cfg.token, phoneNumberId: cfg.phoneNumberId, to, body: item.body,
-      });
+      messageId = await provider.sendText({ to, body: item.body });
     }
+
+    await provider.afterSend({
+      contactId: item.contact_id,
+      phone: contact.phone,
+      body: item.kind === 'media' ? item.media_name : item.body,
+      kind: item.kind,
+      origin: item.origin,
+    });
 
     await transaction(async (client) => {
       await client.query(

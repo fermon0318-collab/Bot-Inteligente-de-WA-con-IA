@@ -31,6 +31,8 @@ import { startWorker } from './services/outbox.js';
 import * as reminders from './services/reminders.js';
 import * as remarketing from './services/remarketing.js';
 import * as trialBilling from './services/trialBilling.js';
+import * as appPolicy from './wa/app/policy.js';
+import * as appSession from './wa/app/session.js';
 
 const app = express();
 
@@ -242,6 +244,13 @@ const stopReminders = reminders.startWorker();
 // cumplieron los 7 días. No hace nada si el proveedor activo no es Wompi.
 const stopTrialBilling = trialBilling.startWorker();
 
+// Modo App: reabre las sesiones vinculadas por QR y renueva sus reservas
+const stopAppSessions = appSession.startWorker();
+
+// Guardián de políticas de Meta: vigila patrones que pondrían en riesgo la
+// cuenta de WhatsApp del cliente y avisa (o frena) antes de que ocurra
+const stopAppPolicy = appPolicy.startWorker();
+
 // Si el proceso murió a mitad de un evento, aquí se recupera
 reprocessPending().catch((err) => console.error('[webhook] reproceso inicial:', err.message));
 
@@ -260,6 +269,10 @@ function shutdown(signal) {
   stopAdsync();
   stopTrialBilling();
   stopReminders();
+  stopAppPolicy();
+  // Suelta los sockets de WhatsApp sin cerrar sesión en el teléfono del
+  // cliente: tras un despliegue nadie tiene que volver a escanear un QR.
+  stopAppSessions().catch(() => {});
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);

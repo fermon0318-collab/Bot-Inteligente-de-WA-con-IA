@@ -129,6 +129,7 @@
 
     App.dashboard.init();
     App.connect.init();
+    App.appMode.init();
     App.chat.init();
     App.reports.init();
     App.automation.init();
@@ -147,6 +148,11 @@
         key: 'wa-cloudapi',
         message: '¿Deseas que hagamos la conexión por ti?',
         href: `https://wa.me/[WHATSAPP_NUMBER]?text=${encodeURIComponent('Hola, necesito ayuda para conectar mi WhatsApp Cloud API a Elorai')}`,
+      },
+      'app-mode': {
+        key: 'wa-appmode',
+        message: '¿Te ayudamos a vincular tu WhatsApp sin perder nada?',
+        href: `https://wa.me/[WHATSAPP_NUMBER]?text=${encodeURIComponent('Hola, quiero usar Modo App en Elorai sin migrar mi número a Cloud API')}`,
       },
       ads: {
         key: 'wa-ads',

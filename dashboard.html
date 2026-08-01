@@ -72,6 +72,7 @@
       <ul class="space-y-1">
         <li><button class="nav-link active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></button></li>
         <li><button class="nav-link" data-view="cloud-api"><i class="fa-solid fa-cloud"></i><span>Cloud API</span></button></li>
+        <li><button class="nav-link" data-view="app-mode"><i class="fa-solid fa-mobile-screen-button"></i><span>Modo App</span></button></li>
         <li><button class="nav-link" data-view="agenda"><i class="fa-solid fa-calendar-days"></i><span>Agenda</span></button></li>
         <li><button class="nav-link" data-view="live-chat"><i class="fa-solid fa-comments"></i><span>Chat en Vivo</span></button></li>
         <li><button class="nav-link" data-view="chat-history"><i class="fa-solid fa-clock-rotate-left"></i><span>Histórico Chats</span></button></li>
@@ -402,7 +403,176 @@
       </div>
     </section>
 
-    <!-- ═══════════════════ 3. AGENDA ═══════════════════ -->
+    <!-- ═══════════════════ 3. MODO APP ═══════════════════ -->
+    <section id="view-app-mode" class="view">
+      <div class="section-head flex flex-wrap items-center gap-3">
+        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-mobile-screen-button"></i></span>
+        <div class="mr-auto">
+          <h2 class="text-lg font-extrabold">Modo App</h2>
+          <p class="text-sm opacity-90">Conserva tu número, tu historial y tus contactos — sin migrar a Cloud API</p>
+        </div>
+        <div class="flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1.5">
+          <span class="dot dot-off" id="app-status-dot"></span>
+          <span class="text-sm font-bold" id="app-status-text">Sin vincular</span>
+        </div>
+      </div>
+
+      <!-- Módulo no disponible en este despliegue -->
+      <div id="app-unavailable" class="hidden card p-4 lg:p-5 mt-4 border-amber-200 bg-amber-50/60">
+        <p class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1.5"></i>Modo App no está disponible</p>
+        <p class="hint !mt-0" id="app-unavailable-reason">—</p>
+      </div>
+
+      <!-- Qué es y para quién -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-circle-info text-accent-600 mr-1.5"></i>Cuándo usar Modo App en vez de Cloud API</h3>
+        <p class="hint !mt-0 mb-4">
+          Modo App vincula Elorai a tu WhatsApp Business como un dispositivo más, igual que WhatsApp Web.
+          No migras el número: sigues teniendo tu historial, tus contactos y tus grupos, y no pagas a Meta
+          por escribir fuera de la ventana de 24 horas.
+        </p>
+        <div class="grid md:grid-cols-2 gap-3">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+            <p class="text-sm font-extrabold text-ink mb-2"><i class="fa-solid fa-check text-emerald-500 mr-1.5"></i>Encaja si…</p>
+            <ul class="text-sm text-ink/70 space-y-1.5 list-disc pl-4">
+              <li>Llevas años atendiendo desde este número y no quieres perder nada.</li>
+              <li>Tus clientes escriben primero: agendas citas, resuelves dudas, cierras ventas.</li>
+              <li>Necesitas responder a alguien días después sin pagar una plantilla.</li>
+            </ul>
+          </div>
+          <div class="rounded-xl border border-red-200 bg-red-50/60 p-3.5">
+            <p class="text-sm font-extrabold text-ink mb-2"><i class="fa-solid fa-xmark text-red-500 mr-1.5"></i>No encaja si…</p>
+            <ul class="text-sm text-ink/70 space-y-1.5 list-disc pl-4">
+              <li>Vas a enviar campañas o promociones a listas de contactos.</li>
+              <li>Escribes primero a personas que nunca te contactaron.</li>
+              <li>Necesitas el sello de cuenta verificada o soporte oficial de Meta.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="hint mt-4">
+          <i class="fa-solid fa-shield-halved text-accent-600 mr-1"></i>
+          Modo App usa un cliente no oficial. Las normas de WhatsApp se aplican igual, pero aquí no hay
+          un error que te frene: hay una cuenta restringida. Por eso Elorai impone un ritmo humano de
+          envío y te avisa antes de que un patrón ponga tu número en riesgo.
+        </p>
+      </div>
+
+      <!-- Canal activo -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-shuffle text-accent-600 mr-1.5"></i>Canal activo</h3>
+        <p class="hint !mt-0 mb-4">Elorai atiende por un canal a la vez. Cambiarlo detiene el bot hasta que lo vuelvas a iniciar.</p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <button type="button" class="channel-option text-left rounded-xl border-2 border-ink/10 p-3.5 hover:border-accent-300" data-channel="cloud">
+            <p class="text-sm font-extrabold text-ink"><i class="fa-solid fa-cloud text-accent-600 mr-1.5"></i>WhatsApp Cloud API</p>
+            <p class="text-xs text-ink/60 mt-1">Oficial de Meta. Número dedicado, plantillas y cobro por conversación.</p>
+          </button>
+          <button type="button" class="channel-option text-left rounded-xl border-2 border-ink/10 p-3.5 hover:border-accent-300" data-channel="app">
+            <p class="text-sm font-extrabold text-ink"><i class="fa-solid fa-mobile-screen-button text-accent-600 mr-1.5"></i>Modo App</p>
+            <p class="text-xs text-ink/60 mt-1">Tu propio WhatsApp Business vinculado por QR. Sin migración ni coste por mensaje.</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Avisos del guardián de políticas -->
+      <div id="app-policy-card" class="hidden card p-4 lg:p-5 mt-4 border-red-200 bg-red-50/50">
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-shield-halved text-red-500 mr-1.5"></i>Riesgo para tu cuenta de WhatsApp</h3>
+          <span class="badge badge-danger" id="app-risk-badge">—</span>
+        </div>
+        <div id="app-policy-list" class="space-y-2.5"></div>
+        <div id="app-paused-box" class="hidden mt-4 rounded-xl border border-red-300 bg-white p-3.5">
+          <p class="text-sm font-bold text-ink mb-1"><i class="fa-solid fa-pause text-red-500 mr-1.5"></i>Envíos en pausa</p>
+          <p class="text-xs text-ink/70 mb-3" id="app-paused-reason">—</p>
+          <button id="app-resume-btn" type="button" class="btn btn-danger btn-sm"><i class="fa-solid fa-play"></i> Entiendo el riesgo, reanudar envíos</button>
+        </div>
+      </div>
+
+      <!-- Vinculación -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-qrcode text-accent-600 mr-1.5"></i>Vincular tu teléfono</h3>
+        <p class="hint !mt-0 mb-4">
+          En tu WhatsApp Business: <strong>Ajustes → Dispositivos vinculados → Vincular un dispositivo</strong>,
+          y escanea este código.
+        </p>
+
+        <div class="grid lg:grid-cols-[18rem_1fr] gap-5 items-start">
+          <div class="rounded-xl border border-ink/10 bg-white p-4 flex flex-col items-center justify-center min-h-[18rem]">
+            <img id="app-qr-img" class="hidden w-full max-w-[16rem] rounded-lg" alt="Código QR para vincular WhatsApp" />
+            <div id="app-qr-placeholder" class="text-center text-ink/40">
+              <i class="fa-solid fa-qrcode text-5xl mb-3"></i>
+              <p class="text-sm font-semibold">Pulsa «Generar código QR»</p>
+            </div>
+            <p id="app-qr-hint" class="hidden text-xs text-ink/50 mt-3 text-center">El código caduca en un minuto; se renueva solo.</p>
+          </div>
+
+          <div>
+            <dl class="grid sm:grid-cols-2 gap-3 text-sm">
+              <div><dt class="label !mb-1">Estado</dt><dd class="font-semibold text-ink" id="app-detail-status">Sin vincular</dd></div>
+              <div><dt class="label !mb-1">Número vinculado</dt><dd class="font-semibold text-ink" id="app-detail-phone">—</dd></div>
+              <div><dt class="label !mb-1">Nombre del perfil</dt><dd class="font-semibold text-ink" id="app-detail-name">—</dd></div>
+              <div><dt class="label !mb-1">Vinculado desde</dt><dd class="font-semibold text-ink" id="app-detail-since">—</dd></div>
+            </dl>
+            <p id="app-detail-error" class="hidden error-msg !block mt-3"></p>
+
+            <div class="flex flex-wrap gap-2 mt-4">
+              <button id="app-connect-btn" type="button" class="btn btn-gradient"><i class="fa-solid fa-qrcode"></i> Generar código QR</button>
+              <button id="app-relink-btn" type="button" class="btn btn-soft"><i class="fa-solid fa-rotate"></i> Vincular otro teléfono</button>
+              <button id="app-disconnect-btn" type="button" class="btn btn-danger"><i class="fa-solid fa-link-slash"></i> Desvincular</button>
+            </div>
+            <p class="hint mt-3">
+              Desvincular no borra nada de tu WhatsApp: solo retira el permiso de Elorai para responder por ti.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ritmo de envío -->
+      <div class="card p-4 lg:p-5 mt-4">
+        <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-gauge-high text-accent-600 mr-1.5"></i>Ritmo de envío</h3>
+        <p class="hint !mt-0 mb-4">
+          Estos topes protegen tu número. Elorai espera un tiempo <strong>aleatorio</strong> entre mensajes
+          y nunca envía dos veces el mismo texto al mismo contacto. Puedes hacerlo más lento; más rápido no.
+        </p>
+        <form id="app-limits-form" novalidate>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="label" for="app-min-gap">Pausa mínima (segundos)</label>
+              <input id="app-min-gap" type="number" class="input" min="5" max="120" value="5" />
+            </div>
+            <div>
+              <label class="label" for="app-max-gap">Pausa máxima (segundos)</label>
+              <input id="app-max-gap" type="number" class="input" min="5" max="120" value="15" />
+            </div>
+            <div>
+              <label class="label" for="app-per-minute">Máximo por minuto</label>
+              <input id="app-per-minute" type="number" class="input" min="1" max="30" value="20" />
+            </div>
+            <div>
+              <label class="label" for="app-daily">Máximo por día</label>
+              <input id="app-daily" type="number" class="input" min="1" max="5000" value="500" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-4"><i class="fa-solid fa-floppy-disk"></i> Guardar ritmo</button>
+        </form>
+
+        <div class="grid sm:grid-cols-3 gap-3 mt-5">
+          <div class="rounded-xl border border-ink/10 p-3.5">
+            <p class="text-xs font-bold text-ink/50 uppercase tracking-wide">Último minuto</p>
+            <p class="text-xl font-extrabold text-ink mt-1" id="app-usage-minute">0</p>
+          </div>
+          <div class="rounded-xl border border-ink/10 p-3.5">
+            <p class="text-xs font-bold text-ink/50 uppercase tracking-wide">Última hora</p>
+            <p class="text-xl font-extrabold text-ink mt-1" id="app-usage-hour">0</p>
+          </div>
+          <div class="rounded-xl border border-ink/10 p-3.5">
+            <p class="text-xs font-bold text-ink/50 uppercase tracking-wide">Hoy</p>
+            <p class="text-xl font-extrabold text-ink mt-1" id="app-usage-today">0</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ 4. AGENDA ═══════════════════ -->
     <section id="view-agenda" class="view">
       <div class="section-head flex flex-wrap items-center gap-3">
         <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-calendar-days"></i></span>
@@ -1467,18 +1637,22 @@
   </a>
 </div>
 
-<script src="assets/js/session.js?v=2"></script>
-<script src="assets/js/catalogs.js?v=2"></script>
-<script src="assets/js/core.js?v=2"></script>
-<script src="assets/js/dashboard.js?v=2"></script>
-<script src="assets/js/connect.js?v=2"></script>
-<script src="assets/js/agenda.js?v=2"></script>
-<script src="assets/js/chat.js?v=2"></script>
-<script src="assets/js/reports.js?v=2"></script>
-<script src="assets/js/automation.js?v=2"></script>
-<script src="assets/js/settings.js?v=2"></script>
-<script src="assets/js/templates.js?v=2"></script>
-<script src="assets/js/billing.js?v=2"></script>
-<script src="assets/js/app.js?v=2"></script>
+<!-- El ?v= se sube en cada despliegue que toque estos archivos: sin él, el
+     navegador sirve el JS que tenía en caché y la pantalla nueva no aparece
+     aunque el servidor ya la tenga. v=3 añade appmode.js. -->
+<script src="assets/js/session.js?v=3"></script>
+<script src="assets/js/catalogs.js?v=3"></script>
+<script src="assets/js/core.js?v=3"></script>
+<script src="assets/js/dashboard.js?v=3"></script>
+<script src="assets/js/connect.js?v=3"></script>
+<script src="assets/js/appmode.js?v=3"></script>
+<script src="assets/js/agenda.js?v=3"></script>
+<script src="assets/js/chat.js?v=3"></script>
+<script src="assets/js/reports.js?v=3"></script>
+<script src="assets/js/automation.js?v=3"></script>
+<script src="assets/js/settings.js?v=3"></script>
+<script src="assets/js/templates.js?v=3"></script>
+<script src="assets/js/billing.js?v=3"></script>
+<script src="assets/js/app.js?v=3"></script>
 </body>
 </html>

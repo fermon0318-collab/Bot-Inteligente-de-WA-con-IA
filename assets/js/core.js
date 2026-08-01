@@ -295,6 +295,7 @@
   const VIEWS = {
     'dashboard': ['Dashboard', 'Resumen de actividad de tu bot'],
     'cloud-api': ['Cloud API', 'Conexión con WhatsApp Business'],
+    'app-mode': ['Modo App', 'Tu WhatsApp de siempre, vinculado por código QR'],
     'agenda': ['Agenda', 'Reservas, bloqueos y profesionales'],
     'live-chat': ['Chat en Vivo', 'Conversaciones en curso'],
     'chat-history': ['Histórico Chats', 'Conversaciones anteriores'],

@@ -13,6 +13,7 @@ qué vas a construir, el código exacto, cómo probarlo y qué suele salir mal.
 | — | **D · Remarketing** | [bloque-d-remarketing.md](bloque-d-remarketing.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
 | — | **E · Métricas y Conversions API** | [bloque-e-metricas.md](bloque-e-metricas.md) | ✅ Ya implementado — queda como referencia de cómo se construyó |
 | — | **G · Producción** | [bloque-g-produccion.md](bloque-g-produccion.md) | ✅ Implementado lo que no requiere un servidor real — ver `ROADMAP.md` § Bloque G para qué queda manual (monitorización, `rclone`, endurecer SSH) |
+| — | **H · Modo App** | [bloque-h-modo-app.md](bloque-h-modo-app.md) | ✅ Implementado — WhatsApp por QR sin migrar a Cloud API, con guardián de políticas y plan de escalado a 1000 usuarios |
 
 > **Despliegue en Railway:** [deploy-railway.md](deploy-railway.md) — la ruta
 > activa mientras dure el plan gratuito, sin nginx.
@@ -92,6 +93,16 @@ Nunca devuelvas un token en claro por la API.
 **Envíos.** Nunca llames a la Graph API directamente desde una ruta. Usa
 `enqueue()`: te da reintentos, orden y persistencia gratis.
 
+**Canales.** Tampoco llames a `services/whatsapp.js` ni a Baileys directamente.
+Pide el proveedor de la cuenta y háblale siempre igual — así el código funciona
+en Cloud API y en Modo App sin saber en cuál está:
+
+```js
+import * as providers from './providers/index.js';
+const provider = await providers.forAccount(accountId);
+if (provider.capabilities.templates) { /* solo Cloud API */ }
+```
+
 **Errores.** Lanza con `status` y deja que el manejador central responda:
 
 ```js
@@ -129,6 +140,15 @@ server/src/
     remarketing.js      Trabajador periódico, franja horaria y envío (Bloque D)
     capi.js             Conversions API: cola y envío de eventos de compra (Bloque E)
     adsync.js           Sincronización de gasto con la Marketing API de Meta (Bloque E)
+    providers/          Proveedores de WhatsApp intercambiables (Bloque H)
+      index.js          Resuelve el proveedor de cada cuenta según su canal
+      cloud.js          Cloud API de Meta
+      app.js            Modo App (Baileys), con puerta de ritmo
+  wa/app/               Runtime de Modo App (Bloque H)
+    session.js          Sockets de Baileys: QR, reconexión, arrendamiento
+    authStore.js        Estado de autenticación en Postgres, cifrado
+    pacing.js           Pausas, topes por minuto/día, antiduplicados
+    policy.js           Detectores de patrones de riesgo y freno de emergencia
   test/                 node --test · sin dependencias externas (Bloque G)
   billing/
     index.js            Interfaz de pasarela (perezosa: solo carga el adaptador activo)

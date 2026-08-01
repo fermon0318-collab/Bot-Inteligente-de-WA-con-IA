@@ -15,9 +15,9 @@ import { many, one, query } from '../db/pool.js';
 import * as ai from './ai.js';
 import * as flows from './flows.js';
 import { drain, enqueue } from './outbox.js';
+import * as providers from './providers/index.js';
 import * as receipts from './receipts.js';
 import * as storage from './storage.js';
-import * as wa from './whatsapp.js';
 
 /** Escribe en la terminal de actividad del panel. */
 async function log(accountId, message, level = 'info') {
@@ -30,10 +30,28 @@ async function log(accountId, message, level = 'info') {
 /** Resuelve la cuenta a partir del número que recibió el mensaje. */
 export async function accountForPhoneNumberId(phoneNumberId) {
   return one(
-    `SELECT account_id, bot_running, wa_connected
+    `SELECT account_id, bot_running, wa_connected, wa_channel
        FROM bot_settings WHERE wa_phone_number_id = $1`,
     [String(phoneNumberId)]
   );
+}
+
+/**
+ * Resuelve la cuenta de un mensaje entrante.
+ *
+ * Cloud API identifica la cuenta por el `phone_number_id` que Meta manda en el
+ * evento; Modo App ya sabe de qué cuenta es su propio socket. Un único punto
+ * de entrada para los dos canales.
+ */
+async function resolveAccount({ accountId, phoneNumberId }) {
+  if (accountId) {
+    return one(
+      `SELECT account_id, bot_running, wa_connected, wa_channel
+         FROM bot_settings WHERE account_id = $1`,
+      [accountId]
+    );
+  }
+  return accountForPhoneNumberId(phoneNumberId);
 }
 
 /** Crea o actualiza el contacto y devuelve su fila. */
@@ -96,9 +114,12 @@ function attachmentOf(message) {
  * el mensaje ya está registrado con su texto, y quedarse sin la imagen es
  * mucho mejor que perder el mensaje entero o romper el webhook.
  */
-async function guardarAdjunto({ accountId, messageId, attachment, token }) {
+async function guardarAdjunto({ accountId, messageId, attachment, provider, rawMessage }) {
   try {
-    const archivo = await wa.downloadMedia({ token, mediaId: attachment.mediaId });
+    // Cada canal descarga a su manera: Cloud API pide el archivo a Meta con el
+    // id y el token; Modo App lo descifra a partir del mensaje original. El
+    // proveedor absorbe la diferencia.
+    const archivo = await provider.downloadMedia({ mediaId: attachment.mediaId, raw: rawMessage });
 
     // Meta manda el mime con parámetros ("audio/ogg; codecs=opus"), y las
     // notas de voz siempre vienen así. Sin recortarlos, el tipo no coincide
@@ -133,8 +154,11 @@ async function guardarAdjunto({ accountId, messageId, attachment, token }) {
  * Procesa un mensaje entrante ya extraído del webhook.
  * Devuelve un resumen de lo que decidió hacer — útil para las pruebas y el log.
  */
-export async function handleIncomingMessage({ phoneNumberId, message, contactProfile }) {
-  const account = await accountForPhoneNumberId(phoneNumberId);
+export async function handleIncomingMessage({
+  phoneNumberId, accountId: fromAccountId, message, contactProfile,
+  rawKey = null, rawMessage = null,
+}) {
+  const account = await resolveAccount({ accountId: fromAccountId, phoneNumberId });
   if (!account) return { skipped: 'cuenta_desconocida' };
 
   const accountId = account.account_id;
@@ -178,10 +202,11 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
      no se responde solo — el operador tiene que poder ver igualmente la foto
      o escuchar el audio que le mandaron desde Chat en Vivo. */
   if (attachment) {
-    const cfgMedia = await wa.accountConfig(accountId);
-    if (cfgMedia?.token) {
+    const proveedorMedia = await providers.forAccount(accountId);
+    if (proveedorMedia.ready) {
       const r = await guardarAdjunto({
-        accountId, messageId: inserted.id, attachment, token: cfgMedia.token,
+        accountId, messageId: inserted.id, attachment,
+        provider: proveedorMedia, rawMessage,
       });
       result.actions.push(r.saved ? `adjunto_guardado:${r.type}` : 'adjunto_no_guardado');
     }
@@ -202,12 +227,14 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
     }
   }
 
-  /* Acuse de recibo: el contacto ve que su mensaje llegó */
-  const cfg = await wa.accountConfig(accountId);
-  if (cfg?.token && cfg.phoneNumberId) {
-    wa.markAsRead({ token: cfg.token, phoneNumberId: cfg.phoneNumberId, messageId: message.id })
-      .catch(() => {});
-  }
+  /* Acuse de recibo: el contacto ve que su mensaje llegó.
+     Cada canal lo marca a su manera — Cloud API por id de mensaje, Modo App
+     por la clave del socket — y el proveedor se encarga de la diferencia. */
+  providers.forAccount(accountId)
+    .then((provider) => (provider.ready
+      ? provider.markAsRead({ messageId: message.id, key: rawKey })
+      : null))
+    .catch(() => {});
 
   /* 4.5 · ¿Adjuntó un comprobante de pago? */
   if (attachment && ['image', 'document'].includes(attachment.kind)) {
@@ -216,7 +243,7 @@ export async function handleIncomingMessage({ phoneNumberId, message, contactPro
     } else {
       const veredicto = await receipts.processReceipt({
         accountId, contactId: contact.id,
-        messageId: inserted.id, attachment,
+        messageId: inserted.id, attachment, rawMessage,
       });
       result.actions.push(`comprobante:${veredicto.status}`);
       // Un comprobante no sigue al resto del pipeline: ya se respondió
@@ -392,10 +419,17 @@ export async function sendManual({ accountId, contactId, body, mediaName }) {
   );
   if (!contact) return { error: 'contacto_inexistente' };
 
-  // Meta solo permite texto libre dentro de las 24 h del último mensaje del
-  // contacto. Se avisa en vez de dejar que el envío falle sin explicación.
-  const outsideWindow = !contact.last_inbound_at
-    || Date.now() - new Date(contact.last_inbound_at).getTime() > 24 * 3600 * 1000;
+  // Cloud API solo permite texto libre dentro de las 24 h del último mensaje
+  // del contacto: fuera de ahí hace falta plantilla y Meta la cobra. Se avisa
+  // en vez de dejar que el envío falle sin explicación.
+  //
+  // En Modo App esa ventana no existe —es el teléfono del cliente escribiendo
+  // a sus propios contactos— así que el aviso sobraría y se omite.
+  const provider = await providers.forAccount(accountId);
+  const outsideWindow = provider.capabilities.window24h && (
+    !contact.last_inbound_at
+    || Date.now() - new Date(contact.last_inbound_at).getTime() > 24 * 3600 * 1000
+  );
 
   const item = await enqueue({
     accountId, contactId,

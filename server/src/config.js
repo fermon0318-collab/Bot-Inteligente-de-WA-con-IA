@@ -140,6 +140,27 @@ export const config = {
     },
   },
 
+  /* --- Modo App -------------------------------------------------------------
+     Sesiones de WhatsApp vinculadas por QR. Son sockets abiertos y con estado:
+     a diferencia del resto de Elorai, este proceso NO es intercambiable con
+     otro mientras tiene sesiones vivas. De ahí las tres variables:
+
+       enabled      permite apagar el módulo entero en un despliegue concreto
+                    (por ejemplo, dejar la API web sin sesiones y levantar un
+                    servicio aparte que solo haga esto)
+       workerId     identifica a este proceso al reservar cuentas; con varias
+                    instancias tiene que ser distinto en cada una
+       maxSessions  techo de sesiones por proceso, que es lo que se sube o baja
+                    para repartir carga (ver docs/bloque-h-modo-app.md)
+     ------------------------------------------------------------------------ */
+  appMode: {
+    enabled: optional('APP_MODE_ENABLED', 'true') !== 'false',
+    workerId: optional('APP_MODE_WORKER_ID', '')
+      || optional('RAILWAY_REPLICA_ID', '')
+      || `worker-${process.pid}-${Math.random().toString(36).slice(2, 8)}`,
+    maxSessions: Number(optional('APP_MODE_MAX_SESSIONS', '150')),
+  },
+
   /** Correos que entran al panel sin suscripción activa (fundadores, soporte). */
   bypassEmails: optional('BILLING_BYPASS_EMAILS', '')
     .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),

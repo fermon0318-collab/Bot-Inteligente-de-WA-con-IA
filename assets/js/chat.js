@@ -15,6 +15,33 @@
     new: ['Nuevo', 'text-ink/50'],
   };
 
+  /** Cuántas líneas puede crecer el composer antes de empezar a hacer scroll. */
+  const COMPOSER_MAX_LINES = 6;
+
+  /**
+   * Ajusta la altura del textarea del composer a su contenido, hasta un tope
+   * de COMPOSER_MAX_LINES líneas; a partir de ahí, scroll interno.
+   *
+   * El tope se calcula en tiempo real a partir del line-height y el padding
+   * que de verdad tiene el elemento (no un valor fijo en CSS): así sigue
+   * siendo correcto si cambia la tipografía sin tener que tocar dos sitios.
+   */
+  function autoGrow(textarea) {
+    const styles = getComputedStyle(textarea);
+    const lineHeight = parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.2;
+    const paddingV = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+    const borderV = parseFloat(styles.borderTopWidth) + parseFloat(styles.borderBottomWidth);
+    const maxHeight = lineHeight * COMPOSER_MAX_LINES + paddingV + borderV;
+
+    // Se resetea a 'auto' antes de medir: si no, scrollHeight nunca baja de
+    // la altura ya fijada y el campo no se encoge al borrar texto.
+    textarea.style.height = 'auto';
+    const needed = textarea.scrollHeight + borderV; // scrollHeight ya incluye el padding
+
+    textarea.style.height = `${Math.min(needed, maxHeight)}px`;
+    textarea.style.overflowY = needed > maxHeight ? 'auto' : 'hidden';
+  }
+
   function createChatPanel(cfg) {
     const p = cfg.prefix;
     const id = (suffix) => qs(`#${p}-${suffix}`);
@@ -74,7 +101,7 @@
           el('span', { class: 'min-w-0 flex-1' }, [
             el('span', { class: 'flex items-center gap-1.5' }, [
               el('span', { class: 'text-sm font-bold text-ink truncate flex-1', text: c.name }),
-              el('span', { class: 'text-[0.68rem] text-ink/40 flex-none', text: App.timeAgo(c.lastAt) }),
+              el('span', { class: 'text-2xs text-ink/40 flex-none', text: App.timeAgo(c.lastAt) }),
             ]),
             el('span', { class: 'block text-xs text-ink/55 truncate', text: c.preview }),
             el('span', { class: 'flex items-center gap-1.5 mt-1' }, [
@@ -282,6 +309,7 @@
       if (!text) return;
 
       input.value = '';
+      autoGrow(input);
       // Se pinta al momento y luego se confirma: el operador no espera a la red
       pushMessage(text, 'out');
 
@@ -482,6 +510,7 @@
         pop.appendChild(el('button', { type: 'button', text: e, onclick: () => {
           const input = id('input');
           input.value += e;
+          autoGrow(input);
           input.focus();
           pop.classList.remove('open');
         } }));
@@ -508,6 +537,21 @@
       if (id('window-template')) id('window-template').addEventListener('click', enviarPlantilla);
 
       id('form').addEventListener('submit', send);
+
+      // El textarea crece con el texto hasta 6 líneas y luego hace scroll.
+      const input = id('input');
+      autoGrow(input); // altura correcta desde el primer render, sin esperar a teclear
+      input.addEventListener('input', () => autoGrow(input));
+
+      // Enter envía, igual que en cualquier chat; Shift+Enter mete un salto de
+      // línea de verdad — un <textarea> no envía el formulario solo por Enter
+      // como sí hacía el <input> de una sola línea que había antes.
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' && !ev.shiftKey) {
+          ev.preventDefault();
+          id('form').requestSubmit();
+        }
+      });
 
       id('attach').addEventListener('click', () => id('file-input').click());
       id('file-input').addEventListener('change', async (ev) => {

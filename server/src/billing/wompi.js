@@ -405,8 +405,17 @@ export function verifyWebhook(rawBody) {
   const parts = sig.properties.map((path) => getByPath(event.data, path));
   const toHash = parts.join('') + String(event.timestamp) + config.wompi.eventsSecret;
   const expected = crypto.createHash('sha256').update(toHash).digest('hex').toUpperCase();
+  const recibido = String(sig.checksum).toUpperCase();
 
-  if (expected !== String(sig.checksum).toUpperCase()) {
+  // Comparación a tiempo constante, igual que unsign() en lib/crypto.js para
+  // las cookies de sesión: con !== normal, el tiempo que tarda la comparación
+  // varía según cuántos caracteres coinciden desde el principio, y en teoría
+  // eso se puede medir para reconstruir la firma byte a byte.
+  const a = Buffer.from(expected, 'hex');
+  const b = Buffer.from(recibido, 'hex');
+  const coincide = a.length === b.length && crypto.timingSafeEqual(a, b);
+
+  if (!coincide) {
     throw Object.assign(new Error('Firma de webhook de Wompi inválida'), { status: 400 });
   }
   return event;

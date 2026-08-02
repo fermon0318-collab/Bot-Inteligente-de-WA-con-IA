@@ -21,10 +21,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
-<link rel="stylesheet" href="assets/css/tailwind.css?v=2" />
+<link rel="stylesheet" href="assets/css/tailwind.css?v=4" />
 
 <script id="chartjs-lib" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" async></script>
-<link rel="stylesheet" href="assets/css/elorai.css?v=2" />
+<link rel="stylesheet" href="assets/css/elorai.css?v=4" />
 </head>
 
 <body class="antialiased">
@@ -56,7 +56,7 @@
       <img src="assets/img/elorai-logo.svg" alt="Logo Elorai" class="w-11 h-11 drop-shadow" />
       <span class="leading-tight block">
         <span class="block text-xl font-extrabold brand-text tracking-tight">Elorai</span>
-        <span class="block text-[0.68rem] font-semibold text-ink/50 uppercase tracking-widest">Bot IA · WhatsApp</span>
+        <span class="block text-2xs font-semibold text-ink/50 uppercase tracking-widest">Bot IA · WhatsApp</span>
       </span>
     </a>
     <button id="sidebar-close" type="button" aria-label="Cerrar menú"
@@ -108,7 +108,7 @@
     <div class="rounded-xl bg-white/70 border border-accent-200/70 px-3 py-2.5 flex items-center gap-2.5">
       <span class="pulse-ring"><span class="dot dot-ok block" id="sidebar-bot-dot"></span></span>
       <div class="leading-tight">
-        <p class="text-[0.7rem] font-bold uppercase tracking-wider text-ink/45">Estado del bot</p>
+        <p class="text-2xs font-bold uppercase tracking-wider text-ink/45">Estado del bot</p>
         <p class="text-sm font-bold text-emerald-600" id="sidebar-bot-state">Activo</p>
       </div>
     </div>
@@ -140,7 +140,7 @@
             <span class="avatar !w-8 !h-8 !text-xs" id="user-avatar">AP</span>
             <span class="hidden md:block text-left leading-tight max-w-[10rem]">
               <span class="block text-xs font-bold text-ink truncate" id="user-name">Administrador</span>
-              <span class="block text-[0.68rem] text-ink/50 truncate" id="user-email-short">admin@elorai.io</span>
+              <span class="block text-2xs text-ink/50 truncate" id="user-email-short">admin@elorai.io</span>
             </span>
             <i class="fa-solid fa-chevron-down text-xs text-ink/40"></i>
           </button>
@@ -651,7 +651,7 @@
                 <span class="pulse-ring"><span class="dot dot-ok block"></span></span>
                 <p class="text-sm font-extrabold text-ink mr-auto">Conversaciones activas</p>
                 <span class="badge badge-brand" id="live-count">0</span>
-                <button id="live-new-contact" type="button" title="Agregar contacto"
+                <button id="live-new-contact" type="button" title="Agregar contacto" aria-label="Agregar contacto"
                   class="w-7 h-7 rounded-lg bg-accent-100 hover:bg-accent-200 text-brand-700 flex items-center justify-center transition">
                   <i class="fa-solid fa-plus text-xs"></i>
                 </button>
@@ -699,7 +699,7 @@
                 <button type="button" class="btn btn-ghost btn-icon" id="live-attach" aria-label="Adjuntar archivo"><i class="fa-solid fa-paperclip"></i></button>
                 <button type="button" class="btn btn-ghost btn-icon" id="live-template" aria-label="Enviar plantilla" title="Enviar plantilla aprobada"><i class="fa-solid fa-file-lines"></i></button>
                 <input type="file" id="live-file-input" class="hidden" />
-                <input id="live-input" class="input" placeholder="Escribe un mensaje…" autocomplete="off" />
+                <textarea id="live-input" class="input chat-composer" placeholder="Escribe un mensaje…" rows="1"></textarea>
                 <button type="submit" class="btn btn-gradient btn-icon" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
               </form>
 
@@ -768,7 +768,7 @@
                 <button type="button" class="btn btn-ghost btn-icon" id="hist-attach" aria-label="Adjuntar archivo"><i class="fa-solid fa-paperclip"></i></button>
                 <button type="button" class="btn btn-ghost btn-icon" id="hist-template" aria-label="Enviar plantilla" title="Enviar plantilla aprobada"><i class="fa-solid fa-file-lines"></i></button>
                 <input type="file" id="hist-file-input" class="hidden" />
-                <input id="hist-input" class="input" placeholder="Retomar la conversación…" autocomplete="off" />
+                <textarea id="hist-input" class="input chat-composer" placeholder="Retomar la conversación…" rows="1"></textarea>
                 <button type="submit" class="btn btn-gradient btn-icon" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
               </form>
 
@@ -1639,20 +1639,21 @@
 
 <!-- El ?v= se sube en cada despliegue que toque estos archivos: sin él, el
      navegador sirve el JS que tenía en caché y la pantalla nueva no aparece
-     aunque el servidor ya la tenga. v=3 añade appmode.js. -->
-<script src="assets/js/session.js?v=3"></script>
-<script src="assets/js/catalogs.js?v=3"></script>
-<script src="assets/js/core.js?v=3"></script>
-<script src="assets/js/dashboard.js?v=3"></script>
-<script src="assets/js/connect.js?v=3"></script>
-<script src="assets/js/appmode.js?v=3"></script>
-<script src="assets/js/agenda.js?v=3"></script>
-<script src="assets/js/chat.js?v=3"></script>
-<script src="assets/js/reports.js?v=3"></script>
-<script src="assets/js/automation.js?v=3"></script>
-<script src="assets/js/settings.js?v=3"></script>
-<script src="assets/js/templates.js?v=3"></script>
-<script src="assets/js/billing.js?v=3"></script>
-<script src="assets/js/app.js?v=3"></script>
+     aunque el servidor ya la tenga. v=4: composer auto-expandible, soporte de
+     rangos HTTP para audio/video, y los arreglos de la auditoría de seguridad. -->
+<script src="assets/js/session.js?v=4"></script>
+<script src="assets/js/catalogs.js?v=4"></script>
+<script src="assets/js/core.js?v=4"></script>
+<script src="assets/js/dashboard.js?v=4"></script>
+<script src="assets/js/connect.js?v=4"></script>
+<script src="assets/js/appmode.js?v=4"></script>
+<script src="assets/js/agenda.js?v=4"></script>
+<script src="assets/js/chat.js?v=4"></script>
+<script src="assets/js/reports.js?v=4"></script>
+<script src="assets/js/automation.js?v=4"></script>
+<script src="assets/js/settings.js?v=4"></script>
+<script src="assets/js/templates.js?v=4"></script>
+<script src="assets/js/billing.js?v=4"></script>
+<script src="assets/js/app.js?v=4"></script>
 </body>
 </html>

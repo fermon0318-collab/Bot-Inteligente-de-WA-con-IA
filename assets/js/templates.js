@@ -100,7 +100,7 @@
           ]),
           el('p', { class: 'text-xs text-ink/55 mt-0.5', text: t.desc }),
           el('p', { class: 'text-sm text-ink/80 bg-accent-50 rounded-lg p-2.5 mt-2 whitespace-pre-line', text: t.body }),
-          el('p', { class: 'text-[0.7rem] text-ink/45 mt-1.5',
+          el('p', { class: 'text-2xs text-ink/45 mt-1.5',
             text: `Nombre en Meta: ${t.name}${t.varLabels.length ? ` · Datos: ${t.varLabels.join(', ')}` : ''}` }),
           el('div', { class: 'flex gap-2 mt-2 flex-wrap' }, [copiar, registrar]),
         ]);

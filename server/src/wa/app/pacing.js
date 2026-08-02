@@ -53,14 +53,26 @@ export function randomGapMs(minSeconds, maxSeconds, random = Math.random) {
 }
 
 /** Normaliza los límites que llegan del panel a algo que no ponga en riesgo el número. */
+/**
+ * Número si es positivo y finito; si no (vacío, NaN, cero o negativo), el
+ * valor por defecto. `Number(x) || porDefecto` no sirve para esto: un
+ * negativo es "truthy" en JS, así que el `||` nunca llegaba a activarse y un
+ * dailyLimit de -1 acababa en 1 (el suelo de Math.max) en vez de en el 500
+ * por defecto que se buscaba.
+ */
+const positivoO = (valor, porDefecto) => {
+  const n = Number(valor);
+  return Number.isFinite(n) && n > 0 ? n : porDefecto;
+};
+
 export function sanitizeLimits({ minGapSeconds, maxGapSeconds, perMinuteLimit, dailyLimit } = {}) {
-  const min = Math.min(MAX_GAP_SECONDS, Math.max(MIN_GAP_SECONDS, Number(minGapSeconds) || MIN_GAP_SECONDS));
-  const max = Math.min(MAX_GAP_SECONDS, Math.max(min, Number(maxGapSeconds) || MIN_GAP_SECONDS * 3));
+  const min = Math.min(MAX_GAP_SECONDS, Math.max(MIN_GAP_SECONDS, positivoO(minGapSeconds, MIN_GAP_SECONDS)));
+  const max = Math.min(MAX_GAP_SECONDS, Math.max(min, positivoO(maxGapSeconds, MIN_GAP_SECONDS * 3)));
   return {
     minGapSeconds: min,
     maxGapSeconds: max,
-    perMinuteLimit: Math.min(MAX_PER_MINUTE, Math.max(1, Number(perMinuteLimit) || 20)),
-    dailyLimit: Math.min(5000, Math.max(1, Number(dailyLimit) || 500)),
+    perMinuteLimit: Math.min(MAX_PER_MINUTE, Math.max(1, positivoO(perMinuteLimit, 20))),
+    dailyLimit: Math.min(5000, Math.max(1, positivoO(dailyLimit, 500))),
   };
 }
 

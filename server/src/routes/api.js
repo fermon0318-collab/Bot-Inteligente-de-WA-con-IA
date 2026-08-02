@@ -13,7 +13,7 @@ import { config } from '../config.js';
 import { many, one, query, transaction } from '../db/pool.js';
 import { decrypt, encrypt, mask } from '../lib/crypto.js';
 import { destroySession } from '../lib/session.js';
-import { requireAuth, requireSubscription } from '../middleware/auth.js';
+import { rateLimit, requireAuth, requireSubscription } from '../middleware/auth.js';
 import * as adsync from '../services/adsync.js';
 import * as capi from '../services/capi.js';
 import * as engine from '../services/engine.js';
@@ -423,6 +423,11 @@ router.post('/settings/bot/:action(start|stop)', requireSubscription, async (req
    Modo App — WhatsApp vinculado por código QR
    ========================================================================== */
 
+// Por cuenta, no por IP: lo que hay que acotar es cuántas veces una MISMA
+// cuenta intenta abrir un socket de Baileys seguidos, no cuántas peticiones
+// llegan desde una oficina compartiendo salida a internet.
+const appModeConnectLimit = rateLimit({ windowMs: 60_000, max: 6, key: (req) => account(req) });
+
 /** Estado completo: sesión, límites, consumo y avisos de políticas. */
 router.get('/settings/app-mode', async (req, res, next) => {
   try {
@@ -487,7 +492,7 @@ router.get('/settings/app-mode', async (req, res, next) => {
  * Inicia la vinculación. Devuelve el estado; el QR se recoge en /qr, que es
  * lo que el panel consulta cada pocos segundos mientras el usuario escanea.
  */
-router.post('/settings/app-mode/connect', requireSubscription, async (req, res, next) => {
+router.post('/settings/app-mode/connect', requireSubscription, appModeConnectLimit, async (req, res, next) => {
   try {
     const accountId = account(req);
     const disponible = await appSession.available();
@@ -1158,6 +1163,13 @@ router.put('/conversations/:id/ai', requireSubscription, async (req, res, next) 
  * se comprueba que ese mensaje pertenece a la cuenta de quien pregunta. Sin
  * ese JOIN, cualquiera con sesión podría leer los archivos de otro negocio
  * cambiando el id en la URL.
+ *
+ * Responde a `Range` (206 Partial Content) igual que cualquier servidor de
+ * medios de verdad. Sin esto, un <audio>/<video> nunca recibe el archivo en
+ * trozos: Chrome tolera descargarlo entero, pero Safari e iOS simplemente
+ * cortan la reproducción en cuanto necesitan seguir desde un punto que no
+ * sea el principio — que es justo el síntoma de "el audio no termina de
+ * sonar, se corta a la mitad".
  */
 router.get('/messages/:id/media', async (req, res, next) => {
   try {
@@ -1169,17 +1181,46 @@ router.get('/messages/:id/media', async (req, res, next) => {
     );
     if (!row?.media_url) return res.status(404).json({ error: 'not_found' });
 
-    const buffer = await storage.read(row.media_url);
+    const total = await storage.size(row.media_url);
+    const mimeType = row.media_mime || 'application/octet-stream';
 
-    res.setHeader('Content-Type', row.media_mime || 'application/octet-stream');
+    res.setHeader('Content-Type', mimeType);
     // Privado: es contenido de un cliente, no debe quedar en cachés compartidas.
     res.setHeader('Cache-Control', 'private, max-age=86400');
+    // Anuncia soporte de rangos siempre: es lo que le dice al navegador que
+    // puede pedir trozos en vez de todo-o-nada.
+    res.setHeader('Accept-Ranges', 'bytes');
     // Los PDF se descargan con su nombre; imagen/audio/video se ven en línea.
     if (row.media_type === 'pdf') {
       const safe = String(row.media_name || 'documento.pdf').replace(/[^\w.\- ]/g, '_');
       res.setHeader('Content-Disposition', `inline; filename="${safe}"`);
     }
-    res.send(buffer);
+
+    const range = req.headers.range;
+    if (!range) {
+      res.setHeader('Content-Length', total);
+      return storage.readRange(row.media_url).pipe(res);
+    }
+
+    // "bytes=INICIO-FIN", FIN es opcional (significa "hasta el final").
+    const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (!match) {
+      res.setHeader('Content-Range', `bytes */${total}`);
+      return res.status(416).end();
+    }
+
+    const start = match[1] ? Number(match[1]) : 0;
+    const end = match[2] ? Number(match[2]) : total - 1;
+
+    if (Number.isNaN(start) || Number.isNaN(end) || start > end || end >= total) {
+      res.setHeader('Content-Range', `bytes */${total}`);
+      return res.status(416).end();
+    }
+
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+    res.setHeader('Content-Length', end - start + 1);
+    storage.readRange(row.media_url, { start, end }).pipe(res);
   } catch (err) {
     if (err.code === 'ENOENT') return res.status(404).json({ error: 'file_missing' });
     next(err);

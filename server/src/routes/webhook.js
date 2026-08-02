@@ -10,11 +10,48 @@
  * después se procesa.
  */
 
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
+import { config } from '../config.js';
 import { many, one, query } from '../db/pool.js';
+import { rateLimit } from '../middleware/auth.js';
 import * as engine from '../services/engine.js';
 
 const router = Router();
+
+// Defensa en profundidad detrás de la firma: un límite generoso, calibrado
+// para no afectar el tráfico real de Meta (todas las cuentas comparten este
+// único endpoint y las entregas pueden venir en ráfaga), pero que acota el
+// costo de una avalancha de peticiones sin firma válida o mal configuradas.
+const webhookRateLimit = rateLimit({ windowMs: 60_000, max: 600 });
+
+/** Para no llenar los logs: un aviso de "sin App Secret" cada 5 min como mucho. */
+let lastMisconfigWarning = 0;
+
+/**
+ * Verifica que el POST vino de verdad de Meta.
+ *
+ * Meta firma cada entrega con HMAC-SHA256 del cuerpo EXACTO (los bytes tal
+ * cual, antes de parsear JSON) usando el App Secret de la app registrada en
+ * Meta for Developers, y lo manda en `X-Hub-Signature-256: sha256=<hex>`.
+ *
+ * Sin esto, el único dato que identifica la cuenta destino es
+ * `phone_number_id`, que NO es secreto — aparece en el propio panel del
+ * cliente — así que cualquiera podría inyectar mensajes falsos con solo
+ * conocerlo. Devuelve `true`/`false`; nunca lanza.
+ */
+function firmaValida(rawBody, header) {
+  if (!header || !header.startsWith('sha256=')) return false;
+
+  const esperada = createHmac('sha256', config.meta.appSecret).update(rawBody).digest('hex');
+  const recibida = header.slice('sha256='.length);
+
+  const a = Buffer.from(esperada, 'hex');
+  const b = Buffer.from(recibida, 'hex');
+  // Firmas de longitud distinta: timingSafeEqual exige buffers del mismo
+  // tamaño o lanza, así que se descarta antes en vez de dejar que reviente.
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /* ==========================================================================
    Verificación (Meta llama una vez al configurar el webhook)
@@ -54,8 +91,34 @@ router.get('/whatsapp', async (req, res) => {
    Recepción de eventos
    ========================================================================== */
 
-router.post('/whatsapp', async (req, res) => {
-  const body = req.body;
+router.post('/whatsapp', webhookRateLimit, async (req, res) => {
+  // Sin App Secret configurado, la única alternativa a procesar sin verificar
+  // es no procesar en absoluto: un webhook "abierto" es peor que uno que
+  // tarda en activarse. Meta reintenta las entregas fallidas durante horas,
+  // así que nada se pierde mientras se configura META_APP_SECRET.
+  if (!config.meta.configured) {
+    if (Date.now() - lastMisconfigWarning > 5 * 60_000) {
+      console.error('[webhook] META_APP_SECRET no está configurado: se rechazan todos los eventos entrantes de WhatsApp.');
+      lastMisconfigWarning = Date.now();
+    }
+    return res.status(503).end();
+  }
+
+  // req.body es el Buffer crudo (ver index.js: express.raw para esta ruta,
+  // montado antes que express.json). Hace falta así, sin parsear, para que la
+  // firma se calcule sobre los mismos bytes exactos que firmó Meta.
+  const raw = req.body;
+  if (!Buffer.isBuffer(raw) || !firmaValida(raw, req.headers['x-hub-signature-256'])) {
+    console.warn('[webhook] firma inválida o ausente — evento rechazado');
+    return res.status(401).end();
+  }
+
+  let body;
+  try {
+    body = JSON.parse(raw.toString('utf8'));
+  } catch {
+    return res.status(400).end();
+  }
 
   // Confirmar de inmediato: cualquier trabajo aquí retrasa la respuesta a Meta
   res.sendStatus(200);

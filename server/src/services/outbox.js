@@ -238,9 +238,17 @@ export async function drain({ limit = 20 } = {}) {
     try {
       result[await dispatch(item)]++;
     } catch (err) {
+      // Cualquier fallo antes de que dispatch() llegue a su propio try/catch
+      // — providers.forAccount(), la consulta de bot_settings, beforeSend()
+      // llegaba aquí con `permanent` fijo en `false`: un mensaje con un fallo
+      // persistente en esa zona reintentaba para siempre (tope de 1 h entre
+      // intentos) sin marcarse jamás 'failed' ni avisar en el log de
+      // actividad. Misma regla que ya usa dispatch(): tras MAX_ATTEMPTS, se
+      // da por vencido igual que si hubiera fallado enviando de verdad.
       console.error(`[outbox] error inesperado en el mensaje ${item.id}:`, err.message);
-      await fail(item, err.message, false).catch(() => {});
-      result.retry++;
+      const permanent = err.permanent || item.attempts >= MAX_ATTEMPTS;
+      await fail(item, err.message, permanent).catch(() => {});
+      result[permanent ? 'failed' : 'retry']++;
     }
   }
   return result;

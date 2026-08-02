@@ -101,6 +101,14 @@ export const config = {
     get redirectUri() { return `${config.publicUrl}/auth/google/callback`; },
   },
 
+  // Opcional al arrancar, igual que Google y Stripe: mientras no esté, el
+  // webhook de WhatsApp responde 503 en vez de procesar eventos sin verificar
+  // — ver routes/webhook.js. Nunca se activa "sin firma" por accidente.
+  meta: {
+    appSecret: optional('META_APP_SECRET'),
+    get configured() { return Boolean(config.meta.appSecret); },
+  },
+
   stripe: {
     secretKey: BILLING_PROVIDER === 'stripe'
       ? required('STRIPE_SECRET_KEY', { hint: 'sk_live_… o sk_test_…' })

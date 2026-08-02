@@ -75,3 +75,18 @@ test('sanitizeLimits nunca deja el máximo por debajo del mínimo', () => {
   const limites = sanitizeLimits({ minGapSeconds: 40, maxGapSeconds: 10 });
   assert.ok(limites.maxGapSeconds >= limites.minGapSeconds);
 });
+
+test('sanitizeLimits cae al valor por defecto ante un límite diario negativo', () => {
+  // `Number(-1) || 500` nunca activaba el `||` porque -1 es "truthy" en JS:
+  // el resultado acababa en 1 (el suelo de Math.max), no en el 500 que se
+  // buscaba como valor por defecto ante una entrada inválida.
+  assert.equal(sanitizeLimits({ dailyLimit: -1 }).dailyLimit, 500);
+  assert.equal(sanitizeLimits({ dailyLimit: 0 }).dailyLimit, 500);
+  assert.equal(sanitizeLimits({ dailyLimit: NaN }).dailyLimit, 500);
+  assert.equal(sanitizeLimits({ perMinuteLimit: -5 }).perMinuteLimit, 20);
+});
+
+test('sanitizeLimits respeta un límite diario positivo aunque sea bajo', () => {
+  assert.equal(sanitizeLimits({ dailyLimit: 1 }).dailyLimit, 1);
+  assert.equal(sanitizeLimits({ dailyLimit: 100 }).dailyLimit, 100);
+});

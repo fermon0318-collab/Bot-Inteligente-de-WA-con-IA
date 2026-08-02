@@ -355,15 +355,25 @@ export async function handleStatus({ phoneNumberId, status }) {
  * los flujos en curso y apaga la IA. Lo usa el botón del panel.
  */
 export async function stopAutomation({ accountId, contactId }) {
+  // Las tres consultas filtran por account_id, no solo por contact_id: sin
+  // esto, una cuenta que conociera (o adivinara) el UUID de un contacto ajeno
+  // podía cancelar en silencio mensajes en cola y flujos en curso de OTRO
+  // negocio. `contacts` ya se protegía así; `outbox` y `flow_runs` no.
+  const contact = await one(
+    'SELECT id FROM contacts WHERE id = $1 AND account_id = $2',
+    [contactId, accountId]
+  );
+  if (!contact) return;
+
   await query(
     `UPDATE outbox SET status = 'canceled', last_error = 'automatización detenida'
-      WHERE contact_id = $1 AND status = 'pending'`,
-    [contactId]
+      WHERE contact_id = $1 AND account_id = $2 AND status = 'pending'`,
+    [contactId, accountId]
   );
   await query(
     `UPDATE flow_runs SET status = 'canceled', updated_at = now()
-      WHERE contact_id = $1 AND status IN ('running', 'waiting')`,
-    [contactId]
+      WHERE contact_id = $1 AND account_id = $2 AND status IN ('running', 'waiting')`,
+    [contactId, accountId]
   );
   await query(
     'UPDATE contacts SET automation_off = true, ai_enabled = false WHERE id = $1 AND account_id = $2',

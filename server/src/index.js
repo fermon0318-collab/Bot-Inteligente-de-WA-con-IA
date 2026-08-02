@@ -67,12 +67,13 @@ app.use(helmet({
 }));
 app.use(compression());
 
-/* --- Webhook de cobros: cuerpo en crudo ----------------------------------
-   Debe ir ANTES del parser de JSON. La firma de Stripe se calcula sobre los
-   bytes exactos del cuerpo; si express lo parsea primero, la verificación
-   falla siempre y de forma desconcertante.
+/* --- Webhooks: cuerpo en crudo ---------------------------------------------
+   Deben ir ANTES del parser de JSON. La firma (de Stripe, o de Meta más abajo)
+   se calcula sobre los bytes exactos del cuerpo; si express lo parsea
+   primero, la verificación falla siempre y de forma desconcertante.
    ------------------------------------------------------------------------ */
 app.use('/api/billing/webhook', express.raw({ type: 'application/json', limit: '1mb' }));
+app.use('/webhook/whatsapp', express.raw({ type: 'application/json', limit: '1mb' }));
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));

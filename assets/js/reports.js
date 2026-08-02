@@ -64,7 +64,7 @@
 
       tbody.appendChild(el('tr', {}, [
         el('td', {}, el('div', { class: 'flex items-center gap-2' }, [
-          el('span', { class: 'avatar !w-8 !h-8 !text-[0.7rem]', text: App.initials(c.name || c.phone) }),
+          el('span', { class: 'avatar !w-8 !h-8 !text-2xs', text: App.initials(c.name || c.phone) }),
           el('span', { class: 'font-semibold text-ink', text: c.name || c.phone }),
         ])),
         el('td', { class: 'font-mono text-xs', text: c.phone }),

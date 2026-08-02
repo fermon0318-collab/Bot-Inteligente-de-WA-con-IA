@@ -156,6 +156,23 @@ async function renewLeases() {
    ========================================================================== */
 
 /**
+ * Cierra el socket de una sesión existente (si lo tiene) y cancela cualquier
+ * reconexión que tuviera programada. No toca el mapa `sessions`: quien llama
+ * decide qué hacer con la entrada (reemplazarla o borrarla).
+ */
+function detenerSesionExistente(session) {
+  if (!session) return;
+  // Cancela la reconexión con espera creciente si había una programada. Sin
+  // esto, un connect()/disconnect() manual no evita que el setTimeout de una
+  // reconexión anterior dispare más tarde y reviva la sesión igual.
+  if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
+  session.closing = true;
+  if (session.socket) {
+    try { session.socket.end(undefined); } catch { /* ya podría estar muerto */ }
+  }
+}
+
+/**
  * Abre (o reabre) la sesión de una cuenta.
  *
  * `forceQr: true` descarta las credenciales guardadas y fuerza un código nuevo
@@ -163,67 +180,100 @@ async function renewLeases() {
  */
 export async function connect(accountId, { forceQr = false } = {}) {
   const existing = sessions.get(accountId);
-  if (existing && !forceQr) return { status: existing.status, alreadyOpen: true };
-  if (existing) await disconnect(accountId, { logout: false, keepAuth: false });
 
-  const baileys = await loadBaileys();
-
-  if (!(await claimLease(accountId))) {
-    return { status: 'connecting', message: 'La sesión está abierta en otro proceso.' };
+  // Ya hay un socket vivo: si no se pide forzar un QR nuevo, no hay nada que
+  // hacer — devuelve el estado tal cual.
+  if (existing?.socket && !forceQr) {
+    return { status: existing.status, alreadyOpen: true };
+  }
+  // Ya hay OTRO intento en curso para esta cuenta (un marcador recién puesto
+  // por una llamada concurrente) o una reconexión con espera ya programada:
+  // no se arranca un segundo intento encima, se deja que el primero termine.
+  // Esto vale incluso con forceQr — forzar sobre algo que ya está en vuelo
+  // es exactamente el escenario que produce dos sockets para el mismo número.
+  if (existing?.placeholder || existing?.reconnectTimer) {
+    return { status: existing.status, alreadyOpen: true, inProgress: true };
   }
 
-  if (forceQr) await clearAuthState(accountId);
+  // Reclama la cuenta EN EL ACTO, antes de cualquier `await`. Es lo único que
+  // impide que dos llamadas casi simultáneas — doble clic en "Generar QR", dos
+  // pestañas, o el trabajador periódico compitiendo con un clic manual —
+  // pasen las dos de largo mientras esta función todavía resuelve promesas
+  // (loadBaileys, claimLease, loadAuthState…) y acaben abriendo DOS sockets
+  // de WhatsApp para el mismo número. `claimLease` por sí solo no bastaba
+  // para esto: usa el worker_id del proceso, así que una segunda llamada del
+  // mismo proceso lo reclama igual de bien que la primera.
+  detenerSesionExistente(existing);
+  const marcador = { accountId, status: 'connecting', placeholder: true, closing: false };
+  sessions.set(accountId, marcador);
 
-  const { state, saveCreds } = await loadAuthState({ accountId, baileys });
-  const reconectando = await hasAuthState(accountId);
+  try {
+    const baileys = await loadBaileys();
 
-  await setStatus(accountId, reconectando ? 'connecting' : 'qr_pending', { last_error: null });
+    if (!(await claimLease(accountId))) {
+      // La cuenta la lleva otro proceso: se suelta el marcador, no es nuestra.
+      if (sessions.get(accountId) === marcador) sessions.delete(accountId);
+      return { status: 'connecting', message: 'La sesión está abierta en otro proceso.' };
+    }
 
-  const { version } = await baileys.fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
+    if (forceQr) await clearAuthState(accountId);
 
-  const socket = baileys.makeWASocket({
-    version,
-    auth: {
-      creds: state.creds,
-      // La caché de claves evita ir a Postgres por cada mensaje descifrado.
-      keys: baileys.makeCacheableSignalKeyStore(state.keys, silentLogger()),
-    },
-    logger: silentLogger(),
-    // Nada de marcarse en línea permanentemente: un número "siempre conectado"
-    // desde un cliente no oficial llama la atención sin aportar nada.
-    markOnlineOnConnect: false,
-    syncFullHistory: false,
-    browser: baileys.Browsers.appropriate('Desktop'),
-    generateHighQualityLinkPreview: false,
-  });
+    const { state, saveCreds } = await loadAuthState({ accountId, baileys });
+    const reconectando = await hasAuthState(accountId);
 
-  const session = {
-    accountId,
-    socket,
-    baileys,
-    status: reconectando ? 'connecting' : 'qr_pending',
-    reconnectAttempts: existing?.reconnectAttempts || 0,
-    closing: false,
-  };
-  sessions.set(accountId, session);
+    await setStatus(accountId, reconectando ? 'connecting' : 'qr_pending', { last_error: null });
 
-  socket.ev.on('creds.update', () => {
-    saveCreds().catch((err) => console.error(`[modo-app] guardar credenciales ${accountId}:`, err.message));
-  });
+    const { version } = await baileys.fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
 
-  socket.ev.on('connection.update', (update) => {
-    handleConnectionUpdate(session, update).catch((err) => {
-      console.error(`[modo-app] connection.update ${accountId}:`, err.message);
+    const socket = baileys.makeWASocket({
+      version,
+      auth: {
+        creds: state.creds,
+        // La caché de claves evita ir a Postgres por cada mensaje descifrado.
+        keys: baileys.makeCacheableSignalKeyStore(state.keys, silentLogger()),
+      },
+      logger: silentLogger(),
+      // Nada de marcarse en línea permanentemente: un número "siempre conectado"
+      // desde un cliente no oficial llama la atención sin aportar nada.
+      markOnlineOnConnect: false,
+      syncFullHistory: false,
+      browser: baileys.Browsers.appropriate('Desktop'),
+      generateHighQualityLinkPreview: false,
     });
-  });
 
-  socket.ev.on('messages.upsert', (payload) => {
-    handleIncoming(session, payload).catch((err) => {
-      console.error(`[modo-app] mensaje entrante ${accountId}:`, err.message);
+    const session = {
+      accountId,
+      socket,
+      baileys,
+      status: reconectando ? 'connecting' : 'qr_pending',
+      reconnectAttempts: existing?.reconnectAttempts || 0,
+      closing: false,
+    };
+    sessions.set(accountId, session);
+
+    socket.ev.on('creds.update', () => {
+      saveCreds().catch((err) => console.error(`[modo-app] guardar credenciales ${accountId}:`, err.message));
     });
-  });
 
-  return { status: session.status };
+    socket.ev.on('connection.update', (update) => {
+      handleConnectionUpdate(session, update).catch((err) => {
+        console.error(`[modo-app] connection.update ${accountId}:`, err.message);
+      });
+    });
+
+    socket.ev.on('messages.upsert', (payload) => {
+      handleIncoming(session, payload).catch((err) => {
+        console.error(`[modo-app] mensaje entrante ${accountId}:`, err.message);
+      });
+    });
+
+    return { status: session.status };
+  } catch (err) {
+    // No dejar el marcador huérfano si algo falló a mitad de camino: la
+    // próxima llamada a connect() debe poder intentarlo de nuevo.
+    if (sessions.get(accountId) === marcador) sessions.delete(accountId);
+    throw err;
+  }
 }
 
 async function handleConnectionUpdate(session, { connection, lastDisconnect, qr }) {
@@ -272,7 +322,11 @@ async function handleConnectionUpdate(session, { connection, lastDisconnect, qr 
     ?? lastDisconnect?.error?.output?.payload?.statusCode;
   const { DisconnectReason } = baileys;
 
-  sessions.delete(accountId);
+  // Solo se borra la entrada del mapa si sigue siendo ESTA sesión: si ya se
+  // reemplazó por un marcador o una sesión más nueva —una reconexión manual
+  // disparada mientras esta terminaba de cerrarse—, borrar por clave a secas
+  // tiraría por la borda la entrada nueva sin querer.
+  if (sessions.get(accountId) === session) sessions.delete(accountId);
   if (session.closing) return; // lo cerramos nosotros a propósito
 
   // WhatsApp invalidó la sesión: las credenciales ya no sirven de nada y
@@ -334,14 +388,34 @@ async function handleConnectionUpdate(session, { connection, lastDisconnect, qr 
     last_error: lastDisconnect?.error?.message || 'conexión interrumpida',
   });
 
-  setTimeout(() => {
+  const timer = setTimeout(() => {
     connect(accountId)
       .then(() => {
         const s = sessions.get(accountId);
         if (s) s.reconnectAttempts = attempts;
       })
       .catch((err) => console.error(`[modo-app] reconexión ${accountId}:`, err.message));
-  }, waitMs).unref();
+  }, waitMs);
+  timer.unref();
+
+  // Se deja un marcador con el timer, en vez de borrar la entrada sin más:
+  // es lo que permite que disconnect() o un connect() manual encuentren esta
+  // reconexión programada y la cancelen. Sin esto, un "Desvincular" o un
+  // cambio de canal justo en esta ventana no evitaba que el timeout disparara
+  // igual más tarde y abriera un socket nuevo pidiendo un QR — reviviendo
+  // Modo App justo después de que el usuario dijo que ya no lo quería.
+  //
+  // Solo se planta si el mapa sigue vacío para esta cuenta: el `await
+  // setStatus` de arriba deja una ventana en la que un connect() manual pudo
+  // colarse y ya estar abriendo una sesión de verdad, y no hay que pisarla.
+  if (!sessions.has(accountId)) {
+    sessions.set(accountId, {
+      accountId, status: 'connecting', reconnectAttempts: attempts,
+      reconnectTimer: timer, closing: false,
+    });
+  } else {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -356,14 +430,19 @@ export async function disconnect(accountId, { logout = false, keepAuth = true } 
   const session = sessions.get(accountId);
 
   if (session) {
+    // Cancela cualquier reconexión programada: sin esto, desvincular (o
+    // cambiar de canal) mientras una reconexión con espera está pendiente no
+    // impedía que el timeout disparara igual más tarde y revivicara la
+    // sesión con un QR nuevo, justo después de que se pidió lo contrario.
+    if (session.reconnectTimer) clearTimeout(session.reconnectTimer);
     session.closing = true;
     try {
-      if (logout) await session.socket.logout();
-      else session.socket.end(undefined);
+      if (logout) await session.socket?.logout();
+      else session.socket?.end(undefined);
     } catch {
       // Un socket ya muerto al cerrarlo no es un problema
     }
-    sessions.delete(accountId);
+    if (sessions.get(accountId) === session) sessions.delete(accountId);
   }
 
   if (logout || !keepAuth) await clearAuthState(accountId);

@@ -223,7 +223,7 @@
       }, 'Abriendo sesión…');
     });
 
-    qs('#app-relink-btn').addEventListener('click', async () => {
+    qs('#app-relink-btn').addEventListener('click', async (ev) => {
       const ok = await App.confirmModal(
         'Vincular otro teléfono',
         'Se descartará la vinculación actual y tendrás que escanear un código QR nuevo. '
@@ -231,15 +231,21 @@
         { confirmText: 'Generar código nuevo', icon: 'fa-rotate' }
       );
       if (!ok) return;
-      try {
-        await App.session.api('/settings/app-mode/connect', { method: 'POST', body: { forceQr: true } });
-        await cargar();
-      } catch (err) {
-        App.toast(err.message, 'err');
-      }
+      // Deshabilita el botón mientras la petición está en curso: sin esto, un
+      // doble clic dispara dos POST /connect casi simultáneos, que es
+      // exactamente lo que puede acabar abriendo dos sockets de WhatsApp para
+      // el mismo número.
+      await App.withBusy(ev.currentTarget, async () => {
+        try {
+          await App.session.api('/settings/app-mode/connect', { method: 'POST', body: { forceQr: true } });
+          await cargar();
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
+      }, 'Generando…');
     });
 
-    qs('#app-disconnect-btn').addEventListener('click', async () => {
+    qs('#app-disconnect-btn').addEventListener('click', async (ev) => {
       const ok = await App.confirmModal(
         'Desvincular WhatsApp',
         'Elorai dejará de responder por ti y el bot quedará detenido. En tu teléfono no se borra '
@@ -247,14 +253,16 @@
         { confirmText: 'Desvincular', danger: true, icon: 'fa-link-slash' }
       );
       if (!ok) return;
-      try {
-        await App.session.api('/settings/app-mode/disconnect', { method: 'POST' });
-        App.setBotState(false);
-        await cargar();
-        App.toast('Teléfono desvinculado', 'warn');
-      } catch (err) {
-        App.toast(err.message, 'err');
-      }
+      await App.withBusy(ev.currentTarget, async () => {
+        try {
+          await App.session.api('/settings/app-mode/disconnect', { method: 'POST' });
+          App.setBotState(false);
+          await cargar();
+          App.toast('Teléfono desvinculado', 'warn');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
+      }, 'Desvinculando…');
     });
 
     /* --- Cambio de canal -------------------------------------------------- */
@@ -268,14 +276,16 @@
           { confirmText: 'Cambiar canal', icon: 'fa-shuffle' }
         );
         if (!ok) return;
-        try {
-          await App.session.api('/settings/channel', { method: 'PUT', body: { channel } });
-          App.setBotState(false);
-          await cargar();
-          App.toast(channel === 'app' ? 'Canal: Modo App' : 'Canal: Cloud API', 'ok');
-        } catch (err) {
-          App.toast(err.message, 'err');
-        }
+        await App.withBusy(boton, async () => {
+          try {
+            await App.session.api('/settings/channel', { method: 'PUT', body: { channel } });
+            App.setBotState(false);
+            await cargar();
+            App.toast(channel === 'app' ? 'Canal: Modo App' : 'Canal: Cloud API', 'ok');
+          } catch (err) {
+            App.toast(err.message, 'err');
+          }
+        }, 'Cambiando…');
       });
     });
 
@@ -303,7 +313,7 @@
       }, 'Guardando…');
     });
 
-    qs('#app-resume-btn').addEventListener('click', async () => {
+    qs('#app-resume-btn').addEventListener('click', async (ev) => {
       const ok = await App.confirmModal(
         'Reanudar envíos',
         'Pausamos los envíos porque detectamos un patrón que puede hacer que WhatsApp restrinja tu '
@@ -311,13 +321,15 @@
         { confirmText: 'Reanudar de todos modos', danger: true, icon: 'fa-play' }
       );
       if (!ok) return;
-      try {
-        await App.session.api('/settings/app-mode/resume', { method: 'POST' });
-        await cargar();
-        App.toast('Envíos reanudados', 'warn');
-      } catch (err) {
-        App.toast(err.message, 'err');
-      }
+      await App.withBusy(ev.currentTarget, async () => {
+        try {
+          await App.session.api('/settings/app-mode/resume', { method: 'POST' });
+          await cargar();
+          App.toast('Envíos reanudados', 'warn');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
+      }, 'Reanudando…');
     });
   }
 

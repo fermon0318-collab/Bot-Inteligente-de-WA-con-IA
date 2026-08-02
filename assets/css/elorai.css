@@ -216,6 +216,19 @@ body {
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
 }
 .textarea { resize: vertical; min-height: 7rem; }
+
+/* --- Composer del chat: crece con el texto, hasta 6 líneas ----------------
+   assets/js/chat.js mide la altura real (line-height + padding + borde) y
+   ajusta `style.height` en cada tecleo; aquí solo se fija lo que no cambia:
+   una sola línea al empezar, sin tirador de redimensionar (el auto-grow lo
+   sustituye) y sin scroll mientras cabe — en cuanto JS decide que ya no cabe
+   en 6 líneas, cambia `overflow-y` a `auto` él mismo. */
+.chat-composer {
+  resize: none;
+  overflow-y: hidden;
+  line-height: 1.35;
+  max-height: none; /* el tope real lo impone JS en px, calculado en tiempo real */
+}
 .select { appearance: none; padding-right: 2.25rem;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%237c3aed'%3E%3Cpath fill-rule='evenodd' d='M5.2 7.4a1 1 0 011.4 0L10 10.8l3.4-3.4a1 1 0 111.4 1.4l-4.1 4.1a1 1 0 01-1.4 0L5.2 8.8a1 1 0 010-1.4z' clip-rule='evenodd'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 0.7rem center; background-size: 1.15rem; }
@@ -504,6 +517,17 @@ table.data tbody tr:last-child td { border-bottom: none; }
   display: block; width: 100%; max-width: 16rem; aspect-ratio: 1 / 1;
   height: auto; margin: 0 auto; object-fit: contain;
 }
+
+/* --- Texto diminuto (metadatos, marcas de tiempo) --------------------------
+   Mismo motivo que el QR de arriba: `text-[0.68rem]`/`text-[0.7rem]` son
+   clases de Tailwind con valor arbitrario que nunca llegaron a compilarse en
+   tailwind.css (no hay JIT en producción), así que el texto que las usaba
+   —el subtítulo del logo, el correo en el menú de usuario, "Estado del bot",
+   la hora de cada conversación en Chat en Vivo, el tamaño del avatar en
+   Reportes y el pie de las plantillas— se veía al tamaño heredado en vez del
+   pequeño que tocaba. Una sola clase explícita para las dos variantes: medio
+   punto de diferencia entre 0.68 y 0.7rem no se percibe. */
+.text-2xs { font-size: 0.7rem; }
 /* En pantallas estrechas la burbuja mide ~80% del ancho: 20rem se saldría. */
 @media (max-width: 640px) {
   .bubble-media img, .bubble-media video { max-width: 13rem; }

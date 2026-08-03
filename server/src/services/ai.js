@@ -42,10 +42,16 @@ const PROVIDERS = {
     extract: (data) => data?.choices?.[0]?.message?.content || '',
   },
   // Groq expone el mismo formato de OpenAI (chat completions), solo cambia
-  // la URL y quién hostea los modelos — aquí corre Llama 4 con inferencia
-  // mucho más rápida que un proveedor tradicional.
+  // la URL y quién hostea los modelos, con inferencia mucho más rápida que
+  // un proveedor tradicional. Groq va rotando qué modelos ofrece (deprecó
+  // Llama 4 Scout el 17/jun/2026 y Llama 4 Maverick el 27/jul/2026, ambos
+  // reemplazados por GPT-OSS 120B) — por eso el matcher es genérico por
+  // prefijo en vez de listar IDs concretos, así no hay que tocar código cada
+  // vez que cambian el catálogo.
   groq: {
-    matches: (model) => model.startsWith('groq/') || model.startsWith('llama-') || model.startsWith('meta-llama/'),
+    matches: (model) => model.startsWith('groq/') || model.startsWith('llama-')
+      || model.startsWith('meta-llama/') || model.startsWith('openai/gpt-oss')
+      || model.startsWith('qwen/'),
     url: 'https://api.groq.com/openai/v1/chat/completions',
     headers: (key) => ({ Authorization: `Bearer ${key}`, 'content-type': 'application/json' }),
     body: ({ model, system, messages }) => ({

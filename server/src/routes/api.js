@@ -224,7 +224,9 @@ function publicSettings(row) {
       dailyLimit: row.ai_daily_limit,
     },
     ads: {
-      accountId: row.ads_account_id,
+      // Se guarda con "act_" porque así lo exige la Graph API, pero el panel
+      // solo le pide al usuario el número: se quita al mostrarlo de vuelta.
+      accountId: (row.ads_account_id || '').replace(/^act_/, ''),
       tokenMask: mask(decrypt(row.ads_token_enc)),
       hasToken: Boolean(row.ads_token_enc),
       pixelId: row.capi_pixel_id,
@@ -667,13 +669,22 @@ router.put('/settings/ads', requireSubscription, async (req, res, next) => {
       return res.status(400).json({ error: 'validation', message: 'El Pixel ID debe tener al menos 10 dígitos.' });
     }
 
+    // El panel solo pide el número de cuenta publicitaria (más fácil de
+    // encontrar en Meta Ads Manager); la Graph API exige el prefijo "act_" en
+    // la URL, así que se agrega aquí para que el resto del código (adsync.js)
+    // pueda seguir usando el valor guardado tal cual.
+    const rawAdsAccountId = String(adsAccountId).trim();
+    const normalizedAdsAccountId = rawAdsAccountId && !rawAdsAccountId.startsWith('act_')
+      ? `act_${rawAdsAccountId}`
+      : rawAdsAccountId;
+
     await query(
       `UPDATE bot_settings
           SET ads_account_id = $2,
               ads_token_enc = COALESCE($3, ads_token_enc),
               capi_pixel_id = $4, capi_currency = $5, capi_enabled = $6, updated_at = now()
         WHERE account_id = $1`,
-      [account(req), String(adsAccountId), token ? encrypt(token) : null,
+      [account(req), normalizedAdsAccountId, token ? encrypt(token) : null,
        String(pixelId), String(currency), Boolean(capiEnabled)]
     );
 

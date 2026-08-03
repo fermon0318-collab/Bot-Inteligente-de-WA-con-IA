@@ -219,7 +219,7 @@
 
     qs('#ads-save').addEventListener('click', (ev) => {
       const ok = App.validate([
-        { input: '#ads-account', test: (v) => /^act_\d{6,}$/.test(v), message: 'Formato esperado: act_1234567890' },
+        { input: '#ads-account', test: (v) => /^(act_)?\d{6,}$/.test(v), message: 'Escribe el número de la cuenta publicitaria (solo dígitos).' },
       ]);
       if (!ok) { App.toast('Revisa las credenciales de Meta Ads', 'err'); return; }
       App.withBusy(ev.currentTarget, async () => {

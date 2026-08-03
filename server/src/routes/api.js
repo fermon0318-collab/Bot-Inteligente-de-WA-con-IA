@@ -207,6 +207,8 @@ function publicSettings(row) {
       displayPhone: row.wa_display_phone,
       tokenMask: mask(decrypt(row.wa_token_enc)),
       hasToken: Boolean(row.wa_token_enc),
+      appSecretMask: mask(decrypt(row.wa_app_secret_enc)),
+      hasAppSecret: Boolean(row.wa_app_secret_enc),
       verifyToken: row.wa_verify_token,
       webhookUrl: `${config.publicUrl}/webhook/whatsapp`,
       connected: row.wa_connected,
@@ -265,7 +267,7 @@ router.get('/settings', async (req, res, next) => {
  */
 router.put('/settings/cloud-api', requireSubscription, async (req, res, next) => {
   try {
-    const { phoneNumberId = '', businessId = '', displayPhone = '', token } = req.body || {};
+    const { phoneNumberId = '', businessId = '', displayPhone = '', token, appSecret } = req.body || {};
 
     if (!phoneNumberId.trim() || !businessId.trim()) {
       return res.status(400).json({ error: 'validation', message: 'Phone Number ID y Business Account ID son obligatorios.' });
@@ -277,10 +279,11 @@ router.put('/settings/cloud-api', requireSubscription, async (req, res, next) =>
               wa_business_id = $3,
               wa_display_phone = $4,
               wa_token_enc = COALESCE($5, wa_token_enc),
+              wa_app_secret_enc = COALESCE($6, wa_app_secret_enc),
               updated_at = now()
         WHERE account_id = $1`,
       [account(req), phoneNumberId.trim(), businessId.trim(), displayPhone.trim(),
-       token ? encrypt(token) : null]
+       token ? encrypt(token) : null, appSecret ? encrypt(appSecret) : null]
     );
 
     await log(account(req), 'Credenciales de Cloud API guardadas', 'ok');

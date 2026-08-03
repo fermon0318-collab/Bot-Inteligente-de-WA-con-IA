@@ -47,6 +47,10 @@
     token.value = '';
     token.placeholder = c.hasToken ? c.tokenMask : 'EAAG…';
 
+    const appSecret = qs('#api-app-secret');
+    appSecret.value = '';
+    appSecret.placeholder = c.hasAppSecret ? c.appSecretMask : 'Configuración → Básica de tu app en Meta for Developers';
+
     setApiStatus(c.connected);
     App.setConnection(c.connected);
     App.setBotState(c.botRunning);
@@ -104,17 +108,20 @@
       App.withBusy(qs('#api-form button[type="submit"]'), async () => {
         try {
           const token = qs('#api-token').value.trim();
+          const appSecret = qs('#api-app-secret').value.trim();
           await App.session.api('/settings/cloud-api', {
             method: 'PUT',
             body: {
               phoneNumberId: qs('#api-phone-id').value.trim(),
               businessId: qs('#api-waba').value.trim(),
               displayPhone: qs('#api-phone').value.trim(),
-              // Solo se manda si escribió uno nuevo: si no, el backend conserva el actual
+              // Solo se mandan si escribió uno nuevo: si no, el backend conserva el actual
               ...(token ? { token } : {}),
+              ...(appSecret ? { appSecret } : {}),
             },
           });
           qs('#api-token').value = '';
+          qs('#api-app-secret').value = '';
           await cargarCloudApi();
           await cargarActividad();
           App.toast('Configuración guardada', 'ok');

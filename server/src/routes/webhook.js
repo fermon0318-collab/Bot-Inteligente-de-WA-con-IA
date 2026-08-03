@@ -12,8 +12,8 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
-import { config } from '../config.js';
-import { many, one, query } from '../db/pool.js';
+import { one, query } from '../db/pool.js';
+import { decrypt } from '../lib/crypto.js';
 import { rateLimit } from '../middleware/auth.js';
 import * as engine from '../services/engine.js';
 
@@ -25,42 +25,32 @@ const router = Router();
 // costo de una avalancha de peticiones sin firma válida o mal configuradas.
 const webhookRateLimit = rateLimit({ windowMs: 60_000, max: 600 });
 
-/** Para no llenar los logs: un aviso de "sin App Secret" cada 5 min como mucho. */
-let lastMisconfigWarning = 0;
-
 /**
  * Verifica que el POST vino de verdad de Meta.
  *
  * Meta firma cada entrega con HMAC-SHA256 del cuerpo EXACTO (los bytes tal
- * cual, antes de parsear JSON) usando el App Secret de la app registrada en
- * Meta for Developers, y lo manda en `X-Hub-Signature-256: sha256=<hex>`.
+ * cual, antes de parsear JSON) usando el App Secret de LA APP DEL CLIENTE
+ * (cada cuenta conecta su propio número pegando su propio Access Token desde
+ * su propia app de Meta for Developers — no hay una app central de Elorai),
+ * y lo manda en `X-Hub-Signature-256: sha256=<hex>`.
  *
- * Sin esto, el único dato que identifica la cuenta destino es
- * `phone_number_id`, que NO es secreto — aparece en el propio panel del
- * cliente — así que cualquiera podría inyectar mensajes falsos con solo
- * conocerlo. Devuelve `true`/`false`; nunca lanza.
+ * Por eso la verificación es por cuenta: primero hay que saber a qué cuenta
+ * pertenece el evento (vía `phone_number_id`, que no es secreto y viaja sin
+ * verificar) para poder buscar SU App Secret y validar con ese. Sin esto,
+ * cualquiera podría inyectar mensajes falsos con solo conocer el
+ * phone_number_id. Devuelve `true`/`false`; nunca lanza.
  */
-function firmaValida(rawBody, header) {
+function firmaValida(rawBody, header, appSecret) {
   if (!header || !header.startsWith('sha256=')) return false;
 
-  const esperada = createHmac('sha256', config.meta.appSecret).update(rawBody).digest('hex');
+  const esperada = createHmac('sha256', appSecret).update(rawBody).digest('hex');
   const recibida = header.slice('sha256='.length);
 
   const a = Buffer.from(esperada, 'hex');
   const b = Buffer.from(recibida, 'hex');
   // Firmas de longitud distinta: timingSafeEqual exige buffers del mismo
   // tamaño o lanza, así que se descarta antes en vez de dejar que reviente.
-  const iguales = a.length === b.length && timingSafeEqual(a, b);
-  if (!iguales) {
-    // DIAGNÓSTICO TEMPORAL — un hash HMAC no revela el secreto; solo compara
-    // prefijos para saber si diverge del todo o casi calza.
-    console.warn('[webhook] comparación de firma', {
-      esperadaPrefijo: esperada.slice(0, 8),
-      recibidaPrefijo: recibida.slice(0, 8),
-      largoRawBody: rawBody.length,
-    });
-  }
-  return iguales;
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /* ==========================================================================
@@ -102,33 +92,11 @@ router.get('/whatsapp', async (req, res) => {
    ========================================================================== */
 
 router.post('/whatsapp', webhookRateLimit, async (req, res) => {
-  // Sin App Secret configurado, la única alternativa a procesar sin verificar
-  // es no procesar en absoluto: un webhook "abierto" es peor que uno que
-  // tarda en activarse. Meta reintenta las entregas fallidas durante horas,
-  // así que nada se pierde mientras se configura META_APP_SECRET.
-  if (!config.meta.configured) {
-    if (Date.now() - lastMisconfigWarning > 5 * 60_000) {
-      console.error('[webhook] META_APP_SECRET no está configurado: se rechazan todos los eventos entrantes de WhatsApp.');
-      lastMisconfigWarning = Date.now();
-    }
-    return res.status(503).end();
-  }
-
   // req.body es el Buffer crudo (ver index.js: express.raw para esta ruta,
   // montado antes que express.json). Hace falta así, sin parsear, para que la
   // firma se calcule sobre los mismos bytes exactos que firmó Meta.
   const raw = req.body;
-  if (!Buffer.isBuffer(raw) || !firmaValida(raw, req.headers['x-hub-signature-256'])) {
-    // DIAGNÓSTICO TEMPORAL — quitar una vez resuelto el 401 persistente.
-    console.warn('[webhook] firma inválida o ausente — evento rechazado', {
-      esBuffer: Buffer.isBuffer(raw),
-      contentType: req.headers['content-type'],
-      tieneHeaderFirma: Boolean(req.headers['x-hub-signature-256']),
-      largoHeaderFirma: req.headers['x-hub-signature-256']?.length,
-      appSecretLargo: config.meta.appSecret.length,
-    });
-    return res.status(401).end();
-  }
+  if (!Buffer.isBuffer(raw)) return res.status(400).end();
 
   let body;
   try {
@@ -137,10 +105,30 @@ router.post('/whatsapp', webhookRateLimit, async (req, res) => {
     return res.status(400).end();
   }
 
+  if (body?.object !== 'whatsapp_business_account') return res.status(400).end();
+
+  // El phone_number_id identifica la cuenta pero no es secreto, así que solo
+  // sirve para saber DE QUIÉN es este evento — no para confiar en él todavía.
+  // Con eso se busca el App Secret propio de esa cuenta y recién ahí se
+  // verifica la firma.
+  const phoneNumberId = body.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+  const cuenta = phoneNumberId
+    ? await one('SELECT account_id, wa_app_secret_enc FROM bot_settings WHERE wa_phone_number_id = $1', [String(phoneNumberId)])
+    : null;
+  const appSecret = cuenta && decrypt(cuenta.wa_app_secret_enc);
+
+  if (!appSecret) {
+    console.warn(`[webhook] cuenta sin App Secret configurado (phone_number_id ${phoneNumberId || 'desconocido'}) — evento rechazado`);
+    return res.status(503).end();
+  }
+
+  if (!firmaValida(raw, req.headers['x-hub-signature-256'], appSecret)) {
+    console.warn('[webhook] firma inválida — evento rechazado');
+    return res.status(401).end();
+  }
+
   // Confirmar de inmediato: cualquier trabajo aquí retrasa la respuesta a Meta
   res.sendStatus(200);
-
-  if (body?.object !== 'whatsapp_business_account') return;
 
   try {
     await ingest(body);

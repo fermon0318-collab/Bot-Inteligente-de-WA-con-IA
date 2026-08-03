@@ -64,8 +64,12 @@ window.Elorai = window.Elorai || {};
     { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — el más rápido' },
     { id: 'gpt-4o', label: 'GPT-4o' },
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    // Groq viene recortando su catálogo de modelos de terceros muy rápido —
+    // Llama 4 Scout, Llama 4 Maverick y Kimi K2 0905 se descontinuaron los
+    // tres en 2026, y en las tres notas de descontinuación Groq señala el
+    // mismo reemplazo. Por eso solo queda esta opción de Groq en vez de
+    // ofrecer varias que puedan morir por debajo sin avisar.
     { id: 'groq/openai/gpt-oss-120b', label: 'GPT-OSS 120B (Groq) — el más económico' },
-    { id: 'groq/moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2 (Groq) — el más potente, gratis con límite diario' },
   ];
 
   /* --- Plantillas de flujo avanzado ---------------------------------------- */

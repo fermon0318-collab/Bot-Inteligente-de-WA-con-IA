@@ -50,7 +50,17 @@ function firmaValida(rawBody, header) {
   const b = Buffer.from(recibida, 'hex');
   // Firmas de longitud distinta: timingSafeEqual exige buffers del mismo
   // tamaño o lanza, así que se descarta antes en vez de dejar que reviente.
-  return a.length === b.length && timingSafeEqual(a, b);
+  const iguales = a.length === b.length && timingSafeEqual(a, b);
+  if (!iguales) {
+    // DIAGNÓSTICO TEMPORAL — un hash HMAC no revela el secreto; solo compara
+    // prefijos para saber si diverge del todo o casi calza.
+    console.warn('[webhook] comparación de firma', {
+      esperadaPrefijo: esperada.slice(0, 8),
+      recibidaPrefijo: recibida.slice(0, 8),
+      largoRawBody: rawBody.length,
+    });
+  }
+  return iguales;
 }
 
 /* ==========================================================================

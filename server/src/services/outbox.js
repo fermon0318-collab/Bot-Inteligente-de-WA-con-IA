@@ -118,6 +118,31 @@ async function dispatch(item) {
 
   const to = contact.phone.replace(/\D/g, '');
 
+  // Si esto no es el primer intento, puede que un intento anterior sí haya
+  // llegado a Meta pero la respuesta se perdiera por la red (ver whatsapp.js:
+  // ese caso se marca "ambiguo" y de todas formas se reintenta, para no
+  // perder mensajes de verdad). Antes de reenviarlo a ciegas, se revisa si ya
+  // quedó registrado como enviado — evita duplicar el mensaje en WhatsApp.
+  if (item.attempts > 1) {
+    const yaEnviado = await one(
+      `SELECT wa_message_id FROM messages
+        WHERE account_id = $1 AND contact_id = $2
+          AND direction = $3 AND body = $4
+          AND created_at > now() - interval '10 minutes'
+        ORDER BY created_at DESC LIMIT 1`,
+      [item.account_id, item.contact_id, item.origin === 'manual' ? 'out' : 'bot',
+       item.kind === 'media' ? `📎 ${item.media_name}` : item.body]
+    );
+    if (yaEnviado) {
+      await query(
+        `UPDATE outbox SET status = 'sent', sent_at = now(), wa_message_id = $2, last_error = NULL
+          WHERE id = $1`,
+        [item.id, yaEnviado.wa_message_id]
+      );
+      return 'sent';
+    }
+  }
+
   /* --- Ritmo -------------------------------------------------------------
      En Cloud API siempre deja pasar. En Modo App es la puerta que impide las
      ráfagas, respeta la pausa entre mensajes y descarta duplicados.

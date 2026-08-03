@@ -21,13 +21,17 @@ const PERMANENT = new Set([
 ]);
 
 export class WhatsAppError extends Error {
-  constructor(message, { code, permanent, status } = {}) {
+  constructor(message, { code, permanent, status, ambiguous = false } = {}) {
     super(message);
     this.name = 'WhatsAppError';
     this.code = code;
     this.status = status;
     // Un error permanente no se reintenta: solo gastaría cuota y ensuciaría el log
     this.permanent = permanent ?? PERMANENT.has(code);
+    // Fallo de red/timeout: no hay respuesta de Meta, así que no se sabe si
+    // el mensaje sí salió. A diferencia de un error HTTP explícito (ahí Meta
+    // confirma que no se envió), este caso necesita el resguardo anti-duplicado.
+    this.ambiguous = ambiguous;
   }
 }
 
@@ -58,11 +62,15 @@ async function call(path, { token, method = 'POST', body } = {}) {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(30_000),
     });
   } catch (err) {
-    // Fallo de red o tiempo agotado: merece reintento
-    throw new WhatsAppError(`No se pudo contactar con Meta: ${err.message}`, { permanent: false });
+    // Fallo de red o tiempo agotado: no sabemos si Meta sí recibió la
+    // petición antes de que se cortara la respuesta — ambiguo, no "no se
+    // envió". outbox.dispatch() lo reintenta igual (perder un mensaje de
+    // verdad es peor que uno ocasional duplicado), pero primero revisa si ya
+    // quedó registrado como enviado para no duplicarlo a ciegas.
+    throw new WhatsAppError(`No se pudo contactar con Meta: ${err.message}`, { permanent: false, ambiguous: true });
   }
 
   const data = await response.json().catch(() => ({}));

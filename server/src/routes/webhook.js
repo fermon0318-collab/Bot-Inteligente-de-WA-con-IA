@@ -109,7 +109,14 @@ router.post('/whatsapp', webhookRateLimit, async (req, res) => {
   // firma se calcule sobre los mismos bytes exactos que firmó Meta.
   const raw = req.body;
   if (!Buffer.isBuffer(raw) || !firmaValida(raw, req.headers['x-hub-signature-256'])) {
-    console.warn('[webhook] firma inválida o ausente — evento rechazado');
+    // DIAGNÓSTICO TEMPORAL — quitar una vez resuelto el 401 persistente.
+    console.warn('[webhook] firma inválida o ausente — evento rechazado', {
+      esBuffer: Buffer.isBuffer(raw),
+      contentType: req.headers['content-type'],
+      tieneHeaderFirma: Boolean(req.headers['x-hub-signature-256']),
+      largoHeaderFirma: req.headers['x-hub-signature-256']?.length,
+      appSecretLargo: config.meta.appSecret.length,
+    });
     return res.status(401).end();
   }
 

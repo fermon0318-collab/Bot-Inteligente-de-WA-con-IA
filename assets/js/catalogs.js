@@ -65,6 +65,7 @@ window.Elorai = window.Elorai || {};
     { id: 'gpt-4o', label: 'GPT-4o' },
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
     { id: 'groq/openai/gpt-oss-120b', label: 'GPT-OSS 120B (Groq) — el más económico' },
+    { id: 'groq/moonshotai/kimi-k2-instruct-0905', label: 'Kimi K2 (Groq) — el más potente, gratis con límite diario' },
   ];
 
   /* --- Plantillas de flujo avanzado ---------------------------------------- */

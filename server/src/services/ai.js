@@ -41,6 +41,20 @@ const PROVIDERS = {
     }),
     extract: (data) => data?.choices?.[0]?.message?.content || '',
   },
+  // Groq expone el mismo formato de OpenAI (chat completions), solo cambia
+  // la URL y quién hostea los modelos — aquí corre Llama 4 con inferencia
+  // mucho más rápida que un proveedor tradicional.
+  groq: {
+    matches: (model) => model.startsWith('groq/') || model.startsWith('llama-') || model.startsWith('meta-llama/'),
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    headers: (key) => ({ Authorization: `Bearer ${key}`, 'content-type': 'application/json' }),
+    body: ({ model, system, messages }) => ({
+      model: model.replace(/^groq\//, ''),
+      max_tokens: MAX_TOKENS,
+      messages: [{ role: 'system', content: system }, ...messages],
+    }),
+    extract: (data) => data?.choices?.[0]?.message?.content || '',
+  },
 };
 
 function providerFor(model) {

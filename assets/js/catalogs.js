@@ -64,6 +64,7 @@ window.Elorai = window.Elorai || {};
     { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — el más rápido' },
     { id: 'gpt-4o', label: 'GPT-4o' },
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { id: 'groq/meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 (Groq) — el más económico' },
   ];
 
   /* --- Plantillas de flujo avanzado ---------------------------------------- */

@@ -12,7 +12,7 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
-import { one, query } from '../db/pool.js';
+import { many, one, query } from '../db/pool.js';
 import { decrypt } from '../lib/crypto.js';
 import { rateLimit } from '../middleware/auth.js';
 import * as engine from '../services/engine.js';

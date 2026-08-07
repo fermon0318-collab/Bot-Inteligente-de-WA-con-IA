@@ -48,6 +48,13 @@ export const MAX_BYTES_BY_TYPE = {
   pdf: 100 * 1024 * 1024,    // límite real de Meta para documentos
 };
 
+/**
+ * Tamaño típico de un video de chat, bien por debajo del límite duro de
+ * Meta (16 MB): apuntar a esto (no al límite) es lo que hace que cargue
+ * rápido para quien lo recibe, en vez de solo evitar el rechazo de Meta.
+ */
+export const VIDEO_LIVIANO_BYTES = 6 * 1024 * 1024;
+
 /** El mayor de los límites por tipo: techo en bruto antes de saber cuál es. */
 export const MAX_BYTES = Math.max(...Object.values(MAX_BYTES_BY_TYPE));
 
@@ -108,18 +115,26 @@ export async function save({ accountId, buffer, mimeType, originalName }) {
   const limite = MAX_BYTES_BY_TYPE[type] || MAX_BYTES;
 
   let contenido = buffer;
-  if (type === 'video' && contenido.length > limite) {
-    // La app oficial de WhatsApp no tiene un límite más alto: comprime el
-    // video antes de enviarlo para que quepa bajo el mismo límite de Meta.
-    // Esto hace lo mismo, en vez de rechazar de una un archivo que un
-    // cliente cualquiera podría enviar sin pensarlo dos veces.
+  if (type === 'video' && contenido.length > VIDEO_LIVIANO_BYTES) {
+    // Un video que ya cabe bajo los 16 MB de Meta no se tocaba antes: si
+    // venía en HD/4K se mandaba tal cual, pesado, y a quien lo recibe le
+    // tardaba en cargar. Ahora se apunta siempre a un tamaño típico de video
+    // de chat (más liviano que el límite duro de Meta), no solo cuando lo
+    // supera.
+    const objetivo = Math.min(limite, VIDEO_LIVIANO_BYTES);
     try {
-      contenido = await compressVideo(contenido, limite);
+      contenido = await compressVideo(contenido, objetivo);
     } catch (err) {
-      throw Object.assign(
-        new Error(`El video supera los ${Math.round(limite / 1024 / 1024)} MB permitidos y no se pudo comprimir lo suficiente: ${err.message}`),
-        { status: 400, code: 'too_large' }
-      );
+      // Si el original YA cabía bajo el límite de Meta, no comprimirlo más
+      // no es motivo para rechazar el envío — se manda como vino, más
+      // pesado de lo ideal pero funcional. Solo es fatal si ni siquiera cabe
+      // en el límite duro.
+      if (buffer.length > limite) {
+        throw Object.assign(
+          new Error(`El video supera los ${Math.round(limite / 1024 / 1024)} MB permitidos y no se pudo comprimir lo suficiente: ${err.message}`),
+          { status: 400, code: 'too_large' }
+        );
+      }
     }
   }
 

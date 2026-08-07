@@ -70,8 +70,23 @@ async function duracionSegundos(path) {
  * Lanza si no logra comprimirlo lo suficiente (video demasiado largo para el
  * límite incluso a calidad mínima aceptable).
  */
+/**
+ * Techo de entrada: por arriba de esto, decodificar el original (paso que no
+ * se puede evitar ni acotando la resolución de salida) suele matar el
+ * proceso por falta de memoria en un contenedor de ~1 GB. Mejor avisar de
+ * una vez que intentarlo y fallar con SIGKILL cada vez.
+ */
+const MAX_ENTRADA_BYTES = 60 * 1024 * 1024;
+
 export async function compressVideo(buffer, maxBytes) {
   if (buffer.length <= maxBytes) return buffer;
+
+  if (buffer.length > MAX_ENTRADA_BYTES) {
+    throw Object.assign(
+      new Error(`El video pesa ${Math.round(buffer.length / 1024 / 1024)} MB — demasiado para comprimirlo con la memoria disponible del servidor (máximo ${Math.round(MAX_ENTRADA_BYTES / 1024 / 1024)} MB de entrada). Prueba a reducirlo antes de subirlo.`),
+      { code: 'entrada_muy_pesada' }
+    );
+  }
 
   const dir = await mkdtemp(join(tmpdir(), 'elorai-video-'));
   const entrada = join(dir, `${randomBytes(8).toString('hex')}.mp4`);
@@ -98,9 +113,12 @@ export async function compressVideo(buffer, maxBytes) {
 
     await ejecutar(ffmpegPath, [
       '-y', '-i', entrada,
-      // 720p como techo: más resolución no ayuda en WhatsApp y solo gasta bitrate.
-      '-vf', "scale='min(1280,iw)':'-2'",
-      '-c:v', 'libx264', '-preset', 'veryfast',
+      // 854px como techo: el contenedor tiene poca RAM y bajar la resolución
+      // de salida es lo único que de verdad reduce el trabajo del filtro de
+      // escalado y el encoder — decodificar el original no se puede evitar,
+      // pero esto acota el resto.
+      '-vf', "scale='min(854,iw)':'-2'",
+      '-c:v', 'libx264', '-preset', 'ultrafast',
       '-b:v', `${bitrateVideoKbps}k`, '-maxrate', `${bitrateVideoKbps}k`,
       '-bufsize', `${bitrateVideoKbps * 2}k`,
       '-c:a', 'aac', '-b:a', `${AUDIO_KBPS}k`,
@@ -115,8 +133,8 @@ export async function compressVideo(buffer, maxBytes) {
       const ajuste = Math.floor(bitrateVideoKbps * (maxBytes / comprimido.length) * 0.95);
       await ejecutar(ffmpegPath, [
         '-y', '-i', entrada,
-        '-vf', "scale='min(1280,iw)':'-2'",
-        '-c:v', 'libx264', '-preset', 'veryfast',
+        '-vf', "scale='min(854,iw)':'-2'",
+        '-c:v', 'libx264', '-preset', 'ultrafast',
         '-b:v', `${ajuste}k`, '-maxrate', `${ajuste}k`, '-bufsize', `${ajuste * 2}k`,
         '-c:a', 'aac', '-b:a', `${AUDIO_KBPS}k`,
         '-movflags', '+faststart',

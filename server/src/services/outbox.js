@@ -52,9 +52,17 @@ export async function cancelPending(contactId, reason = 'cancelado por el operad
  * resuelto.
  */
 async function claimDue(limit) {
+  // El estado pasa a 'sending' al tomarlo — antes se quedaba en 'pending'
+  // todo el tiempo que durara dispatch(), que para un video con compresión
+  // puede ser 15-30 s. En ese lapso, cualquier otra pasada del worker (el
+  // siguiente tick, o un contenedor nuevo solapado con el viejo durante un
+  // despliegue) volvía a encontrar la misma fila con status='pending' y la
+  // tomaba de nuevo: el mismo mensaje se enviaba dos veces de verdad. El
+  // WHERE de la subconsulta ya no la vuelve a encontrar mientras siga
+  // 'sending'.
   return many(
     `UPDATE outbox o
-        SET attempts = o.attempts + 1
+        SET attempts = o.attempts + 1, status = 'sending'
        FROM (
          SELECT id FROM outbox
           WHERE status = 'pending' AND scheduled_at <= now()
@@ -71,7 +79,7 @@ async function claimDue(limit) {
 /** Deja el mensaje pendiente para más tarde sin gastar un intento. */
 async function postpone(item, reason, seconds) {
   await query(
-    `UPDATE outbox SET attempts = attempts - 1,
+    `UPDATE outbox SET attempts = attempts - 1, status = 'pending',
             scheduled_at = now() + make_interval(secs => $3), last_error = $2
       WHERE id = $1`,
     [item.id, reason, Math.max(1, Math.round(seconds))]
@@ -256,7 +264,8 @@ async function fail(item, message, permanent) {
     );
   } else {
     await query(
-      `UPDATE outbox SET scheduled_at = now() + make_interval(secs => $3), last_error = $2
+      `UPDATE outbox SET status = 'pending',
+              scheduled_at = now() + make_interval(secs => $3), last_error = $2
         WHERE id = $1`,
       [item.id, message, backoffSeconds(item.attempts)]
     );

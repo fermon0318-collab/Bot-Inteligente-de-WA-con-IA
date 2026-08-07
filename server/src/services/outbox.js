@@ -116,7 +116,16 @@ async function dispatch(item) {
     return 'failed';
   }
 
-  const to = contact.phone.replace(/\D/g, '');
+  const to = (contact.phone || '').replace(/\D/g, '');
+  if (!to) {
+    // Sin esto, un contacto con el teléfono vacío o sin dígitos reintentaba
+    // para siempre contra la Graph API, que rechaza cada intento con "The
+    // parameter to is required" — ni se enviaba nunca ni se avisaba de forma
+    // clara cuál era el contacto roto. Es un dato inválido, no algo que un
+    // reintento vaya a arreglar solo.
+    await fail(item, `El contacto "${contact.name || 'sin nombre'}" no tiene un teléfono válido guardado`, true);
+    return 'failed';
+  }
 
   // Si esto no es el primer intento, puede que un intento anterior sí haya
   // llegado a Meta pero la respuesta se perdiera por la red (ver whatsapp.js:

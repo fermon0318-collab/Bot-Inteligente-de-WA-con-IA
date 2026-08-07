@@ -65,7 +65,15 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false,
 }));
-app.use(compression());
+app.use(compression({
+  // Comprimir una respuesta 206 (Partial Content) rompe el streaming: el
+  // middleware re-codifica el cuerpo y desincroniza el Content-Length/rango
+  // que ya se calculó a mano en /api/messages/:id/media. Como el audio/video
+  // que sirve esa ruta ya viene comprimido en su propio formato, no hay nada
+  // que ganar comprimiéndolo de nuevo — mejor excluirla del todo. Es la causa
+  // más probable de "el audio se corta a los pocos segundos".
+  filter: (req, res) => !req.path.endsWith('/media') && compression.filter(req, res),
+}));
 
 /* --- Webhooks: cuerpo en crudo ---------------------------------------------
    Deben ir ANTES del parser de JSON. La firma (de Stripe, o de Meta más abajo)

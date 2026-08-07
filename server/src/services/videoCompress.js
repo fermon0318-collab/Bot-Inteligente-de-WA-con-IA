@@ -25,13 +25,24 @@ const MIN_VIDEO_KBPS = 150;
 
 function ejecutar(cmd, args) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args);
+    // -threads 2: sin esto ffmpeg intenta usar todos los núcleos que vea, lo
+    // que en un contenedor con poca memoria (Railway free/starter) dispara
+    // picos que el kernel corta con SIGKILL antes de que ffmpeg termine —
+    // se ve como "código null" en vez de un error explicado.
+    const proc = spawn(cmd, [...args, '-threads', '2']);
     let stderr = '';
     proc.stderr.on('data', (d) => { stderr += d; });
     proc.on('error', reject);
-    proc.on('close', (code) => {
+    proc.on('close', (code, signal) => {
       if (code === 0) resolve(stderr);
-      else reject(new Error(`${cmd} salió con código ${code}: ${stderr.slice(-500)}`));
+      else if (signal) {
+        reject(new Error(
+          `${cmd} fue terminado por la señal ${signal}`
+          + `${signal === 'SIGKILL' ? ' (sin memoria suficiente para procesar este video)' : ''}`
+        ));
+      } else {
+        reject(new Error(`${cmd} salió con código ${code}: ${stderr.slice(-500)}`));
+      }
     });
   });
 }

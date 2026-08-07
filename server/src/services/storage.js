@@ -15,6 +15,7 @@ import { createReadStream } from 'node:fs';
 import { mkdir, readFile, stat as fsStat, unlink, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { ROOT } from '../config.js';
+import { compressVideo } from './videoCompress.js';
 
 const UPLOADS = process.env.UPLOADS_DIR || join(ROOT, 'uploads');
 
@@ -105,7 +106,24 @@ export async function save({ accountId, buffer, mimeType, originalName }) {
     );
   }
   const limite = MAX_BYTES_BY_TYPE[type] || MAX_BYTES;
-  if (buffer.length > limite) {
+
+  let contenido = buffer;
+  if (type === 'video' && contenido.length > limite) {
+    // La app oficial de WhatsApp no tiene un límite más alto: comprime el
+    // video antes de enviarlo para que quepa bajo el mismo límite de Meta.
+    // Esto hace lo mismo, en vez de rechazar de una un archivo que un
+    // cliente cualquiera podría enviar sin pensarlo dos veces.
+    try {
+      contenido = await compressVideo(contenido, limite);
+    } catch (err) {
+      throw Object.assign(
+        new Error(`El video supera los ${Math.round(limite / 1024 / 1024)} MB permitidos y no se pudo comprimir lo suficiente: ${err.message}`),
+        { status: 400, code: 'too_large' }
+      );
+    }
+  }
+
+  if (contenido.length > limite) {
     throw Object.assign(
       new Error(`El archivo supera los ${Math.round(limite / 1024 / 1024)} MB permitidos para este tipo`),
       { status: 400, code: 'too_large' }
@@ -117,13 +135,13 @@ export async function save({ accountId, buffer, mimeType, originalName }) {
 
   const safeName = `${randomBytes(16).toString('hex')}${extname(originalName).slice(0, 10)}`;
   const path = join(dir, safeName);
-  await writeFile(path, buffer);
+  await writeFile(path, contenido);
 
   return {
     storagePath: join(accountId, safeName),
-    checksum: createHash('sha256').update(buffer).digest('hex'),
+    checksum: createHash('sha256').update(contenido).digest('hex'),
     type,
-    size: buffer.length,
+    size: contenido.length,
   };
 }
 

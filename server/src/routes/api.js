@@ -850,19 +850,32 @@ router.post('/triggers', requireSubscription, async (req, res, next) => {
   }
 });
 
+/**
+ * Marca/desmarca un disparador como predeterminado.
+ * Sobre uno que YA es predeterminado, esto lo QUITA en vez de no hacer nada:
+ * antes solo se podía reemplazar el predeterminado por otro, nunca dejar de
+ * tener uno — un disparador marcado por error (ej. "informacion" atrapando
+ * cualquier mensaje, audios incluidos) no se podía deshacer sin asignarle el
+ * rol a un disparador distinto.
+ */
 router.post('/triggers/:id/default', requireSubscription, async (req, res, next) => {
   try {
     await transaction(async (client) => {
       const current = await client.query(
-        'SELECT kind FROM triggers WHERE id = $1 AND account_id = $2',
+        'SELECT kind, is_default FROM triggers WHERE id = $1 AND account_id = $2',
         [req.params.id, account(req)]
       );
       if (!current.rows[0]) return;
-      await client.query(
-        'UPDATE triggers SET is_default = false WHERE account_id = $1 AND kind = $2',
-        [account(req), current.rows[0].kind]
-      );
-      await client.query('UPDATE triggers SET is_default = true WHERE id = $1', [req.params.id]);
+
+      if (current.rows[0].is_default) {
+        await client.query('UPDATE triggers SET is_default = false WHERE id = $1', [req.params.id]);
+      } else {
+        await client.query(
+          'UPDATE triggers SET is_default = false WHERE account_id = $1 AND kind = $2',
+          [account(req), current.rows[0].kind]
+        );
+        await client.query('UPDATE triggers SET is_default = true WHERE id = $1', [req.params.id]);
+      }
     });
     res.json({ ok: true });
   } catch (err) {

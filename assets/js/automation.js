@@ -620,12 +620,15 @@
         type: 'button',
         class: `btn btn-sm ${t.isDefault ? 'btn-gradient' : 'btn-ghost'}`,
         html: `<i class="fa-solid fa-star"></i> ${t.isDefault ? 'Predeterminado' : 'Hacer predeterminado'}`,
+        title: 'Un disparador predeterminado responde a CUALQUIER mensaje que no coincida con otro disparador más específico (texto, audio, lo que sea) — no solo a su palabra clave.',
       });
       defBtn.addEventListener('click', async () => {
         try {
           await App.session.api(`/triggers/${t.id}/default`, { method: 'POST' });
           await cargarDisparadores();
-          App.toast(`"${t.keyword}" es ahora el disparador predeterminado`, 'ok');
+          App.toast(t.isDefault
+            ? `"${t.keyword}" ya no es el disparador predeterminado`
+            : `"${t.keyword}" es ahora el disparador predeterminado`, 'ok');
         } catch (err) {
           App.toast(err.message, 'err');
         }

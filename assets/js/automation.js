@@ -233,7 +233,17 @@
     sel.innerHTML = '';
     App.SIMPLE_FLOWS.forEach((f) => sel.appendChild(el('option', { value: f.id, text: f.name })));
     if (App.SIMPLE_FLOWS.some((f) => f.id === keep)) sel.value = keep;
-    if (sfCurrent && !App.SIMPLE_FLOWS.some((f) => f.id === sfCurrent.id)) loadSimpleFlow(App.SIMPLE_FLOWS[0]?.id);
+    // initSimpleFlows() llama a esto antes de que cargarFlujos() (asíncrono)
+    // traiga los datos reales, así que la primera vez sfCurrent todavía es
+    // null — sin el "!sfCurrent" de abajo, esa condición nunca se cumplía
+    // (null es falsy) y loadSimpleFlow() nunca llegaba a llamarse. El
+    // <select> del navegador igual mostraba la primera opción marcada, pero
+    // el editor de pasos se quedaba vacío para siempre: un <select> no
+    // dispara 'change' cuando el usuario "elige" la opción que ya venía
+    // preseleccionada, así que ese primer flujo nunca llegaba a cargar.
+    if (App.SIMPLE_FLOWS.length && (!sfCurrent || !App.SIMPLE_FLOWS.some((f) => f.id === sfCurrent.id))) {
+      loadSimpleFlow(sel.value || App.SIMPLE_FLOWS[0].id);
+    }
 
     App.fillFlowSelect(qs('#trig-flow'));
     App.fillFlowSelect(qs('#pay-postflow'), true);

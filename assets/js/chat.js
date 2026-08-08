@@ -657,7 +657,15 @@
                          hasMedia: m.hasMedia, mediaType: m.mediaType, mediaName: m.mediaName }));
           current.messages = mergeServerMessages(server);
           renderHeader();
-          renderMessages();
+          // renderMessages() hace msgBox.innerHTML = '' y reconstruye todo de
+          // cero: si hay un <audio>/<video> sonando, lo mata a mitad de la
+          // reproducción cada vez que toca este refresco (cada 10 s mientras
+          // el chat está abierto) — por eso una nota de voz "se cortaba" casi
+          // siempre cerca del mismo punto. Los mensajes ya quedaron
+          // actualizados en `current.messages`; el próximo refresco sin nada
+          // sonando los pinta.
+          const reproduciendo = msgBox.querySelector('audio:not([paused]), video:not([paused])');
+          if (!reproduciendo) renderMessages();
           pintarAvisoVentana();
         }
       }

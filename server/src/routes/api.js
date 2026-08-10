@@ -1079,6 +1079,26 @@ router.post('/contacts/:id/paid', requireSubscription, async (req, res, next) =>
 });
 
 /**
+ * Baja de un contacto. Pensado para los que quedaron con un teléfono
+ * inservible (p. ej. un JID corrupto del canal Modo App que no se pudo
+ * limpiar solo): sin esto no había forma de sacarlos de la lista desde el
+ * panel. Borra en cascada su historial de mensajes, citas, etc.
+ */
+router.delete('/contacts/:id', requireSubscription, async (req, res, next) => {
+  try {
+    const row = await one(
+      'DELETE FROM contacts WHERE id = $1 AND account_id = $2 RETURNING phone, name',
+      [req.params.id, account(req)]
+    );
+    if (!row) return res.status(404).json({ error: 'not_found' });
+    await log(account(req), `Contacto eliminado: ${row.name || row.phone || 'sin nombre'}`, 'ok');
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * Alta manual de un contacto desde Chat en Vivo, para cuando el negocio
  * necesita escribirle primero a alguien (el botón "+"). Si el teléfono ya
  * existe se devuelve ese mismo contacto en vez de fallar — abrir el chat de

@@ -598,6 +598,30 @@
         }
       });
 
+      // Solo existe en Chat en Vivo, no en el histórico.
+      if (id('delete-contact')) {
+        id('delete-contact').addEventListener('click', async () => {
+          if (!current) return;
+          const ok = await App.confirmModal('Eliminar contacto',
+            `Se eliminará a <strong>${App.escapeHtml(current.name)}</strong> y todo su historial de mensajes. Si vuelve a escribir, se creará como un contacto nuevo.`,
+            { confirmText: 'Eliminar', danger: true, icon: 'fa-trash' });
+          if (!ok) return;
+          try {
+            await App.session.api(`/contacts/${current.id}`, { method: 'DELETE' });
+            data = data.filter((c) => c.id !== current.id);
+            current = null;
+            id('active').classList.add('hidden');
+            id('active').classList.remove('flex');
+            id('welcome').classList.remove('hidden');
+            goBackToList();
+            renderList();
+            App.toast('Contacto eliminado', 'ok');
+          } catch (err) {
+            App.toast(err.message, 'err');
+          }
+        });
+      }
+
       if (cfg.withAi) {
         id('ai-toggle').addEventListener('change', async (ev) => {
           if (!current) return;

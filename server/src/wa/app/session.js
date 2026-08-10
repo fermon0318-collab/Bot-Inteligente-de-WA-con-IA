@@ -578,7 +578,15 @@ export function normalizeIncoming(raw) {
   // Un JID puede traer sufijo de dispositivo (5215512345678:12@s.whatsapp.net).
   // Hay que quitarlo: el motor construye el teléfono borrando lo que no son
   // dígitos, y sin esto el ":12" se pegaría al número.
-  const from = String(key.remoteJid || '').split('@')[0].split(':')[0];
+  // Si remoteJid viene vacío o corrupto, String(undefined) da el texto
+  // literal "undefined" — no está vacío, así que el chequeo `if (!message?.from)`
+  // que filtra mensajes irrelevantes lo dejaba pasar igual. Luego el motor
+  // arma el teléfono borrando lo que no son dígitos y "undefined" no tiene
+  // ninguno, así que quedaba en "+" a secas: un contacto con teléfono
+  // imposible de usar (así apareció "Dios Es Bueno." sin teléfono válido).
+  // Exigir que el JID tenga al menos un dígito descarta ese caso de raíz.
+  const jidRaw = String(key.remoteJid || '').split('@')[0].split(':')[0];
+  const from = /\d/.test(jidRaw) ? jidRaw : '';
   const id = key.id || '';
 
   const texto = message.conversation

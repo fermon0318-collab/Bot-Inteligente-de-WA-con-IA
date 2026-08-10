@@ -1,5 +1,5 @@
 /* ============================================================================
-   ApolAI — núcleo: helpers, navegación, modales, toasts, loader
+   Elorai — núcleo: helpers, navegación, modales, toasts, loader
    ========================================================================== */
 
 (function (App) {
@@ -63,9 +63,61 @@
     return `${(bytes / 1048576).toFixed(1)} MB`;
   }
 
+  /* --- Preferencias locales -------------------------------------------------
+     Ajustes de UI (moneda del panel, zona horaria de remarketing…) que se
+     recuerdan por navegador. No son datos de la cuenta — eso vive en el
+     servidor y viaja con la sesión; esto es solo "cómo lo dejaste la última
+     vez en este dispositivo". Con localStorage bloqueado (modo privado, por
+     ejemplo) simplemente no se recuerda nada, sin romper el panel. */
+  function getPref(key, fallback) {
+    try {
+      const v = localStorage.getItem(`elorai:${key}`);
+      return v === null ? fallback : v;
+    } catch { return fallback; }
+  }
+  function setPref(key, value) {
+    try { localStorage.setItem(`elorai:${key}`, value); } catch { /* modo privado u otro bloqueo */ }
+  }
+  App.getPref = getPref;
+  App.setPref = setPref;
+
+  /* --- Botón flotante de WhatsApp -------------------------------------------
+     Un único widget fijo en la esquina (no una tarjeta metida en el
+     contenido): burbuja con un mensaje contextual + botón redondo que
+     siempre lleva a WhatsApp. Cloud API y Métricas de Anuncios lo activan
+     con su propio mensaje al entrar a esa vista (ver `App.onAnyView` más
+     abajo); cada mensaje se recuerda cerrado por separado y por dispositivo. */
+  function initWhatsappFab() {
+    const fab = qs('#whatsapp-fab');
+    if (!fab) return { set() {}, hide() {} };
+    const bubble = qs('#whatsapp-fab-bubble');
+    const text = qs('#whatsapp-fab-text');
+    const link = qs('#whatsapp-fab-link');
+    let currentKey = null;
+
+    qs('#whatsapp-fab-close').addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      bubble.classList.add('hidden');
+      if (currentKey) setPref(currentKey, 'dismissed');
+    });
+
+    return {
+      set({ key, message, href }) {
+        currentKey = key;
+        text.textContent = message;
+        link.href = href;
+        fab.classList.remove('hidden');
+        bubble.classList.toggle('hidden', getPref(key, '') === 'dismissed');
+      },
+      hide() { fab.classList.add('hidden'); },
+    };
+  }
+  App.initWhatsappFab = initWhatsappFab;
+
   /* --- Estado global ------------------------------------------------------ */
   App.state = {
-    currency: 'USD',
+    currency: getPref('currency', 'USD'),
     view: 'dashboard',
     botRunning: true,
     connected: true,
@@ -75,6 +127,10 @@
   const TOAST_ICONS = { ok: 'fa-circle-check', err: 'fa-circle-exclamation', warn: 'fa-triangle-exclamation', info: 'fa-circle-info' };
 
   function toast(message, kind = 'ok', ms = 3400) {
+    // El panel de demostración no tiene sesión real: cada lectura sin datos
+    // propios lanza un 401 esperado que `session.js` marca con este prefijo
+    // para no llenar la demo de avisos de error que no significan nada.
+    if (typeof message === 'string' && message.startsWith('__demo_silent__')) return;
     const stack = qs('#toast-stack');
     const node = el('div', { class: `toast ${kind}`, role: 'status' }, [
       el('i', { class: `fa-solid ${TOAST_ICONS[kind] || TOAST_ICONS.info}` }),
@@ -239,7 +295,8 @@
   const VIEWS = {
     'dashboard': ['Dashboard', 'Resumen de actividad de tu bot'],
     'cloud-api': ['Cloud API', 'Conexión con WhatsApp Business'],
-    'countries': ['Bloqueo por País', 'Filtra mensajes por prefijo telefónico'],
+    'app-mode': ['Modo App', 'Tu WhatsApp de siempre, vinculado por código QR'],
+    'agenda': ['Agenda', 'Reservas, bloqueos y profesionales'],
     'live-chat': ['Chat en Vivo', 'Conversaciones en curso'],
     'chat-history': ['Histórico Chats', 'Conversaciones anteriores'],
     'reports': ['Reportes', 'Contactos, estados y exportaciones'],
@@ -249,14 +306,22 @@
     'flows-advanced': ['Flujos Avanzados', 'Conversaciones con ramificaciones'],
     'remarketing': ['Remarketing', 'Recuperación de contactos'],
     'triggers': ['Disparadores', 'Palabras clave que activan flujos'],
+    'templates': ['Plantillas', 'Mensajes aprobados por Meta para escribir fuera de 24 h'],
+    'billing': ['Facturación', 'Plan, pagos, facturas y cancelación'],
     'payments': ['Pagos y Acceso', 'Verificación y entrega automática'],
     'ai-config': ['Configurar IA', 'Modelo, prompt y comportamiento'],
-    'tutorials': ['Tutoriales', 'Videos guía de ApolAI'],
+    'tutorials': ['Tutoriales', 'Videos guía de Elorai'],
     'faq': ['Preguntas Frecuentes', 'Dudas resueltas'],
   };
 
   const viewHooks = {};
   App.onView = (name, fn) => { (viewHooks[name] = viewHooks[name] || []).push(fn); };
+
+  // Hooks que corren en CADA cambio de vista (reciben el nombre de la vista),
+  // a diferencia de onView que solo corre para una vista puntual. Lo usa el
+  // botón flotante de WhatsApp para saber cuándo mostrarse/ocultarse.
+  const anyViewHooks = [];
+  App.onAnyView = (fn) => anyViewHooks.push(fn);
 
   function navigate(view) {
     if (!VIEWS[view]) view = 'dashboard';
@@ -272,12 +337,13 @@
     const [title, subtitle] = VIEWS[view];
     qs('#view-title').textContent = title;
     qs('#view-subtitle').textContent = subtitle;
-    document.title = `ApolAI · ${title}`;
+    document.title = `Elorai · ${title}`;
 
     if (location.hash.slice(1) !== view) history.replaceState(null, '', `#${view}`);
     closeSidebar();
     window.scrollTo({ top: 0, behavior: 'auto' });
     (viewHooks[view] || []).forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+    anyViewHooks.forEach((fn) => { try { fn(view); } catch (e) { console.error(e); } });
   }
 
   /* --- Sidebar ------------------------------------------------------------ */
@@ -303,7 +369,9 @@
     qs('#sidebar-close').addEventListener('click', closeSidebar);
     qs('#sidebar-overlay').addEventListener('click', closeSidebar);
 
-    // Menú de usuario
+    // Menú de usuario. Cualquier acción que abra un modal o cambie de vista
+    // debe cerrarlo antes (closeUserMenu): si se queda abierto, el panel
+    // flotante tapa el contenido y se come los clics de lo que hay debajo.
     const menuBtn = qs('#user-menu-btn');
     const menu = qs('#user-menu');
     menuBtn.addEventListener('click', (ev) => {
@@ -320,12 +388,14 @@
 
     qs('#logout-btn').addEventListener('click', async () => {
       menu.classList.add('hidden');
-      const ok = await confirmModal('Cerrar sesión', '¿Seguro que quieres salir de tu panel de ApolAI?', {
+      const ok = await confirmModal('Cerrar sesión', '¿Seguro que quieres salir de tu panel de Elorai?', {
         confirmText: 'Cerrar sesión', danger: true, icon: 'fa-right-from-bracket',
       });
       if (ok) {
         showLoader('Cerrando sesión…');
-        setTimeout(() => { hideLoader(); toast('Sesión cerrada. Vuelve pronto 👋', 'info'); }, 900);
+        // Invalida la sesión en el servidor; si no hay backend, vuelve al inicio
+        if (App.session) App.session.logout();
+        else setTimeout(() => { location.href = 'index.html'; }, 900);
       }
     });
 
@@ -442,9 +512,45 @@
     finally { button.disabled = false; button.innerHTML = original; }
   }
 
+  /* --- Visor de imágenes del chat ------------------------------------------
+     Se cablea perezosamente: el visor solo existe en dashboard.html, así que
+     en la landing y el onboarding esto simplemente no hace nada. */
+  function openMediaViewer(src) {
+    const viewer = qs('#media-viewer');
+    if (!viewer) return;
+    qs('#media-viewer-img').src = src;
+    viewer.classList.add('open');
+  }
+
+  function closeMediaViewer() {
+    const viewer = qs('#media-viewer');
+    if (!viewer) return;
+    viewer.classList.remove('open');
+    // Se suelta la imagen para no dejarla en memoria mientras no se usa
+    qs('#media-viewer-img').src = '';
+  }
+
+  function initMediaViewer() {
+    const viewer = qs('#media-viewer');
+    if (!viewer) return;
+    qs('#media-viewer-close').addEventListener('click', closeMediaViewer);
+    // Clic en el fondo (no en la imagen) también cierra
+    viewer.addEventListener('click', (ev) => { if (ev.target === viewer) closeMediaViewer(); });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && viewer.classList.contains('open')) closeMediaViewer();
+    });
+  }
+
+  /** Cierra el menú flotante de usuario del encabezado. */
+  function closeUserMenu() {
+    qs('#user-menu').classList.add('hidden');
+    qs('#user-menu-btn').setAttribute('aria-expanded', 'false');
+  }
+
   /* --- Exportación -------------------------------------------------------- */
   Object.assign(App, {
-    qs, qsa, el, escapeHtml,
+    qs, qsa, el, escapeHtml, closeUserMenu,
+    openMediaViewer, closeMediaViewer, initMediaViewer,
     money, num, pct, timeAgo, clock, dateShort, initials, fileSize,
     toast, showLoader, hideLoader,
     modal, confirmModal, promptModal, closeModal,
@@ -456,4 +562,4 @@
     downloadCsv, renderPager, fakeRequest, withBusy,
   });
 
-})(window.ApolAI);
+})(window.Elorai);

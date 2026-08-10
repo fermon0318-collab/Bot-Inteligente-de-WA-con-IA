@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ApolAI — sistema de diseño
+   Elorai — sistema de diseño
    Marca: índigo #4F46E5 → violeta #7C3AED → púrpura #9333EA
    Superficies: glass claro sobre fondo lavanda
    ========================================================================== */
@@ -41,7 +41,9 @@
 
 html { scroll-behavior: smooth; }
 
+html { overflow-x: hidden; }
 body {
+  overflow-x: hidden; max-width: 100vw;
   font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--ink);
   background:
@@ -214,6 +216,19 @@ body {
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
 }
 .textarea { resize: vertical; min-height: 7rem; }
+
+/* --- Composer del chat: crece con el texto, hasta 6 líneas ----------------
+   assets/js/chat.js mide la altura real (line-height + padding + borde) y
+   ajusta `style.height` en cada tecleo; aquí solo se fija lo que no cambia:
+   una sola línea al empezar, sin tirador de redimensionar (el auto-grow lo
+   sustituye) y sin scroll mientras cabe — en cuanto JS decide que ya no cabe
+   en 6 líneas, cambia `overflow-y` a `auto` él mismo. */
+.chat-composer {
+  resize: none;
+  overflow-y: hidden;
+  line-height: 1.35;
+  max-height: none; /* el tope real lo impone JS en px, calculado en tiempo real */
+}
 .select { appearance: none; padding-right: 2.25rem;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%237c3aed'%3E%3Cpath fill-rule='evenodd' d='M5.2 7.4a1 1 0 011.4 0L10 10.8l3.4-3.4a1 1 0 111.4 1.4l-4.1 4.1a1 1 0 01-1.4 0L5.2 8.8a1 1 0 010-1.4z' clip-rule='evenodd'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 0.7rem center; background-size: 1.15rem; }
@@ -265,7 +280,6 @@ body {
 }
 .check-item:hover { background: #fff; border-color: var(--stroke); }
 .check-item input { width: 1.05rem; height: 1.05rem; accent-color: var(--brand-2); cursor: pointer; flex: none; }
-.check-item.is-blocked { border-color: rgba(239, 68, 68, 0.45); background: rgba(254, 242, 242, 0.75); }
 
 /* --------------------------------------------------------------------------
    Badges y chips
@@ -405,17 +419,144 @@ table.data tbody tr:last-child td { border-bottom: none; }
   background-image: linear-gradient(135deg, var(--brand-soft), var(--brand-3));
 }
 
-.msg-row { display: flex; margin-bottom: 0.7rem; }
+/* --------------------------------------------------------------------------
+   Conversación — estética de WhatsApp a propósito
+   El operador viene de usar WhatsApp Business todo el día: replicar el fondo
+   empapelado, el verde de los mensajes propios y el blanco de los recibidos
+   hace que el cambio de herramienta no se sienta como aprender otra cosa.
+   Los colores son los de WhatsApp (#e7ffdb / #efeae2), no los de la marca:
+   aquí la familiaridad vale más que la coherencia cromática del panel.
+   -------------------------------------------------------------------------- */
+
+.chat-canvas {
+  background-color: #efeae2;
+  /* Empapelado tenue tipo WhatsApp, en SVG embebido para no pedir un archivo */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23000' fill-opacity='0.035'%3E%3Cpath d='M12 18c1.5-3 4-4 6-2s1 5-1 6-4 0-5-2zM40 8c2-1 4 0 4 2s-2 3-4 2-2-3 0-4zM48 40c1.5-2 4-1.5 5 .5s-.5 4-2.5 4-3.5-2-2.5-4.5zM20 46c2-2 5-1 5 2s-3 4-5 2-2-3 0-4zM32 28c1.8-1.4 4 0 4 2.2s-2.2 3.2-4 2-1.6-3 0-4.2z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.msg-row { display: flex; margin-bottom: 0.35rem; }
 .msg-row.out { justify-content: flex-end; }
 .bubble {
-  max-width: min(78%, 34rem); padding: 0.6rem 0.85rem; border-radius: 1rem;
-  font-size: 0.875rem; line-height: 1.45; box-shadow: 0 4px 12px -6px rgba(30, 27, 75, 0.3);
+  position: relative;
+  max-width: min(80%, 30rem);
+  padding: 0.4rem 0.55rem 0.35rem;
+  border-radius: 0.5rem;
+  font-size: 0.885rem; line-height: 1.35;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
   word-break: break-word;
+  color: #111b21;
 }
-.bubble.in { background: #fff; border: 1px solid var(--stroke-soft); border-bottom-left-radius: 0.3rem; }
-.bubble.out { color: #fff; background-image: linear-gradient(120deg, var(--brand-1), var(--brand-2)); border-bottom-right-radius: 0.3rem; }
-.bubble.bot { color: #fff; background-image: linear-gradient(120deg, var(--brand-2), var(--brand-3)); border-bottom-right-radius: 0.3rem; }
-.bubble .meta { display: block; font-size: 0.68rem; opacity: 0.75; margin-top: 0.25rem; }
+/* Recibidos: blanco, esquina superior izquierda recortada */
+.bubble.in { background: #fff; border-top-left-radius: 0; }
+/* Enviados a mano y por el bot: el verde de WhatsApp.
+   El bot se distingue por su etiqueta "🤖 IA", no por otro color — así el
+   hilo se lee como una sola conversación del negocio, igual que en la app. */
+.bubble.out, .bubble.bot { background: #e7ffdb; border-top-right-radius: 0; }
+
+/* La hora va abajo a la derecha, dentro de la burbuja, como en WhatsApp */
+.bubble .meta {
+  display: block; text-align: right;
+  font-size: 0.6875rem; color: rgba(17, 27, 33, 0.45);
+  margin-top: 0.1rem; line-height: 1;
+}
+
+/* Colita de la burbuja, como el pico de los globos de WhatsApp */
+.bubble::after {
+  content: ''; position: absolute; top: 0; width: 0.5rem; height: 0.5rem;
+}
+.bubble.in::after {
+  left: -0.45rem;
+  background: #fff;
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+}
+.bubble.out::after, .bubble.bot::after {
+  right: -0.45rem;
+  background: #e7ffdb;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Separador de fecha: pastilla flotante translúcida, como en la app */
+.chat-day {
+  display: inline-block; padding: 0.25rem 0.7rem; border-radius: 0.5rem;
+  background: #fff; color: rgba(17, 27, 33, 0.6);
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+/* --- Adjuntos dentro de la burbuja --------------------------------------- */
+.bubble-media { margin: -0.15rem -0.2rem 0.25rem; border-radius: 0.4rem; overflow: hidden; }
+.bubble-media img, .bubble-media video {
+  /* El tope tiene que ser ABSOLUTO, no en porcentaje: la burbuja se
+     dimensiona por el ancho natural de su contenido, y un `max-width: 100%`
+     no acota ese cálculo (depende del ancho del padre, que aún se está
+     resolviendo). Con un porcentaje, una foto de 400 px estiraba la burbuja
+     a 400 px mientras la imagen se recortaba a 320 px, dejando una franja
+     vacía al lado. Tampoco se usa `width: 100%`, para que una foto pequeña o
+     un sticker no se estiren ni se vean pixelados. */
+  display: block; max-width: 20rem; max-height: 22rem;
+  width: auto; height: auto;
+  background: rgba(0, 0, 0, 0.04);
+}
+.bubble-media img { cursor: zoom-in; }
+
+/* --- Código QR de Modo App -------------------------------------------------
+   Regla explícita, NO clases de Tailwind con corchetes (`max-w-[16rem]`):
+   este proyecto sirve `assets/css/tailwind.css` ya compilado — no hay JIT en
+   producción — así que una clase que no existiera en el HTML cuando se
+   generó ese archivo con `npm run build:css` queda simplemente ausente,
+   aunque el código fuente la use. Es lo que le pasó a este QR: llevaba solo
+   `w-full` sin ningún tope, se estiraba al ancho del contenedor y un PNG de
+   320 px reescalado así se ve pixelado y roto en bloques, imposible de
+   escanear. Al no depender de una clase generada, este bug no puede repetirse
+   aunque alguien vuelva a olvidar recompilar Tailwind. */
+.qr-code-img {
+  /* Ancho fluido con tope absoluto y una relación de aspecto fija: en vez de
+     fijar alto y ancho por separado (que rompería el cuadrado en pantallas
+     estrechas), se deja que el ancho encoja con el contenedor y el alto lo
+     sigue siempre en proporción 1:1 — que es la forma real de un QR. */
+  display: block; width: 100%; max-width: 16rem; aspect-ratio: 1 / 1;
+  height: auto; margin: 0 auto; object-fit: contain;
+}
+
+/* --- Texto diminuto (metadatos, marcas de tiempo) --------------------------
+   Mismo motivo que el QR de arriba: `text-[0.68rem]`/`text-[0.7rem]` son
+   clases de Tailwind con valor arbitrario que nunca llegaron a compilarse en
+   tailwind.css (no hay JIT en producción), así que el texto que las usaba
+   —el subtítulo del logo, el correo en el menú de usuario, "Estado del bot",
+   la hora de cada conversación en Chat en Vivo, el tamaño del avatar en
+   Reportes y el pie de las plantillas— se veía al tamaño heredado en vez del
+   pequeño que tocaba. Una sola clase explícita para las dos variantes: medio
+   punto de diferencia entre 0.68 y 0.7rem no se percibe. */
+.text-2xs { font-size: 0.7rem; }
+/* En pantallas estrechas la burbuja mide ~80% del ancho: 20rem se saldría. */
+@media (max-width: 640px) {
+  .bubble-media img, .bubble-media video { max-width: 13rem; }
+}
+.bubble-media audio { display: block; width: 15rem; max-width: 100%; }
+.bubble-doc {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding: 0.5rem 0.6rem; border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.05); color: inherit; text-decoration: none;
+  margin: -0.15rem -0.2rem 0.25rem;
+}
+.bubble-doc:hover { background: rgba(0, 0, 0, 0.09); }
+.bubble-doc i { font-size: 1.35rem; color: #d3392f; flex: none; }
+.bubble-doc span { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Visor de imagen a pantalla completa */
+.media-viewer {
+  position: fixed; inset: 0; z-index: 90;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.9); padding: 1.5rem;
+}
+.media-viewer.open { display: flex; }
+.media-viewer img { max-width: 100%; max-height: 100%; border-radius: 0.5rem; }
+.media-viewer button {
+  position: absolute; top: 1rem; right: 1rem;
+  width: 2.5rem; height: 2.5rem; border-radius: 999px; border: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 1.1rem;
+}
+.media-viewer button:hover { background: rgba(255, 255, 255, 0.28); }
 
 .emoji-pop {
   position: absolute; bottom: 3.4rem; left: 0; z-index: 30;
@@ -474,8 +615,20 @@ table.data tbody tr:last-child td { border-bottom: none; }
   background-image: linear-gradient(120deg, var(--brand-1), var(--brand-2) 55%, var(--brand-3));
   display: flex; align-items: center; gap: 0.7rem;
 }
+/* Botón de cerrar del modal: el glifo es pequeño, pero el área táctil no. */
+.modal-head button[aria-label="Cerrar"] {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; flex: none; border-radius: 0.5rem;
+}
+.modal-head button[aria-label="Cerrar"]:hover { background: rgba(255,255,255,0.15); }
 .modal-body { padding: 1.25rem; overflow-y: auto; }
 .modal-foot { padding: 0.9rem 1.25rem; background: rgba(238, 242, 255, 0.6); display: flex; gap: 0.6rem; justify-content: flex-end; flex-wrap: wrap; }
+@media (max-width: 480px) {
+  /* Con 3 botones (Cancelar/Agregar otra/Guardar) el wrap normal deja filas
+     desparejas; en vez de eso se apilan a todo el ancho, acción principal arriba. */
+  .modal-foot { flex-direction: column-reverse; }
+  .modal-foot .btn { width: 100%; }
+}
 
 /* --------------------------------------------------------------------------
    Toasts
@@ -591,6 +744,20 @@ table.data tbody tr:last-child td { border-bottom: none; }
 .terminal::-webkit-scrollbar { width: 7px; }
 .terminal::-webkit-scrollbar-thumb { background: rgba(196, 181, 253, 0.35); border-radius: 999px; }
 
+/* Marcador de dato pendiente de completar. Se usa tanto en las páginas legales
+   como en las respuestas del FAQ, para que un plazo sin decidir se vea. */
+.ph {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.35rem;
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
 .copyable { display: flex; gap: 0.5rem; align-items: stretch; }
 .copyable .input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 
@@ -599,7 +766,7 @@ table.data tbody tr:last-child td { border-bottom: none; }
    .badge ganaría a la utilidad `hidden`. Se restablece solo para ellos, sin
    tocar patrones responsive del tipo `hidden sm:block` en elementos neutros. */
 :where(.btn, .badge, .icon-badge, .switch, .check-item, .nav-link, .conv-item,
-       .avatar, .msg-row, .copyable, .faq-q, .step-card, .toast).hidden {
+       .avatar, .msg-row, .copyable, .faq-q, .step-card, .toast, .wa-fab, .wa-fab-bubble).hidden {
   display: none !important;
 }
 @media (min-width: 1024px) {
@@ -608,6 +775,158 @@ table.data tbody tr:last-child td { border-bottom: none; }
 @media (max-width: 1023.98px) {
   :where(.btn, .badge, .icon-badge, .switch, .avatar).max-lg\:hidden { display: none !important; }
 }
+
+/* --------------------------------------------------------------------------
+   Botón flotante de WhatsApp
+   -------------------------------------------------------------------------- */
+
+.wa-fab {
+  position: fixed;
+  right: 1.25rem; bottom: 1.25rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.7rem;
+}
+
+.wa-fab-toggle {
+  width: 3.4rem; height: 3.4rem;
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; color: #fff;
+  background-image: linear-gradient(135deg, #34d399, #059669);
+  box-shadow: 0 14px 30px -10px rgba(5, 150, 105, 0.65);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  animation: wa-fab-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wa-fab-toggle:hover { transform: scale(1.07); box-shadow: 0 18px 36px -10px rgba(5, 150, 105, 0.75); }
+
+.wa-fab-bubble {
+  position: relative;
+  max-width: 16.5rem;
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid var(--stroke);
+  box-shadow: 0 22px 44px -18px rgba(30, 27, 75, 0.4);
+  padding: 0.9rem 1.1rem 1rem;
+  animation: wa-fab-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wa-fab-bubble::after {
+  content: "";
+  position: absolute;
+  right: 1.4rem; bottom: -0.45rem;
+  width: 0.9rem; height: 0.9rem;
+  background: #fff;
+  border-right: 1px solid var(--stroke);
+  border-bottom: 1px solid var(--stroke);
+  transform: rotate(45deg);
+}
+.wa-fab-bubble-close {
+  position: absolute; top: 0.5rem; right: 0.5rem;
+  width: 1.5rem; height: 1.5rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+.wa-fab-bubble-close:hover { background: rgba(238, 242, 255, 0.9); color: var(--ink); }
+.wa-fab-bubble-text {
+  font-size: 0.85rem; font-weight: 600; line-height: 1.4;
+  color: var(--ink); padding-right: 1.1rem;
+}
+
+@keyframes wa-fab-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Agenda
+   -------------------------------------------------------------------------- */
+
+.agenda-mode-btn {
+  padding: 0.4rem 0.9rem; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft);
+  background: #fff; border: none; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
+}
+.agenda-mode-btn + .agenda-mode-btn { border-left: 1px solid var(--stroke); }
+.agenda-mode-btn.active { color: #fff; background-image: linear-gradient(120deg, var(--brand-1), var(--brand-2)); }
+
+.agenda-grid-wrap { overflow-x: auto; overflow-y: auto; max-height: 70vh; border: 1px solid var(--stroke-soft); border-radius: 0.85rem; }
+.agenda-grid { display: grid; min-width: 46rem; position: relative; }
+
+.agenda-head-row { display: grid; position: sticky; top: 0; z-index: 3; background: #fff; border-bottom: 1px solid var(--stroke); }
+.agenda-head-cell { padding: 0.6rem 0.4rem; text-align: center; border-left: 1px solid var(--stroke-soft); }
+.agenda-head-cell:first-child { border-left: none; }
+.agenda-head-cell.is-today { background: rgba(124, 58, 237, 0.08); }
+.agenda-head-day { font-size: 0.72rem; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; }
+.agenda-head-date { font-size: 0.95rem; font-weight: 800; color: var(--ink); }
+
+.agenda-body-row { display: grid; }
+.agenda-hour-col { border-left: none; }
+.agenda-hour-label { font-size: 0.72rem; font-weight: 700; color: var(--ink-faint); padding: 0.2rem 0.5rem; transform: translateY(-0.6em); }
+
+.agenda-day-col { position: relative; border-left: 1px solid var(--stroke-soft); background-image: repeating-linear-gradient(to bottom, transparent, transparent calc(var(--hour-h) - 1px), var(--stroke-soft) calc(var(--hour-h) - 1px), var(--stroke-soft) var(--hour-h)); }
+.agenda-day-col.is-today { background-color: rgba(124, 58, 237, 0.04); }
+.agenda-day-col:hover { cursor: pointer; }
+
+.agenda-now-line { position: absolute; left: 0; right: 0; height: 2px; background: #ef4444; z-index: 4; pointer-events: none; }
+.agenda-now-line::before {
+  content: attr(data-time); position: absolute; left: 2px; top: -0.62rem; background: #ef4444; color: #fff;
+  font-size: 0.62rem; font-weight: 800; padding: 0.05rem 0.3rem; border-radius: 0.3rem;
+}
+
+.agenda-event {
+  position: absolute; left: 2px; right: 2px; border-radius: 0.5rem; overflow: hidden;
+  padding: 0.2rem 0.4rem; font-size: 0.72rem; line-height: 1.25; cursor: pointer;
+  border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 2px 6px rgba(30,27,75,0.12); z-index: 2;
+}
+.agenda-event:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 1px; }
+.agenda-event strong, .agenda-event span {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.agenda-event strong { font-size: 0.74rem; }
+.agenda-event.is-block {
+  background-image: repeating-linear-gradient(45deg, rgba(100,116,139,0.18), rgba(100,116,139,0.18) 6px, rgba(100,116,139,0.28) 6px, rgba(100,116,139,0.28) 12px);
+  color: #334155; border-color: rgba(100,116,139,0.35);
+}
+/* Cita/bloqueo que sigue antes o después del rango de horas visible. */
+.agenda-event.is-clipped-top { border-top: 2px dashed currentColor; border-top-left-radius: 0; border-top-right-radius: 0; }
+.agenda-event.is-clipped-bottom { border-bottom: 2px dashed currentColor; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+.agenda-add-popover {
+  position: absolute; z-index: 5; background: #fff; border: 1px solid var(--stroke);
+  border-radius: 0.75rem; box-shadow: var(--shadow-lift); padding: 0.35rem; min-width: 10rem;
+}
+.agenda-add-popover button {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left;
+  padding: 0.5rem 0.6rem; border-radius: 0.5rem; font-size: 0.82rem; font-weight: 600;
+  color: var(--ink-soft); background: none; border: none; cursor: pointer;
+}
+.agenda-add-popover button:hover { background: var(--surface-muted); color: var(--ink); }
+
+.agenda-client-results {
+  position: absolute; left: 0; right: 0; top: calc(100% + 0.3rem); z-index: 6;
+  background: #fff; border: 1px solid var(--stroke); border-radius: 0.75rem;
+  box-shadow: var(--shadow-lift); max-height: 12rem; overflow-y: auto;
+}
+.agenda-client-results button {
+  display: block; width: 100%; text-align: left; padding: 0.5rem 0.75rem;
+  font-size: 0.82rem; color: var(--ink); background: none; border: none; cursor: pointer;
+}
+.agenda-client-results button:hover { background: var(--surface-muted); }
+
+.agenda-mini-day {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.9rem; height: 1.9rem; border-radius: 0.5rem; font-size: 0.78rem; font-weight: 700;
+  color: var(--ink-soft); background: none; border: none; cursor: pointer;
+}
+.agenda-mini-day:hover { background: var(--surface-muted); }
+.agenda-mini-day.is-today { color: var(--brand-2); box-shadow: inset 0 0 0 1.5px var(--brand-2); }
+.agenda-mini-day.is-selected { color: #fff; background-image: linear-gradient(120deg, var(--brand-1), var(--brand-2)); }
+.agenda-mini-day.is-muted { color: var(--ink-faint); opacity: 0.4; }
+
+.agenda-legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
+.agenda-legend-dot { width: 0.6rem; height: 0.6rem; border-radius: 999px; flex: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

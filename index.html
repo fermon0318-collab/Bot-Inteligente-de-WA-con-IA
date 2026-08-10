@@ -3,1060 +3,647 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="description" content="ApolAI — panel de administración para tu bot de WhatsApp con inteligencia artificial." />
+<title>Elorai · Bot de WhatsApp con IA que vende por ti</title>
+<meta name="description" content="Elorai conecta tu WhatsApp Business con la API oficial de Meta y suma una IA que conversa, detecta pagos y automatiza tu venta 24/7. Mide el ROI real de cada anuncio." />
 <meta name="theme-color" content="#4F46E5" />
-<title>ApolAI · Panel de Control</title>
+<link rel="canonical" href="https://elorai.io/" />
 
-<meta name="apple-mobile-web-app-title" content="ApolAI" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Elorai · Bot de WhatsApp con IA que vende por ti" />
+<meta property="og:description" content="API oficial de Meta, IA conversacional, verificación automática de pagos y métricas de ROI por anuncio." />
+<meta property="og:image" content="assets/img/favicon-512.png" />
+<meta name="twitter:card" content="summary_large_image" />
 
-<link rel="icon" type="image/svg+xml" href="assets/img/apolai-logo.svg" />
+<meta name="apple-mobile-web-app-title" content="Elorai" />
+<link rel="icon" type="image/svg+xml" href="assets/img/elorai-logo.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        },
-        colors: {
-          brand: {
-            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8',
-            500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81',
-          },
-          accent: {
-            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
-            500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
-          },
-          plum: {
-            50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc',
-            500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87',
-          },
-          ink: '#1e1b4b',
-        },
-      },
-    },
-  };
-</script>
+<link rel="stylesheet" href="assets/css/tailwind.css?v=2" />
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/css/apolai.css" />
+<link rel="stylesheet" href="assets/css/elorai.css?v=2" />
+<link rel="stylesheet" href="assets/css/landing.css?v=2" />
 </head>
 
-<body class="antialiased">
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  PENDIENTE ANTES DE PUBLICAR — reemplazar estos marcadores               ║
+  ║                                                                          ║
+  ║  [WHATSAPP_NUMBER]     · número de contacto en formato internacional     ║
+  ║                          sin signos (ej. 5215512345678)                  ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
 
-<!-- ══════════════════════════ Loader global ══════════════════════════ -->
-<div id="global-loader" role="status" aria-live="polite">
-  <img src="assets/img/apolai-logo.svg" alt="" class="w-16 h-16 animate-pulse" />
-  <div class="spinner" aria-hidden="true"></div>
-  <p id="loader-text" class="text-sm font-semibold text-ink/70">Iniciando ApolAI…</p>
-</div>
+<body class="antialiased text-ink">
 
-<!-- ══════════════════════════ Toasts ══════════════════════════ -->
-<div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+<!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+<header id="navbar" class="fixed top-0 inset-x-0 z-50">
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 lg:h-[4.5rem]">
+      <a href="#hero" class="flex items-center gap-2.5 shrink-0">
+        <img src="assets/img/elorai-logo.svg" alt="Elorai" class="w-10 h-10" />
+        <span class="text-xl font-extrabold brand-text tracking-tight">Elorai</span>
+      </a>
 
-<!-- ══════════════════════════ Botón hamburguesa (móvil) ══════════════════════════ -->
-<button id="sidebar-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar"
-  class="lg:hidden fixed top-3 left-3 z-50 w-11 h-11 rounded-xl brand-gradient text-white shadow-lg flex items-center justify-center">
-  <i class="fa-solid fa-bars"></i>
-</button>
-
-<!-- ══════════════════════════ Overlay móvil ══════════════════════════ -->
-<div id="sidebar-overlay" class="lg:hidden fixed inset-0 z-40 bg-ink/50 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300"></div>
-
-<!-- ══════════════════════════ Sidebar ══════════════════════════ -->
-<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex flex-col glass border-r shadow-2xl">
-  <!-- Marca -->
-  <div class="flex items-center gap-3 px-5 py-5 border-b border-accent-200/60">
-    <img src="assets/img/apolai-logo.svg" alt="Logo ApolAI" class="w-11 h-11 drop-shadow" />
-    <div class="leading-tight">
-      <p class="text-xl font-extrabold brand-text tracking-tight">ApolAI</p>
-      <p class="text-[0.68rem] font-semibold text-ink/50 uppercase tracking-widest">Bot IA · WhatsApp</p>
-    </div>
-    <button id="sidebar-close" type="button" aria-label="Cerrar menú"
-      class="lg:hidden ml-auto w-8 h-8 rounded-lg text-ink/50 hover:bg-brand-100 hover:text-brand-700">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-  </div>
-
-  <!-- Navegación -->
-  <nav class="flex-1 overflow-y-auto scroll-thin px-3 py-4 space-y-5" aria-label="Navegación principal">
-    <div>
-      <p class="nav-group-title">Principal</p>
-      <ul class="space-y-1">
-        <li><button class="nav-link active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></button></li>
-        <li><button class="nav-link" data-view="cloud-api"><i class="fa-solid fa-cloud"></i><span>Cloud API</span></button></li>
-        <li><button class="nav-link" data-view="countries"><i class="fa-solid fa-earth-americas"></i><span>Bloqueo por País</span></button></li>
-        <li><button class="nav-link" data-view="live-chat"><i class="fa-solid fa-comments"></i><span>Chat en Vivo</span><span class="nav-badge" id="nav-unread">3</span></button></li>
-        <li><button class="nav-link" data-view="chat-history"><i class="fa-solid fa-clock-rotate-left"></i><span>Histórico Chats</span></button></li>
-        <li><button class="nav-link" data-view="reports"><i class="fa-solid fa-file-lines"></i><span>Reportes</span></button></li>
-        <li><button class="nav-link" data-view="ads"><i class="fa-solid fa-bullhorn"></i><span>Métricas de Anuncios</span></button></li>
-      </ul>
-    </div>
-    <div>
-      <p class="nav-group-title">Automatización</p>
-      <ul class="space-y-1">
-        <li><button class="nav-link" data-view="media"><i class="fa-solid fa-photo-film"></i><span>Archivos</span></button></li>
-        <li><button class="nav-link" data-view="flows-simple"><i class="fa-solid fa-list-check"></i><span>Flujos Simples</span></button></li>
-        <li><button class="nav-link" data-view="flows-advanced"><i class="fa-solid fa-diagram-project"></i><span>Flujos Avanzados</span></button></li>
-        <li><button class="nav-link" data-view="remarketing"><i class="fa-solid fa-paper-plane"></i><span>Remarketing</span></button></li>
-        <li><button class="nav-link" data-view="triggers"><i class="fa-solid fa-bolt"></i><span>Disparadores</span></button></li>
-      </ul>
-    </div>
-    <div>
-      <p class="nav-group-title">Configuración</p>
-      <ul class="space-y-1">
-        <li><button class="nav-link" data-view="payments"><i class="fa-solid fa-credit-card"></i><span>Pagos y Acceso</span></button></li>
-        <li><button class="nav-link" data-view="ai-config"><i class="fa-solid fa-brain"></i><span>Configurar IA</span></button></li>
-        <li><button class="nav-link" data-view="tutorials"><i class="fa-solid fa-graduation-cap"></i><span>Tutoriales</span></button></li>
-        <li><button class="nav-link" data-view="faq"><i class="fa-solid fa-circle-question"></i><span>Preguntas Frecuentes</span></button></li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Estado del bot -->
-  <div class="px-4 py-3 border-t border-accent-200/60">
-    <div class="rounded-xl bg-white/70 border border-accent-200/70 px-3 py-2.5 flex items-center gap-2.5">
-      <span class="pulse-ring"><span class="dot dot-ok block" id="sidebar-bot-dot"></span></span>
-      <div class="leading-tight">
-        <p class="text-[0.7rem] font-bold uppercase tracking-wider text-ink/45">Estado del bot</p>
-        <p class="text-sm font-bold text-emerald-600" id="sidebar-bot-state">Activo</p>
-      </div>
-    </div>
-  </div>
-</aside>
-
-<!-- ══════════════════════════ Contenedor principal ══════════════════════════ -->
-<div class="lg:pl-[17rem] min-h-screen flex flex-col">
-
-  <!-- Header -->
-  <header class="sticky top-0 z-30 glass border-b shadow-sm">
-    <div class="px-4 lg:px-7 py-3 flex items-center gap-3">
-      <div class="pl-12 lg:pl-0 min-w-0">
-        <h1 id="view-title" class="text-lg lg:text-xl font-extrabold text-ink truncate">Dashboard</h1>
-        <p id="view-subtitle" class="text-xs text-ink/50 font-medium truncate hidden sm:block">Resumen de actividad de tu bot</p>
+      <div class="hidden lg:flex items-center gap-7">
+        <a href="#conexion" class="nav-link-top">Conexión</a>
+        <a href="#caracteristicas" class="nav-link-top">Características</a>
+        <a href="#como-funciona" class="nav-link-top">Cómo Funciona</a>
+        <a href="#precios" class="nav-link-top">Precios</a>
+        <a href="https://www.youtube.com/@EloraiBot" target="_blank" rel="noopener" class="nav-link-top">
+          <i class="fa-brands fa-youtube text-red-500 mr-1"></i>Tutoriales
+        </a>
+        <button type="button" data-open-login class="btn btn-gradient">
+          <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+        </button>
       </div>
 
-      <div class="ml-auto flex items-center gap-2 lg:gap-3">
-        <!-- Indicador de conexión -->
-        <div id="conn-indicator" class="hidden sm:flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5">
-          <span class="pulse-ring"><span class="dot dot-ok block"></span></span>
-          <span class="text-xs font-bold text-emerald-700" id="conn-label">Conectado</span>
-        </div>
-
-        <!-- Menú de usuario -->
-        <div class="relative">
-          <button id="user-menu-btn" type="button" aria-haspopup="true" aria-expanded="false"
-            class="flex items-center gap-2 rounded-xl border border-accent-200/70 bg-white/70 px-2 py-1.5 hover:border-accent-400 transition">
-            <span class="avatar !w-8 !h-8 !text-xs" id="user-avatar">AP</span>
-            <span class="hidden md:block text-left leading-tight max-w-[10rem]">
-              <span class="block text-xs font-bold text-ink truncate" id="user-name">Administrador</span>
-              <span class="block text-[0.68rem] text-ink/50 truncate" id="user-email-short">admin@apolai.io</span>
-            </span>
-            <i class="fa-solid fa-chevron-down text-xs text-ink/40"></i>
-          </button>
-
-          <div id="user-menu" class="hidden absolute right-0 mt-2 w-64 rounded-xl bg-white border border-accent-200 shadow-2xl overflow-hidden z-40">
-            <div class="brand-gradient px-4 py-3 text-white">
-              <p class="text-sm font-bold" id="user-menu-name">Administrador</p>
-              <p class="text-xs opacity-90 break-all" id="user-menu-email">admin@apolai.io</p>
-            </div>
-            <div class="px-4 py-3 space-y-2 text-sm">
-              <div class="flex items-center justify-between">
-                <span class="text-ink/60">Plan</span>
-                <span class="badge badge-brand">Pro</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-ink/60">Estado</span>
-                <span class="badge badge-ok"><span class="dot dot-ok"></span>Activo</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-ink/60">Vence</span>
-                <span class="font-semibold text-ink" id="user-menu-expiry">12/09/2026</span>
-              </div>
-            </div>
-            <div class="border-t border-accent-100 p-2">
-              <button id="logout-btn" type="button" class="btn btn-ghost w-full !justify-start text-red-600 hover:!text-red-700">
-                <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <button id="menu-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"
+        class="lg:hidden w-10 h-10 rounded-xl brand-gradient text-white flex items-center justify-center shadow-lg">
+        <i id="menu-icon" class="fa-solid fa-bars"></i>
+      </button>
     </div>
 
-    <!-- Banner de alerta crítica -->
-    <div id="alert-banner" class="hidden border-t border-amber-200 bg-amber-50 px-4 lg:px-7 py-2.5">
-      <div class="flex items-start gap-3">
-        <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
-        <p class="text-sm text-amber-800 font-semibold flex-1" id="alert-banner-text">
-          Meta no está entregando tus mensajes. Revisa la calidad de tu número en Cloud API.
-        </p>
-        <button id="alert-banner-close" type="button" aria-label="Cerrar aviso" class="text-amber-500 hover:text-amber-700">
-          <i class="fa-solid fa-xmark"></i>
+    <div id="mobile-menu" class="lg:hidden">
+      <div class="py-3 space-y-1 border-t border-accent-200/70">
+        <a href="#conexion" class="nav-link-mobile"><i class="fa-solid fa-plug-circle-check"></i>Conexión</a>
+        <a href="#caracteristicas" class="nav-link-mobile"><i class="fa-solid fa-star"></i>Características</a>
+        <a href="#como-funciona" class="nav-link-mobile"><i class="fa-solid fa-list-ol"></i>Cómo Funciona</a>
+        <a href="#precios" class="nav-link-mobile"><i class="fa-solid fa-tag"></i>Precios</a>
+        <a href="https://www.youtube.com/@EloraiBot" target="_blank" rel="noopener" class="nav-link-mobile"><i class="fa-brands fa-youtube !text-red-500"></i>Tutoriales</a>
+        <button type="button" data-open-login class="btn btn-gradient w-full mt-2">
+          <i class="fa-solid fa-right-to-bracket"></i> Ingresar
         </button>
       </div>
     </div>
-  </header>
+  </nav>
+</header>
 
-  <!-- Contenido -->
-  <main id="content" class="flex-1 px-4 lg:px-7 py-5 lg:py-7 pb-20">
+<main>
 
-    <!-- ═══════════════════ 1. DASHBOARD ═══════════════════ -->
-    <section id="view-dashboard" class="view active">
-      <!-- Tarjetas de estadísticas -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge"><i class="fa-solid fa-user-plus"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Contactos 30d</p><p class="text-2xl font-extrabold text-ink" id="stat-contacts-30">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge warn"><i class="fa-solid fa-hourglass-half"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Pendientes de pago</p><p class="text-2xl font-extrabold text-ink" id="stat-pending">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge ok"><i class="fa-solid fa-cart-shopping"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Ventas 30d</p><p class="text-2xl font-extrabold text-ink" id="stat-sales-30">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge"><i class="fa-solid fa-percent"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Conversión</p><p class="text-2xl font-extrabold text-ink" id="stat-conversion">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-user-clock"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Contactos hoy</p><p class="text-xl font-extrabold text-ink" id="stat-contacts-today">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm warn"><i class="fa-solid fa-receipt"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Pendientes hoy</p><p class="text-xl font-extrabold text-ink" id="stat-pending-today">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm ok"><i class="fa-solid fa-sack-dollar"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Ventas hoy</p><p class="text-xl font-extrabold text-ink" id="stat-sales-today">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-repeat"></i></span><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Recurrencia</p><p class="text-xl font-extrabold text-ink" id="stat-recurrence">—</p></div></div></div>
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<section id="hero" class="relative pt-28 lg:pt-36 pb-16 lg:pb-24 overflow-hidden">
+  <div class="blob-field" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+    <span class="blob blob-4"></span>
+  </div>
+
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto text-center">
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight">
+        <span class="brand-text">Tu bot de WhatsApp</span><br />
+        <span class="text-slate-800">que vende mientras duermes</span>
+      </h1>
+      <p class="mt-6 text-lg lg:text-xl text-ink/60 leading-relaxed max-w-2xl mx-auto">
+        Elorai conecta tu número con la <strong class="text-ink/80">API oficial de Meta</strong>, responde con
+        inteligencia artificial, verifica los comprobantes de pago solo y te dice qué anuncio
+        está trayendo ventas de verdad.
+      </p>
+
+      <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener" class="btn btn-gradient !px-7 !py-3.5 !text-base w-full sm:w-auto">
+          <i class="fa-brands fa-whatsapp text-lg"></i> Contactar por WhatsApp
+        </a>
+        <a href="#conexion" class="btn btn-ghost !px-7 !py-3.5 !text-base w-full sm:w-auto !border-accent-300">
+          <i class="fa-solid fa-circle-question"></i> Por qué elegirnos
+        </a>
       </div>
 
-      <!-- Resumen de ventas -->
-      <div class="card p-4 lg:p-5 mt-4 lg:mt-5">
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="flex items-center gap-3 mr-auto">
-            <span class="icon-badge"><i class="fa-solid fa-coins"></i></span>
-            <div>
-              <h2 class="text-base font-extrabold text-ink">Resumen de ventas</h2>
-              <p class="text-xs text-ink/50">Los montos se convierten a la moneda seleccionada</p>
-            </div>
-          </div>
-          <div class="w-full sm:w-48">
-            <label class="label" for="currency-select">Moneda</label>
-            <select id="currency-select" class="select"></select>
-          </div>
-          <button id="refresh-sales" type="button" class="btn btn-gradient"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-        </div>
-
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          <div class="rounded-xl border border-accent-200/70 bg-white/70 p-3.5">
-            <p class="text-xs font-bold uppercase tracking-wide text-ink/45">Acumulado total</p>
-            <p class="text-xl lg:text-2xl font-extrabold brand-text" id="sales-total">—</p>
-          </div>
-          <div class="rounded-xl border border-accent-200/70 bg-white/70 p-3.5">
-            <p class="text-xs font-bold uppercase tracking-wide text-ink/45">Últimos 30 días</p>
-            <p class="text-xl lg:text-2xl font-extrabold text-ink" id="sales-30">—</p>
-          </div>
-          <div class="rounded-xl border border-accent-200/70 bg-white/70 p-3.5">
-            <p class="text-xs font-bold uppercase tracking-wide text-ink/45">Hoy</p>
-            <p class="text-xl lg:text-2xl font-extrabold text-emerald-600" id="sales-today">—</p>
-          </div>
-          <div class="rounded-xl border border-accent-200/70 bg-white/70 p-3.5">
-            <p class="text-xs font-bold uppercase tracking-wide text-ink/45">Ticket promedio</p>
-            <p class="text-xl lg:text-2xl font-extrabold text-ink" id="sales-ticket">—</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gráficos -->
-      <div class="grid lg:grid-cols-2 gap-4 lg:gap-5 mt-4 lg:mt-5">
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-chart-column text-accent-600 mr-1.5"></i>Clientes y ventas por día</h3>
-          <div class="h-64"><canvas id="chart-daily"></canvas></div>
-        </div>
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-money-bill-trend-up text-accent-600 mr-1.5"></i>Ingresos diarios</h3>
-          <div class="h-64"><canvas id="chart-revenue"></canvas></div>
-        </div>
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-calendar-week text-accent-600 mr-1.5"></i>Distribución por día de la semana</h3>
-          <div class="h-64"><canvas id="chart-weekday"></canvas></div>
-        </div>
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-clock text-accent-600 mr-1.5"></i>Distribución por hora del día</h3>
-          <div class="h-64"><canvas id="chart-hour"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Rendimiento por distribuidor -->
-      <div class="card p-4 lg:p-5 mt-4 lg:mt-5">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-sitemap text-accent-600 mr-1.5"></i>Rendimiento por distribuidor / rama</h3>
-        <div class="grid lg:grid-cols-2 gap-5">
-          <div class="h-72"><canvas id="chart-branches"></canvas></div>
-          <div class="table-wrap self-start">
-            <table class="data">
-              <thead><tr><th>Distribuidor</th><th>Contactos</th><th>Ventas</th><th>Conv.</th><th>Ingresos</th></tr></thead>
-              <tbody id="branches-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 2. CLOUD API ═══════════════════ -->
-    <section id="view-cloud-api" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-cloud"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">WhatsApp Cloud API</h2>
-          <p class="text-sm opacity-90">Conecta tu número de WhatsApp Business con ApolAI</p>
-        </div>
-        <div class="flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1.5">
-          <span class="dot dot-ok" id="api-status-dot"></span>
-          <span class="text-sm font-bold" id="api-status-text">Conectado</span>
-        </div>
-      </div>
-
-      <!-- Webhook -->
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-link text-accent-600 mr-1.5"></i>Configuración del Webhook</h3>
-        <p class="hint !mt-0 mb-3">Pega estos valores en <strong>Meta for Developers → WhatsApp → Configuración → Webhooks</strong>.</p>
-        <div class="grid lg:grid-cols-2 gap-4">
-          <div>
-            <label class="label" for="webhook-url">URL de callback</label>
-            <div class="copyable">
-              <input id="webhook-url" class="input font-mono !text-xs" readonly value="https://api.apolai.io/webhook/wa/8f2c-4a71-b930" />
-              <button type="button" class="btn btn-soft !rounded-l-none" data-copy="#webhook-url" aria-label="Copiar URL"><i class="fa-regular fa-copy"></i></button>
-            </div>
-          </div>
-          <div>
-            <label class="label" for="webhook-token">Token de verificación</label>
-            <div class="copyable">
-              <input id="webhook-token" class="input font-mono !text-xs" readonly value="apolai_vf_9d31c6ba7e05" />
-              <button type="button" class="btn btn-soft !rounded-l-none" data-copy="#webhook-token" aria-label="Copiar token"><i class="fa-regular fa-copy"></i></button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Flujo semi-automático -->
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-wand-magic-sparkles text-accent-600 mr-1.5"></i>Configuración semi-automática</h3>
-        <p class="hint !mt-0 mb-4">Ingresa tu Access Token y el teléfono; ApolAI consulta Meta y completa el resto por ti.</p>
-        <div class="grid lg:grid-cols-2 gap-4">
-          <div>
-            <label class="label" for="auto-token">Access Token</label>
-            <input id="auto-token" type="password" class="input font-mono !text-xs" placeholder="EAAG…" autocomplete="off" />
-            <p class="error-msg" data-error-for="auto-token">Ingresa un Access Token válido.</p>
-          </div>
-          <div>
-            <label class="label" for="auto-phone">Número de teléfono</label>
-            <input id="auto-phone" type="tel" class="input" placeholder="+52 55 1234 5678" />
-            <p class="error-msg" data-error-for="auto-phone">Ingresa un teléfono con al menos 10 dígitos.</p>
-          </div>
-        </div>
-        <button id="fetch-meta-btn" type="button" class="btn btn-gradient mt-4"><i class="fa-solid fa-cloud-arrow-down"></i> Obtener Data de Meta</button>
-
-        <div id="meta-result" class="hidden mt-4 rounded-xl border border-accent-200 bg-accent-50/70 p-4">
-          <p class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-circle-check text-emerald-500 mr-1.5"></i>Datos recuperados de Meta</p>
-          <dl class="grid sm:grid-cols-2 gap-3 text-sm">
-            <div><dt class="label !mb-1">Business Account ID</dt><dd class="font-mono text-xs text-ink break-all" id="meta-waba">—</dd></div>
-            <div><dt class="label !mb-1">Phone Number ID</dt><dd class="font-mono text-xs text-ink break-all" id="meta-phone-id">—</dd></div>
-            <div><dt class="label !mb-1">Nombre verificado</dt><dd class="font-semibold text-ink" id="meta-verified-name">—</dd></div>
-            <div><dt class="label !mb-1">Teléfono</dt><dd class="font-semibold text-ink" id="meta-display-phone">—</dd></div>
-          </dl>
-          <button id="apply-meta-btn" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-arrow-down-to-bracket"></i> Aplicar a Configuración</button>
-        </div>
-      </div>
-
-      <!-- Configuración manual -->
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-sliders text-accent-600 mr-1.5"></i>Configuración de la API</h3>
-        <form id="api-form" novalidate>
-          <div class="grid lg:grid-cols-2 gap-4">
-            <div>
-              <label class="label" for="api-phone-id">Phone Number ID</label>
-              <input id="api-phone-id" class="input font-mono !text-xs" required placeholder="109876543210987" />
-              <p class="error-msg" data-error-for="api-phone-id">Campo obligatorio.</p>
-            </div>
-            <div>
-              <label class="label" for="api-phone">Número de teléfono</label>
-              <input id="api-phone" type="tel" class="input" required placeholder="+52 55 1234 5678" />
-              <p class="error-msg" data-error-for="api-phone">Ingresa un teléfono válido.</p>
-            </div>
-            <div>
-              <label class="label" for="api-waba">Business Account ID</label>
-              <input id="api-waba" class="input font-mono !text-xs" required placeholder="209876543210987" />
-              <p class="error-msg" data-error-for="api-waba">Campo obligatorio.</p>
-            </div>
-            <div>
-              <label class="label" for="api-token">Access Token permanente</label>
-              <div class="copyable">
-                <input id="api-token" type="password" class="input font-mono !text-xs" required placeholder="EAAG…" autocomplete="off" />
-                <button type="button" class="btn btn-soft !rounded-l-none" data-toggle-visibility="#api-token" aria-label="Mostrar u ocultar token"><i class="fa-regular fa-eye"></i></button>
-              </div>
-              <p class="error-msg" data-error-for="api-token">Campo obligatorio.</p>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2 mt-4">
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-            <button type="button" id="test-conn-btn" class="btn btn-soft"><i class="fa-solid fa-plug-circle-check"></i> Probar Conexión</button>
-            <button type="button" id="start-bot-btn" class="btn btn-success"><i class="fa-solid fa-play"></i> Iniciar Bot</button>
-            <button type="button" id="stop-bot-btn" class="btn btn-danger"><i class="fa-solid fa-stop"></i> Detener Bot</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Log -->
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-terminal text-accent-600 mr-1.5"></i>Actividad reciente</h3>
-          <button id="clear-log-btn" type="button" class="btn btn-ghost btn-sm"><i class="fa-solid fa-eraser"></i> Limpiar</button>
-        </div>
-        <div id="api-log" class="terminal scroll-thin" role="log" aria-live="polite"></div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 3. BLOQUEO POR PAÍS ═══════════════════ -->
-    <section id="view-countries" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-earth-americas"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Bloqueo por País</h2>
-          <p class="text-sm opacity-90">Los mensajes desde países bloqueados serán ignorados por el bot</p>
-        </div>
-        <div class="rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-bold"><span id="blocked-count">0</span> bloqueados</div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap gap-3 items-end">
-          <div class="flex-1 min-w-[14rem]">
-            <label class="label" for="country-search">Buscar país</label>
-            <div class="relative">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-accent-400 text-sm"></i>
-              <input id="country-search" class="input !pl-9" placeholder="Ej. Argentina, +54…" />
-            </div>
-          </div>
-          <button id="countries-clear" type="button" class="btn btn-ghost"><i class="fa-solid fa-rotate-left"></i> Desbloquear todos</button>
-          <button id="countries-save" type="button" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-        </div>
-        <div id="country-list" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-2 mt-4 max-h-[28rem] overflow-y-auto scroll-thin pr-1"></div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 4. CHAT EN VIVO ═══════════════════ -->
-    <section id="view-live-chat" class="view">
-      <div class="card overflow-hidden">
-        <div class="grid lg:grid-cols-[20rem_1fr] chat-shell">
-          <!-- Lista de conversaciones -->
-          <div id="live-list-pane" class="flex flex-col border-r border-accent-200/60 min-h-0">
-            <div class="p-3 border-b border-accent-200/60">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="pulse-ring"><span class="dot dot-ok block"></span></span>
-                <p class="text-sm font-extrabold text-ink mr-auto">Conversaciones activas</p>
-                <span class="badge badge-brand" id="live-count">0</span>
-              </div>
-              <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-accent-400 text-sm"></i>
-                <input id="live-search" class="input !pl-9 !py-2" placeholder="Buscar contacto o teléfono…" />
-              </div>
-            </div>
-            <div id="live-conversations" class="flex-1 overflow-y-auto scroll-thin p-2 space-y-1"></div>
-          </div>
-
-          <!-- Panel de chat -->
-          <div id="live-chat-pane" class="flex flex-col min-h-0 max-lg:hidden">
-            <!-- Bienvenida -->
-            <div id="live-welcome" class="flex-1 flex flex-col items-center justify-center text-center px-6">
-              <img src="assets/img/apolai-logo.svg" alt="" class="w-20 h-20 mb-4 opacity-90" />
-              <p class="text-lg font-extrabold text-ink">Selecciona una conversación</p>
-              <p class="text-sm text-ink/50 max-w-sm mt-1">Aquí verás los mensajes en tiempo real. Puedes intervenir manualmente y desactivar la IA cuando lo necesites.</p>
-            </div>
-
-            <!-- Chat activo -->
-            <div id="live-active" class="hidden flex-1 flex-col min-h-0">
-              <div class="p-3 border-b border-accent-200/60 flex flex-wrap items-center gap-2">
-                <button id="live-back" type="button" class="lg:hidden btn btn-ghost btn-sm" aria-label="Volver"><i class="fa-solid fa-arrow-left"></i></button>
-                <span class="avatar" id="live-avatar">—</span>
-                <div class="min-w-0 mr-auto">
-                  <p class="text-sm font-extrabold text-ink truncate" id="live-name">—</p>
-                  <p class="text-xs text-ink/50 truncate"><span id="live-phone">—</span> · <span id="live-state" class="font-semibold">—</span></p>
-                </div>
-                <span id="live-ad-badge" class="badge badge-brand hidden"><i class="fa-solid fa-bullhorn"></i><span id="live-ad-name"></span></span>
-                <label class="flex items-center gap-2 rounded-xl border border-accent-200 bg-white/80 px-2.5 py-1.5">
-                  <span class="text-xs font-bold text-ink/60">IA</span>
-                  <span class="switch"><input type="checkbox" id="live-ai-toggle" checked /><span class="track"></span></span>
-                </label>
-                <button id="live-stop-automation" type="button" class="btn btn-danger btn-sm"><i class="fa-solid fa-hand"></i><span class="hidden sm:inline">Detener automatización</span></button>
-                <button id="live-mark-paid" type="button" class="btn btn-success btn-sm"><i class="fa-solid fa-circle-check"></i><span class="hidden sm:inline">Marcar como Pagado</span></button>
-              </div>
-
-              <div id="live-messages" class="flex-1 overflow-y-auto scroll-thin p-4 bg-accent-50/40"></div>
-
-              <form id="live-form" class="p-3 border-t border-accent-200/60 flex items-end gap-2 relative">
-                <div class="emoji-pop scroll-thin" id="live-emoji-pop"></div>
-                <button type="button" class="btn btn-ghost btn-icon" data-emoji-toggle="live" aria-label="Emojis"><i class="fa-regular fa-face-smile"></i></button>
-                <button type="button" class="btn btn-ghost btn-icon" id="live-attach" aria-label="Adjuntar archivo"><i class="fa-solid fa-paperclip"></i></button>
-                <input type="file" id="live-file-input" class="hidden" />
-                <input id="live-input" class="input" placeholder="Escribe un mensaje…" autocomplete="off" />
-                <button type="submit" class="btn btn-gradient btn-icon" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 5. HISTÓRICO DE CHATS ═══════════════════ -->
-    <section id="view-chat-history" class="view">
-      <div class="card overflow-hidden">
-        <div class="grid lg:grid-cols-[20rem_1fr] chat-shell">
-          <div id="hist-list-pane" class="flex flex-col border-r border-accent-200/60 min-h-0">
-            <div class="p-3 border-b border-accent-200/60">
-              <div class="flex items-center gap-2 mb-2">
-                <i class="fa-solid fa-clock-rotate-left text-accent-600"></i>
-                <p class="text-sm font-extrabold text-ink mr-auto">Conversaciones pasadas</p>
-                <span class="badge badge-muted" id="hist-count">0</span>
-              </div>
-              <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-accent-400 text-sm"></i>
-                <input id="hist-search" class="input !pl-9 !py-2" placeholder="Buscar en el histórico…" />
-              </div>
-            </div>
-            <div id="hist-conversations" class="flex-1 overflow-y-auto scroll-thin p-2 space-y-1"></div>
-            <div class="p-2.5 border-t border-accent-200/60 flex items-center justify-center gap-1.5" id="hist-pager"></div>
-          </div>
-
-          <div id="hist-chat-pane" class="flex flex-col min-h-0 max-lg:hidden">
-            <div id="hist-welcome" class="flex-1 flex flex-col items-center justify-center text-center px-6">
-              <i class="fa-solid fa-box-archive text-5xl text-accent-300 mb-4"></i>
-              <p class="text-lg font-extrabold text-ink">Histórico de conversaciones</p>
-              <p class="text-sm text-ink/50 max-w-sm mt-1">Consulta cualquier conversación anterior y retoma el contacto cuando lo necesites.</p>
-            </div>
-
-            <div id="hist-active" class="hidden flex-1 flex-col min-h-0">
-              <div class="p-3 border-b border-accent-200/60 flex flex-wrap items-center gap-2">
-                <button id="hist-back" type="button" class="lg:hidden btn btn-ghost btn-sm" aria-label="Volver"><i class="fa-solid fa-arrow-left"></i></button>
-                <span class="avatar" id="hist-avatar">—</span>
-                <div class="min-w-0 mr-auto">
-                  <p class="text-sm font-extrabold text-ink truncate" id="hist-name">—</p>
-                  <p class="text-xs text-ink/50 truncate"><span id="hist-phone">—</span> · <span id="hist-state" class="font-semibold">—</span></p>
-                </div>
-                <span id="hist-ad-badge" class="badge badge-brand hidden"><i class="fa-solid fa-bullhorn"></i><span id="hist-ad-name"></span></span>
-                <button id="hist-mark-paid" type="button" class="btn btn-success btn-sm"><i class="fa-solid fa-circle-check"></i><span class="hidden sm:inline">Marcar como Pagado</span></button>
-              </div>
-              <div id="hist-messages" class="flex-1 overflow-y-auto scroll-thin p-4 bg-accent-50/40"></div>
-              <form id="hist-form" class="p-3 border-t border-accent-200/60 flex items-end gap-2 relative">
-                <div class="emoji-pop scroll-thin" id="hist-emoji-pop"></div>
-                <button type="button" class="btn btn-ghost btn-icon" data-emoji-toggle="hist" aria-label="Emojis"><i class="fa-regular fa-face-smile"></i></button>
-                <button type="button" class="btn btn-ghost btn-icon" id="hist-attach" aria-label="Adjuntar archivo"><i class="fa-solid fa-paperclip"></i></button>
-                <input type="file" id="hist-file-input" class="hidden" />
-                <input id="hist-input" class="input" placeholder="Retomar la conversación…" autocomplete="off" />
-                <button type="submit" class="btn btn-gradient btn-icon" aria-label="Enviar"><i class="fa-solid fa-paper-plane"></i></button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 6. REPORTES ═══════════════════ -->
-    <section id="view-reports" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-file-lines"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Reportes de contactos</h2>
-          <p class="text-sm opacity-90">Filtra, exporta y gestiona el estado de pago de tus contactos</p>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-file-csv text-accent-600 mr-1.5"></i>Exportar CSV</h3>
-        <div class="flex flex-wrap gap-2">
-          <button class="btn btn-gradient" data-export="all"><i class="fa-solid fa-download"></i> Todos</button>
-          <button class="btn btn-soft" data-export="paid"><i class="fa-solid fa-circle-check"></i> Compradores</button>
-          <button class="btn btn-soft" data-export="pending"><i class="fa-solid fa-hourglass-half"></i> Pago pendiente</button>
-          <button class="btn btn-soft" data-export="rejected"><i class="fa-solid fa-circle-xmark"></i> Pago rechazado</button>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-filter text-accent-600 mr-1.5"></i>Filtros</h3>
-        <div class="grid sm:grid-cols-2 xl:grid-cols-5 gap-3 items-end">
-          <div><label class="label" for="rep-phone">Teléfono</label><input id="rep-phone" class="input" placeholder="Ej. 5511…" /></div>
-          <div><label class="label" for="rep-status">Estado</label>
-            <select id="rep-status" class="select">
-              <option value="">Todos</option>
-              <option value="paid">Pagado</option>
-              <option value="pending">Pendiente</option>
-              <option value="rejected">Rechazado</option>
-              <option value="new">Nuevo</option>
-            </select>
-          </div>
-          <div><label class="label" for="rep-from">Desde</label><input id="rep-from" type="date" class="input" /></div>
-          <div><label class="label" for="rep-to">Hasta</label><input id="rep-to" type="date" class="input" /></div>
-          <div class="flex gap-2">
-            <button id="rep-apply" type="button" class="btn btn-primary flex-1"><i class="fa-solid fa-magnifying-glass"></i> Filtrar</button>
-            <button id="rep-reset" type="button" class="btn btn-ghost" aria-label="Limpiar filtros"><i class="fa-solid fa-rotate-left"></i></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-sm font-extrabold text-ink mr-auto">Contactos</h3>
-          <span class="badge badge-muted"><span id="rep-total">0</span> resultados</span>
-        </div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Contacto</th><th>Teléfono</th><th>Estado</th><th>Origen</th><th>Último contacto</th><th>Monto</th><th class="text-right">Acciones</th></tr></thead>
-            <tbody id="rep-tbody"></tbody>
-          </table>
-        </div>
-        <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
-          <p class="text-xs text-ink/50" id="rep-range">—</p>
-          <div class="flex items-center gap-1.5" id="rep-pager"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 7. MÉTRICAS DE ANUNCIOS ═══════════════════ -->
-    <section id="view-ads" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-bullhorn"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Métricas de Anuncios</h2>
-          <p class="text-sm opacity-90">Conecta Meta Ads y mide el retorno real de cada campaña</p>
-        </div>
-      </div>
-
-      <div class="grid lg:grid-cols-2 gap-4 mt-4">
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-brands fa-meta text-accent-600 mr-1.5"></i>Meta Ads</h3>
-          <div class="space-y-3">
-            <div><label class="label" for="ads-account">Ad Account ID</label><input id="ads-account" class="input font-mono !text-xs" placeholder="act_1234567890" /></div>
-            <div><label class="label" for="ads-token">Access Token</label>
-              <div class="copyable">
-                <input id="ads-token" type="password" class="input font-mono !text-xs" placeholder="EAAG…" autocomplete="off" />
-                <button type="button" class="btn btn-soft !rounded-l-none" data-toggle-visibility="#ads-token" aria-label="Mostrar u ocultar"><i class="fa-regular fa-eye"></i></button>
-              </div>
-            </div>
-            <button id="ads-save" type="button" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar credenciales</button>
-          </div>
-        </div>
-
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-1"><i class="fa-solid fa-arrows-rotate text-accent-600 mr-1.5"></i>Conversions API</h3>
-          <p class="hint !mt-0 mb-3">Al activarla, ApolAI devuelve a Meta cada venta confirmada en WhatsApp. El algoritmo aprende quién compra de verdad y optimiza tus campañas hacia ese público.</p>
-          <div class="space-y-3">
-            <div><label class="label" for="capi-pixel">Pixel ID</label><input id="capi-pixel" class="input font-mono !text-xs" placeholder="1234567890123456" /></div>
-            <div><label class="label" for="capi-currency">Moneda de reporte</label><select id="capi-currency" class="select"></select></div>
-            <label class="flex items-center gap-3 rounded-xl border border-accent-200 bg-white/70 px-3 py-2.5 cursor-pointer">
-              <span class="switch"><input type="checkbox" id="capi-enabled" /><span class="track"></span></span>
-              <span class="text-sm font-bold text-ink">Activar Conversions API</span>
-            </label>
-            <button id="capi-save" type="button" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap gap-3 items-end">
-          <div><label class="label" for="ads-from">Desde</label><input id="ads-from" type="date" class="input" /></div>
-          <div><label class="label" for="ads-to">Hasta</label><input id="ads-to" type="date" class="input" /></div>
-          <button id="ads-apply" type="button" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Aplicar</button>
-          <button id="ads-export" type="button" class="btn btn-soft ml-auto"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-4">
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-money-bill-wave"></i></span><div><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Gasto total</p><p class="text-xl font-extrabold text-ink" id="ads-spend">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-comments"></i></span><div><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Conversaciones</p><p class="text-xl font-extrabold text-ink" id="ads-convos">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm ok"><i class="fa-solid fa-cart-shopping"></i></span><div><p class="text-xs font-bold uppercase tracking-wide text-ink/45">Ventas pagadas</p><p class="text-xl font-extrabold text-ink" id="ads-sales">—</p></div></div></div>
-        <div class="card card-hover p-4"><div class="flex items-start gap-3"><span class="icon-badge sm"><i class="fa-solid fa-chart-line"></i></span><div><p class="text-xs font-bold uppercase tracking-wide text-ink/45">ROI promedio</p><p class="text-xl font-extrabold text-ink" id="ads-roi">—</p></div></div></div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3">Detalle por anuncio</h3>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Anuncio</th><th>Campaña</th><th>Gasto</th><th>Conv.</th><th>Ventas</th><th>Ingresos</th><th>Costo/conv.</th><th>Costo/venta</th><th>ROI</th><th>Estado</th></tr></thead>
-            <tbody id="ads-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 8. ARCHIVOS (MEDIA) ═══════════════════ -->
-    <section id="view-media" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-photo-film"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Archivos</h2>
-          <p class="text-sm opacity-90">Imágenes, PDFs, audio y video que tus flujos pueden enviar</p>
-        </div>
-        <div class="rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-bold"><span id="media-count">0</span> archivos</div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="dropzone" id="media-dropzone" role="button" tabindex="0">
-          <i class="fa-solid fa-cloud-arrow-up text-4xl text-accent-500 mb-3"></i>
-          <p class="text-sm font-extrabold text-ink">Arrastra tus archivos aquí</p>
-          <p class="text-xs text-ink/50 mt-1">o haz clic para seleccionarlos · JPG, PNG, PDF, MP3, MP4 · máx. 16 MB</p>
-        </div>
-        <input type="file" id="media-input" class="hidden" multiple />
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3">Archivos disponibles</h3>
-        <div id="media-grid" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3"></div>
-        <div id="media-empty" class="empty-state hidden"><i class="fa-regular fa-folder-open"></i>Todavía no has subido archivos.</div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 9. FLUJOS SIMPLES ═══════════════════ -->
-    <section id="view-flows-simple" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-list-check"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Flujos Simples</h2>
-          <p class="text-sm opacity-90">Secuencias lineales de mensajes, archivos y pausas</p>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap gap-3 items-end">
-          <div class="flex-1 min-w-[14rem]">
-            <label class="label" for="sf-select">Flujo activo</label>
-            <select id="sf-select" class="select"></select>
-          </div>
-          <button id="sf-new" type="button" class="btn btn-gradient"><i class="fa-solid fa-plus"></i> Crear flujo</button>
-          <button id="sf-delete" type="button" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Eliminar</button>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <h3 class="text-sm font-extrabold text-ink mr-auto">Pasos del flujo</h3>
-          <button class="btn btn-soft btn-sm" data-sf-add="text"><i class="fa-solid fa-comment"></i> Mensaje</button>
-          <button class="btn btn-soft btn-sm" data-sf-add="file"><i class="fa-solid fa-paperclip"></i> Archivo</button>
-          <button class="btn btn-soft btn-sm" data-sf-add="delay"><i class="fa-solid fa-stopwatch"></i> Pausa</button>
-        </div>
-        <div id="sf-steps" class="space-y-3"></div>
-        <div id="sf-empty" class="empty-state hidden"><i class="fa-solid fa-layer-group"></i>Este flujo no tiene pasos todavía.</div>
-        <button id="sf-save" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-floppy-disk"></i> Guardar flujo</button>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 10. FLUJOS AVANZADOS ═══════════════════ -->
-    <section id="view-flows-advanced" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-diagram-project"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Flujos Avanzados</h2>
-          <p class="text-sm opacity-90">Conversaciones ramificadas con condiciones y saltos</p>
-        </div>
-      </div>
-
-      <!-- Galería -->
-      <div id="af-gallery-wrap" class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap gap-3 items-end mb-4">
-          <div class="flex-1 min-w-[14rem]">
-            <label class="label" for="af-search">Buscar flujo</label>
-            <div class="relative">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-accent-400 text-sm"></i>
-              <input id="af-search" class="input !pl-9" placeholder="Nombre del flujo…" />
-            </div>
-          </div>
-        </div>
-        <div id="af-gallery" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
-      </div>
-
-      <!-- Editor -->
-      <div id="af-editor" class="hidden card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap items-center gap-2 mb-3">
-          <button id="af-back" type="button" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Galería</button>
-          <h3 class="text-sm font-extrabold text-ink mr-auto" id="af-title">—</h3>
-          <div class="flex items-center gap-1">
-            <button class="btn btn-ghost btn-icon" data-zoom="in" aria-label="Acercar"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-            <button class="btn btn-ghost btn-icon" data-zoom="out" aria-label="Alejar"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-            <button class="btn btn-ghost btn-icon" data-zoom="reset" aria-label="Restablecer zoom"><i class="fa-solid fa-arrows-rotate"></i></button>
-            <button class="btn btn-ghost btn-icon" data-zoom="fit" aria-label="Ajustar a vista"><i class="fa-solid fa-expand"></i></button>
-            <span class="text-xs font-bold text-ink/50 w-12 text-center" id="af-zoom-label">100%</span>
-          </div>
-          <button id="af-rename" type="button" class="btn btn-soft btn-sm"><i class="fa-solid fa-pen"></i> Renombrar</button>
-          <button id="af-save" type="button" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-        </div>
-        <div class="flow-canvas scroll-thin" id="af-canvas">
-          <div class="flow-stage" id="af-stage"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 11. REMARKETING ═══════════════════ -->
-    <section id="view-remarketing" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-paper-plane"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Remarketing</h2>
-          <p class="text-sm opacity-90">Recupera contactos que no completaron su compra</p>
-        </div>
-      </div>
-
-      <div class="grid lg:grid-cols-2 gap-4 mt-4">
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-stopwatch text-accent-600 mr-1.5"></i>Tiempo de disparo</h3>
-          <p class="hint !mt-0 mb-3">Tiempo transcurrido desde el primer contacto sin conversión.</p>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="label" for="rm-hours">Horas</label><input id="rm-hours" type="number" min="0" max="720" value="24" class="input" /></div>
-            <div><label class="label" for="rm-minutes">Minutos</label><input id="rm-minutes" type="number" min="0" max="59" value="0" class="input" /></div>
-          </div>
-          <p class="error-msg" data-error-for="rm-hours">Define un tiempo mayor a 0.</p>
-        </div>
-
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-clock text-accent-600 mr-1.5"></i>Franja horaria permitida</h3>
-          <p class="hint !mt-0 mb-3">Los mensajes fuera de esta franja se encolan hasta la siguiente ventana.</p>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="label" for="rm-start">Hora inicio</label><input id="rm-start" type="time" value="09:00" class="input" /></div>
-            <div><label class="label" for="rm-end">Hora fin</label><input id="rm-end" type="time" value="21:00" class="input" /></div>
-          </div>
-          <div class="mt-3"><label class="label" for="rm-tz">Zona horaria</label><select id="rm-tz" class="select"></select></div>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <h3 class="text-sm font-extrabold text-ink mr-auto">Secuencia de remarketing</h3>
-          <button class="btn btn-soft btn-sm" data-rm-add="text"><i class="fa-solid fa-comment"></i> Mensaje</button>
-          <button class="btn btn-soft btn-sm" data-rm-add="file"><i class="fa-solid fa-paperclip"></i> Archivo</button>
-          <button class="btn btn-soft btn-sm" data-rm-add="delay"><i class="fa-solid fa-stopwatch"></i> Pausa</button>
-        </div>
-        <div id="rm-steps" class="space-y-3"></div>
-        <div id="rm-empty" class="empty-state hidden"><i class="fa-solid fa-layer-group"></i>Agrega el primer paso de tu secuencia.</div>
-        <button id="rm-save" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-floppy-disk"></i> Guardar configuración</button>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 12. DISPARADORES ═══════════════════ -->
-    <section id="view-triggers" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-bolt"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Disparadores</h2>
-          <p class="text-sm opacity-90">Palabras clave que activan un flujo automáticamente</p>
-        </div>
-      </div>
-
-      <div class="flex gap-2 mt-4">
-        <button class="btn btn-soft" data-trig-tab="simple" id="trig-tab-simple"><i class="fa-solid fa-bolt"></i> Disparadores</button>
-        <button class="btn btn-ghost" data-trig-tab="advanced" id="trig-tab-advanced"><i class="fa-solid fa-diagram-project"></i> Disparadores Avanzados</button>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3">Agregar disparador</h3>
-        <form id="trig-form" class="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end" novalidate>
-          <div>
-            <label class="label" for="trig-keyword">Palabra o frase clave</label>
-            <input id="trig-keyword" class="input" placeholder="Ej. quiero información" />
-            <p class="error-msg" data-error-for="trig-keyword">Escribe una palabra clave.</p>
-          </div>
-          <div>
-            <label class="label" for="trig-flow">Flujo a activar</label>
-            <select id="trig-flow" class="select"></select>
-          </div>
-          <button type="submit" class="btn btn-gradient"><i class="fa-solid fa-plus"></i> Agregar</button>
-        </form>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-sm font-extrabold text-ink mr-auto" id="trig-list-title">Disparadores activos</h3>
-          <span class="badge badge-brand"><span id="trig-count">0</span></span>
-        </div>
-        <p class="hint !mt-0 mb-3"><i class="fa-solid fa-circle-info text-accent-500"></i> El disparador marcado como <strong>predeterminado</strong> se usa cuando ningún otro coincide con el mensaje del contacto.</p>
-        <div id="trig-list" class="space-y-2"></div>
-        <div id="trig-empty" class="empty-state hidden"><i class="fa-solid fa-bolt"></i>No hay disparadores configurados.</div>
-        <button id="trig-save" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 13. PAGOS Y ACCESO ═══════════════════ -->
-    <section id="view-payments" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-credit-card"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Pagos y Acceso</h2>
-          <p class="text-sm opacity-90">Verificación de comprobantes y entrega automática de tus productos</p>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-message text-accent-600 mr-1.5"></i>Mensajes generales</h3>
-        <div class="grid lg:grid-cols-2 gap-4">
-          <div>
-            <label class="label" for="pay-msg-ok">Pago confirmado</label>
-            <textarea id="pay-msg-ok" class="textarea">¡Pago confirmado! 🎉 En un momento recibes tus accesos. Gracias por confiar en nosotros.</textarea>
-          </div>
-          <div>
-            <label class="label" for="pay-msg-bad">Comprobante no válido</label>
-            <textarea id="pay-msg-bad" class="textarea">No pudimos validar el comprobante. Revisa que se vea el monto, la fecha y la referencia completa, y vuelve a enviarlo.</textarea>
-          </div>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-key text-accent-600 mr-1.5"></i>Reglas de acceso</h3>
-          <button id="pay-rule-add" type="button" class="btn btn-soft btn-sm"><i class="fa-solid fa-plus"></i> Nueva regla</button>
-        </div>
-        <p class="hint !mt-0 mb-3">Cuando el comprobante coincida con el <strong>monto</strong> y el <strong>contexto</strong>, ApolAI entrega el mensaje y los archivos del producto correspondiente.</p>
-        <div id="pay-rules" class="space-y-3"></div>
-        <div id="pay-rules-empty" class="empty-state hidden"><i class="fa-solid fa-key"></i>Aún no hay reglas de acceso.</div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="text-sm font-extrabold text-ink mr-auto"><i class="fa-solid fa-bolt-lightning text-accent-600 mr-1.5"></i>Respuestas rápidas de medios de pago</h3>
-          <button id="pay-quick-add" type="button" class="btn btn-soft btn-sm"><i class="fa-solid fa-plus"></i> Nueva respuesta</button>
-        </div>
-        <div id="pay-quick" class="space-y-3"></div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-diagram-project text-accent-600 mr-1.5"></i>Flujo avanzado post-pago</h3>
-        <p class="hint !mt-0 mb-3">Se ejecuta la primera vez que se detecta un pago válido de ese contacto.</p>
-        <div class="grid sm:grid-cols-[1fr_auto] gap-3 items-end">
-          <div><label class="label" for="pay-postflow">Flujo a ejecutar</label><select id="pay-postflow" class="select"></select></div>
-          <button id="pay-save" type="button" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar todo</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 14. CONFIGURAR IA ═══════════════════ -->
-    <section id="view-ai-config" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-brain"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Configurar IA</h2>
-          <p class="text-sm opacity-90">Define el cerebro conversacional de ApolAI</p>
-        </div>
-        <label class="flex items-center gap-2.5 rounded-full bg-white/20 px-3.5 py-1.5 cursor-pointer">
-          <span class="switch"><input type="checkbox" id="ai-enabled" checked /><span class="track"></span></span>
-          <span class="text-sm font-bold" id="ai-enabled-label">IA activada</span>
-        </label>
-      </div>
-
-      <div class="grid lg:grid-cols-2 gap-4 mt-4">
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3">Credenciales y modelo</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="label" for="ai-key">API Key</label>
-              <div class="copyable">
-                <input id="ai-key" type="password" class="input font-mono !text-xs" placeholder="sk-…" autocomplete="off" />
-                <button type="button" class="btn btn-soft !rounded-l-none" data-toggle-visibility="#ai-key" aria-label="Mostrar u ocultar"><i class="fa-regular fa-eye"></i></button>
-              </div>
-              <p class="error-msg" data-error-for="ai-key">Ingresa tu API Key.</p>
-            </div>
-            <div>
-              <label class="label" for="ai-model">Modelo</label>
-              <select id="ai-model" class="select"></select>
-            </div>
-          </div>
-        </div>
-
-        <div class="card p-4 lg:p-5">
-          <h3 class="text-sm font-extrabold text-ink mb-3">Tiempo de respuesta</h3>
-          <p class="hint !mt-0 mb-4">Retraso antes de responder para que la conversación se sienta natural.</p>
-          <div class="flex items-center gap-4">
-            <input id="ai-delay" type="range" min="10" max="30" value="15" step="1" class="flex-1 accent-accent-600" />
-            <span class="text-2xl font-extrabold brand-text w-20 text-right"><span id="ai-delay-value">15</span>s</span>
-          </div>
-          <div class="flex justify-between text-xs text-ink/40 font-semibold mt-1"><span>10s</span><span>30s</span></div>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="flex flex-wrap items-center gap-2 mb-3">
-          <h3 class="text-sm font-extrabold text-ink mr-auto">Prompt base</h3>
-          <span class="badge badge-muted"><span id="ai-prompt-chars">0</span> caracteres</span>
-          <button id="ai-load-example" type="button" class="btn btn-ghost btn-sm"><i class="fa-solid fa-file-import"></i> Usar ejemplo</button>
-        </div>
-        <textarea id="ai-prompt" class="textarea font-mono !text-xs !min-h-[18rem]" spellcheck="false" placeholder="Describe quién es tu asistente, qué vende y cómo debe responder…"></textarea>
-        <button id="ai-save" type="button" class="btn btn-primary mt-4"><i class="fa-solid fa-floppy-disk"></i> Guardar configuración</button>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <h3 class="text-sm font-extrabold text-ink mb-3"><i class="fa-solid fa-lightbulb text-accent-600 mr-1.5"></i>Prompt de referencia</h3>
-        <p class="hint !mt-0 mb-3">Estructura recomendada. Adáptala a tu negocio: identidad, objetivo, reglas y límites.</p>
-        <pre id="ai-prompt-example" class="terminal scroll-thin whitespace-pre-wrap !max-h-80"></pre>
-      </div>
-    </section>
-
-    <!-- ═══════════════════ 15. TUTORIALES ═══════════════════ -->
-    <section id="view-tutorials" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-graduation-cap"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Tutoriales</h2>
-          <p class="text-sm opacity-90">Aprende a sacarle todo el provecho a ApolAI</p>
-        </div>
-      </div>
-      <div id="tutorials-groups" class="space-y-5 mt-4"></div>
-    </section>
-
-    <!-- ═══════════════════ 16. PREGUNTAS FRECUENTES ═══════════════════ -->
-    <section id="view-faq" class="view">
-      <div class="section-head flex flex-wrap items-center gap-3">
-        <span class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fa-solid fa-circle-question"></i></span>
-        <div class="mr-auto">
-          <h2 class="text-lg font-extrabold">Preguntas Frecuentes</h2>
-          <p class="text-sm opacity-90">Las dudas más comunes sobre ApolAI, resueltas</p>
-        </div>
-      </div>
-
-      <div class="card p-4 lg:p-5 mt-4">
-        <div class="relative mb-4">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-accent-400 text-sm"></i>
-          <input id="faq-search" class="input !pl-9" placeholder="Buscar en las preguntas…" />
-        </div>
-        <div id="faq-list" class="space-y-2.5"></div>
-        <div id="faq-empty" class="empty-state hidden"><i class="fa-solid fa-magnifying-glass"></i>No encontramos preguntas con ese término.</div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Footer -->
-  <footer class="fixed bottom-0 left-0 right-0 lg:left-[17rem] z-20 glass border-t px-4 lg:px-7 py-2.5">
-    <div class="flex items-center justify-between gap-3 text-xs text-ink/50 font-semibold">
-      <p>© <span id="footer-year">2026</span> ApolAI · Todos los derechos reservados</p>
-      <p class="hidden sm:block">v1.0.0</p>
+      <p class="mt-5 text-sm text-ink/65 font-medium">
+        <i class="fa-solid fa-shield-halved text-accent-500"></i>
+        Sin permanencia · Configuración guiada · Tu número, tu cuenta de Meta
+      </p>
     </div>
-  </footer>
-</div>
 
-<!-- ══════════════════════════ Modal genérico ══════════════════════════ -->
-<div id="modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="modal-card">
-    <div class="modal-head">
-      <i id="modal-icon" class="fa-solid fa-circle-question"></i>
-      <h3 id="modal-title" class="text-base font-extrabold">Confirmar</h3>
-      <button id="modal-x" type="button" class="ml-auto text-white/80 hover:text-white" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    <!-- Mockup del producto: captura real del panel -->
+    <div class="mt-14 lg:mt-20 max-w-5xl mx-auto mock-glow floating">
+      <div class="mock-frame">
+        <div class="mock-bar">
+          <span class="mock-dot bg-red-400"></span>
+          <span class="mock-dot bg-amber-400"></span>
+          <span class="mock-dot bg-emerald-400"></span>
+          <span class="ml-3 text-[0.7rem] font-semibold text-ink/55">panel.elorai.io</span>
+        </div>
+        <img src="assets/img/preview-dashboard.webp" alt="Panel de control de Elorai recién configurado, listo para empezar desde cero"
+             class="w-full block" width="1600" height="868" loading="eager" decoding="async" />
+      </div>
     </div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-foot">
-      <button id="modal-cancel" type="button" class="btn btn-ghost">Cancelar</button>
-      <button id="modal-confirm" type="button" class="btn btn-primary">Confirmar</button>
+
+    <div class="mt-12 flex justify-center">
+      <a href="#conexion" class="scroll-hint text-accent-500 text-2xl" aria-label="Ir a la siguiente sección">
+        <i class="fa-solid fa-chevron-down"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CONEXIÓN API OFICIAL ═══════════════════════ -->
+<section id="conexion" class="py-16 lg:py-24 bg-gradient-to-b from-white to-accent-50/60">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto reveal">
+      <h2 class="text-3xl lg:text-4xl font-extrabold tracking-tight">
+        La diferencia entre un bot casero y <span class="brand-text">uno profesional</span>
+      </h2>
+      <p class="mt-4 text-ink/60 leading-relaxed">
+        Muchas soluciones se cuelgan de un teléfono encendido y un WhatsApp no oficial.
+        Funciona hasta que Meta lo detecta y te bloquea el número.
+      </p>
+    </div>
+
+    <div class="mt-12 max-w-5xl mx-auto card p-6 lg:p-10 reveal">
+      <div class="grid lg:grid-cols-[auto_1fr] gap-8 items-start">
+        <div class="icon-tile lg mx-auto lg:mx-0"><i class="fa-solid fa-certificate"></i></div>
+        <div>
+          <h3 class="text-2xl font-extrabold">Conexión vía API oficial de Meta</h3>
+          <p class="mt-3 text-ink/60 leading-relaxed">
+            Elorai se integra con WhatsApp Cloud API, la vía que Meta creó para empresas.
+            Tu número queda dado de alta formalmente, con todos los derechos y ninguna zona gris.
+          </p>
+
+          <div class="mt-7 grid sm:grid-cols-2 gap-4">
+            <div class="check-line">
+              <i class="fa-solid fa-circle-check"></i>
+              <div>
+                <p class="font-bold">Sin depender de un teléfono conectado</p>
+                <p class="text-sm text-ink/55 mt-0.5">Nada de celulares encendidos ni sesiones que se caen: todo vive en el servidor.</p>
+              </div>
+            </div>
+            <div class="check-line">
+              <i class="fa-solid fa-circle-check"></i>
+              <div>
+                <p class="font-bold">Mensajería sin límites artificiales</p>
+                <p class="text-sm text-ink/55 mt-0.5">Escala de decenas a miles de conversaciones sin cambiar de herramienta.</p>
+              </div>
+            </div>
+            <div class="check-line">
+              <i class="fa-solid fa-circle-check"></i>
+              <div>
+                <p class="font-bold">Integración con Conversions API</p>
+                <p class="text-sm text-ink/55 mt-0.5">Cada venta cerrada en el chat vuelve a Meta para alimentar tus campañas.</p>
+              </div>
+            </div>
+            <div class="check-line">
+              <i class="fa-solid fa-circle-check"></i>
+              <div>
+                <p class="font-bold">Cumplimiento de las políticas de Meta</p>
+                <p class="text-sm text-ink/55 mt-0.5">Sin riesgo de baneo por usar métodos no autorizados. Tu cuenta, tranquila.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CARACTERÍSTICAS ═══════════════════════ -->
+<section id="caracteristicas" class="py-16 lg:py-24">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto reveal">
+      <h2 class="text-3xl lg:text-4xl font-extrabold tracking-tight">
+        Todo lo que necesita <span class="brand-text">tu operación de ventas</span>
+      </h2>
+      <p class="mt-4 text-ink/60 leading-relaxed">
+        Siete piezas que trabajan juntas para que dejes de responder lo mismo cien veces al día.
+      </p>
+    </div>
+
+    <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-calendar-days"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">Agenda de citas</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          Reservas, bloqueos de horario y varios profesionales en un calendario propio. Se acabó
+          el ir y venir por WhatsApp para cuadrar una hora.
+        </p>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-certificate"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">Conexión API oficial</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          Alta formal de tu número en WhatsApp Cloud API, con webhook verificado y token permanente.
+          Estable, auditable y dentro de las reglas.
+        </p>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-infinity"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">Mensajería ilimitada</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          Atiende cien o diez mil conversaciones sin cambiar nada. La infraestructura acompaña
+          tu crecimiento en lugar de frenarlo.
+        </p>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-receipt"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">Pagos inteligentes</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          El bot lee el comprobante, extrae monto y referencia, valida contra tus reglas y entrega
+          el producto solo. Tú te enteras cuando ya está vendido.
+        </p>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-clock"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">Disponibilidad 24/7</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          Responde a las tres de la mañana, en domingo y en feriados. El cliente que pregunta
+          hoy no espera hasta mañana para que le contesten.
+        </p>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-chart-line"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">Analíticas avanzadas</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          Conversión, recurrencia, ticket promedio, horarios pico y rendimiento por distribuidor.
+          Números para decidir, no para adornar.
+        </p>
+      </article>
+
+      <article class="feature-card reveal">
+        <div class="icon-tile"><i class="fa-solid fa-brain"></i></div>
+        <h3 class="mt-5 text-lg font-extrabold">IA conversacional</h3>
+        <p class="mt-2 text-sm text-ink/60 leading-relaxed">
+          Una IA que sigue tu prompt, tu tono y tus límites. Y si prefieres tomar el control de
+          una conversación, la apagas con un clic.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CÓMO FUNCIONA ═══════════════════════ -->
+<section id="como-funciona" class="py-16 lg:py-24 bg-accent-50/50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto reveal">
+      <h2 class="text-3xl lg:text-4xl font-extrabold tracking-tight">
+        De cero a vendiendo en <span class="brand-text">cuatro pasos</span>
+      </h2>
+      <p class="mt-4 text-ink/60 leading-relaxed">
+        Sin instalar nada, sin programar y sin dejar el celular encendido en un cajón.
+      </p>
+    </div>
+
+    <div class="timeline mt-14 space-y-12 lg:space-y-20 max-w-6xl mx-auto">
+
+      <!-- Paso 1 -->
+      <div class="tl-step grid lg:grid-cols-[1fr_auto_1fr] gap-6 lg:gap-10 items-center reveal">
+        <div class="lg:text-right order-2 lg:order-1">
+          <h3 class="text-xl lg:text-2xl font-extrabold">Conecta tu número</h3>
+          <p class="mt-3 text-ink/60 leading-relaxed">
+            Pegas tu Access Token y Elorai consulta Meta por ti: recupera el Business Account ID,
+            el Phone Number ID y deja el webhook verificado. Sin tocar documentación técnica.
+          </p>
+        </div>
+        <div class="flex justify-center order-1 lg:order-2"><span class="tl-num">1</span></div>
+        <div class="tl-panel order-3">
+          <i class="fa-solid fa-plug-circle-bolt brand-text"></i>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="tl-step grid lg:grid-cols-[1fr_auto_1fr] gap-6 lg:gap-10 items-center reveal">
+        <div class="tl-panel order-3 lg:order-1">
+          <i class="fa-solid fa-wand-magic-sparkles brand-text"></i>
+        </div>
+        <div class="flex justify-center order-1 lg:order-2"><span class="tl-num">2</span></div>
+        <div class="order-2 lg:order-3">
+          <h3 class="text-xl lg:text-2xl font-extrabold">Entrena a tu asistente</h3>
+          <p class="mt-3 text-ink/60 leading-relaxed">
+            Escribes el prompt base con tu identidad, tus precios y tus reglas. Defines los
+            disparadores por palabra clave y armas los flujos de conversación arrastrando pasos.
+          </p>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div class="tl-step grid lg:grid-cols-[1fr_auto_1fr] gap-6 lg:gap-10 items-center reveal">
+        <div class="lg:text-right order-2 lg:order-1">
+          <h3 class="text-xl lg:text-2xl font-extrabold">Automatiza el cobro</h3>
+          <p class="mt-3 text-ink/60 leading-relaxed">
+            Configuras tus medios de pago y las reglas de acceso: cuando el comprobante coincide
+            con el monto y el contexto, el bot entrega el producto y marca la venta.
+          </p>
+        </div>
+        <div class="flex justify-center order-1 lg:order-2"><span class="tl-num">3</span></div>
+        <div class="tl-panel order-3">
+          <i class="fa-solid fa-money-check-dollar brand-text"></i>
+        </div>
+      </div>
+
+      <!-- Paso 4 -->
+      <div class="tl-step grid lg:grid-cols-[1fr_auto_1fr] gap-6 lg:gap-10 items-center reveal">
+        <div class="tl-panel order-3 lg:order-1">
+          <i class="fa-solid fa-chart-pie brand-text"></i>
+        </div>
+        <div class="flex justify-center order-1 lg:order-2"><span class="tl-num">4</span></div>
+        <div class="order-2 lg:order-3">
+          <h3 class="text-xl lg:text-2xl font-extrabold">Mide y escala</h3>
+          <p class="mt-3 text-ink/60 leading-relaxed">
+            El panel te muestra qué anuncio trae ventas y cuál solo trae curiosos. Cortas lo que
+            no funciona, subes presupuesto a lo que sí, y el remarketing recupera al resto.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ MÉTRICAS / ROI ═══════════════════════ -->
+<section id="roi" class="py-16 lg:py-24 bg-gradient-to-br from-brand-50 via-accent-50 to-plum-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto reveal">
+      <h2 class="text-3xl lg:text-4xl font-extrabold tracking-tight">
+        Deja de adivinar <span class="brand-text">qué anuncio te hace ganar</span>
+      </h2>
+      <p class="mt-4 text-ink/60 leading-relaxed">
+        El píxel ve el clic, pero no ve la venta que cerraste dentro de WhatsApp.
+        Elorai le devuelve esa información a Meta.
+      </p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-2 gap-6">
+      <div class="card p-6 lg:p-8 reveal">
+        <div class="flex items-center gap-4">
+          <div class="icon-tile"><i class="fa-solid fa-briefcase"></i></div>
+          <h3 class="text-xl font-extrabold">Para tu negocio</h3>
+        </div>
+        <div class="mt-6 space-y-4">
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Identificas los anuncios rentables</strong><br /><span class="text-sm text-ink/55">Ves ventas cerradas por anuncio, no solo conversaciones abiertas.</span></p></div>
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Mides el ROI real</strong><br /><span class="text-sm text-ink/55">Gasto contra ingreso cobrado, con costo por conversación y por venta.</span></p></div>
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Optimizas el presupuesto</strong><br /><span class="text-sm text-ink/55">Mueves dinero de lo que no convierte a lo que sí, con evidencia.</span></p></div>
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Reportes de conversión</strong><br /><span class="text-sm text-ink/55">Exportas todo a CSV para tu contabilidad o tu agencia.</span></p></div>
+        </div>
+      </div>
+
+      <div class="card p-6 lg:p-8 reveal">
+        <div class="flex items-center gap-4">
+          <div class="icon-tile"><i class="fa-brands fa-meta"></i></div>
+          <h3 class="text-xl font-extrabold">Para el algoritmo de Meta</h3>
+        </div>
+        <div class="mt-6 space-y-4">
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Datos precisos de conversión</strong><br /><span class="text-sm text-ink/55">Meta recibe la señal de venta real, no una estimación del píxel.</span></p></div>
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Optimización automática</strong><br /><span class="text-sm text-ink/55">Las campañas aprenden a buscar el perfil que efectivamente paga.</span></p></div>
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Menor costo por conversión</strong><br /><span class="text-sm text-ink/55">Menos presupuesto quemado en público que abre chat y desaparece.</span></p></div>
+          <div class="check-line"><i class="fa-solid fa-circle-check"></i><p><strong>Mejor segmentación</strong><br /><span class="text-sm text-ink/55">Públicos similares construidos sobre compradores, no sobre clics.</span></p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cómo funciona la magia -->
+    <div class="mt-8 rounded-2xl brand-gradient text-white p-6 lg:p-10 shadow-2xl reveal">
+      <h3 class="text-2xl font-extrabold text-center">Cómo funciona la conexión</h3>
+      <div class="mt-8 grid md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-white/20 flex items-center justify-center text-xl"><i class="fa-solid fa-magnifying-glass-dollar"></i></div>
+          <p class="mt-4 font-extrabold">1 · Detecta la conversión</p>
+          <p class="mt-1.5 text-sm text-white/80 leading-relaxed">El bot valida el comprobante y confirma que la venta ocurrió de verdad.</p>
+        </div>
+        <div class="text-center">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-white/20 flex items-center justify-center text-xl"><i class="fa-solid fa-paper-plane"></i></div>
+          <p class="mt-4 font-extrabold">2 · Envía los datos</p>
+          <p class="mt-1.5 text-sm text-white/80 leading-relaxed">Conversions API reporta a Meta el evento de compra con su valor y moneda.</p>
+        </div>
+        <div class="text-center">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-white/20 flex items-center justify-center text-xl"><i class="fa-solid fa-wand-sparkles"></i></div>
+          <p class="mt-4 font-extrabold">3 · Optimización automática</p>
+          <p class="mt-1.5 text-sm text-white/80 leading-relaxed">El algoritmo reajusta la entrega hacia quienes se parecen a tus compradores.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 card p-6 lg:p-8 reveal">
+      <p class="text-center text-sm font-bold uppercase tracking-widest text-ink/55">Resultados esperables</p>
+      <div class="mt-6 grid sm:grid-cols-3 gap-6 text-center">
+        <div>
+          <p class="text-4xl lg:text-5xl font-extrabold brand-text">65%</p>
+          <p class="mt-2 text-sm font-semibold text-ink/60">Reducción en costo por conversión</p>
+        </div>
+        <div>
+          <p class="text-4xl lg:text-5xl font-extrabold brand-text">3.2x</p>
+          <p class="mt-2 text-sm font-semibold text-ink/60">Aumento en ROAS</p>
+        </div>
+        <div>
+          <p class="text-4xl lg:text-5xl font-extrabold brand-text">89%</p>
+          <p class="mt-2 text-sm font-semibold text-ink/60">Mejora en precisión de targeting promedio</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 text-center reveal">
+      <a href="#precios" class="btn btn-gradient !px-7 !py-3.5 !text-base">
+        <i class="fa-solid fa-tag"></i> Ver planes
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ PRECIOS ═══════════════════════ -->
+<section id="precios" class="py-16 lg:py-24">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto reveal">
+      <h2 class="text-3xl lg:text-4xl font-extrabold tracking-tight">
+        Un precio simple, <span class="brand-text">sin letra chica</span>
+      </h2>
+      <p class="mt-4 text-ink/60 leading-relaxed">
+        Todo incluido en ambos planes. El anual simplemente sale más barato.
+      </p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+
+      <!-- Plan mensual -->
+      <div class="price-card reveal">
+        <div class="price-head">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-white/20 flex items-center justify-center text-xl"><i class="fa-solid fa-calendar-day"></i></div>
+          <h3 class="mt-4 text-xl font-extrabold">Plan Mensual</h3>
+          <p class="text-sm text-white/80">Flexibilidad total</p>
+        </div>
+        <div class="p-6 lg:p-8 flex-1 flex flex-col">
+          <div class="text-center">
+            <p class="price-amount">$29</p>
+            <p class="mt-1 text-sm text-ink/50 font-semibold">facturado cada mes</p>
+          </div>
+          <button type="button" data-plan="monthly" class="btn btn-gradient w-full mt-6 !py-3">
+            <i class="fa-solid fa-credit-card"></i> Empezar ahora
+          </button>
+          <p class="mt-3 text-center text-xs text-ink/65">✨ Prueba gratis por 7 días • Sin compromiso • Cancela cuando quieras</p>
+          <div class="mt-7 space-y-3 border-t border-accent-100 pt-6">
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Conexión con API oficial de Meta</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Conversaciones ilimitadas</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">IA conversacional configurable</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Verificación automática de pagos</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Agenda de citas con profesionales</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Flujos simples y avanzados</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Remarketing automático</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Métricas de anuncios y ROI</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Soporte por WhatsApp</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan anual -->
+      <div class="price-card featured relative reveal">
+        <span class="price-badge">Ahorra 11%</span>
+        <div class="price-head">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-white/20 flex items-center justify-center text-xl"><i class="fa-solid fa-crown"></i></div>
+          <h3 class="mt-4 text-xl font-extrabold">Plan Anual</h3>
+          <p class="text-sm text-white/80">El que eligen casi todos</p>
+        </div>
+        <div class="p-6 lg:p-8 flex-1 flex flex-col">
+          <div class="text-center">
+            <p class="price-amount">$311</p>
+            <p class="mt-1 text-sm text-ink/50 font-semibold">facturado una vez al año</p>
+          </div>
+          <button type="button" data-plan="yearly" class="btn btn-gradient w-full mt-6 !py-3">
+            <i class="fa-solid fa-credit-card"></i> Quiero el plan anual
+          </button>
+          <p class="mt-3 text-center text-xs text-ink/65">✨ Prueba gratis por 7 días • Sin compromiso • Cancela cuando quieras</p>
+          <div class="mt-7 space-y-3 border-t border-accent-100 pt-6">
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm font-semibold">Todo lo del plan mensual</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Configuración inicial acompañada</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Prioridad en soporte</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Revisión trimestral de tus flujos</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Plantillas de flujos avanzados</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Actualizaciones incluidas</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Precio bloqueado durante el año</span></div>
+            <div class="check-line"><i class="fa-solid fa-check"></i><span class="text-sm">Onboarding de tu equipo</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CTA FINAL ═══════════════════════ -->
+<section class="gradient-animated py-16 lg:py-24 text-white">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h2 class="text-3xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+      ¿Cuántas ventas se te escaparon<br class="hidden sm:block" /> por no contestar a tiempo?
+    </h2>
+    <p class="mt-5 text-lg text-white/85 max-w-2xl mx-auto leading-relaxed">
+      Ponemos a Elorai a atender tu WhatsApp mientras tú te dedicas a lo que sí requiere
+      que estés presente.
+    </p>
+
+    <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener"
+         class="btn !bg-white !text-brand-700 hover:!bg-brand-50 !px-7 !py-3.5 !text-base w-full sm:w-auto shadow-xl">
+        <i class="fa-brands fa-whatsapp text-lg"></i> Hablar con nosotros
+      </a>
+      <button type="button" data-open-login
+         class="btn !bg-white/15 !text-white !border-white/40 hover:!bg-white/25 !px-7 !py-3.5 !text-base w-full sm:w-auto">
+        <i class="fa-solid fa-right-to-bracket"></i> Ingresar a mi cuenta
+      </button>
+    </div>
+
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+      <span class="trust-badge"><i class="fa-solid fa-ban"></i> Sin compromisos</span>
+      <span class="trust-badge"><i class="fa-solid fa-bolt"></i> Configuración en minutos</span>
+      <span class="trust-badge"><i class="fa-solid fa-clock"></i> Disponible 24/7</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer class="bg-ink text-white/70">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+    <div class="grid md:grid-cols-4 gap-10">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2.5">
+          <img src="assets/img/elorai-logo-negative.svg" alt="" class="w-10 h-10" />
+          <span class="text-xl font-extrabold text-white">Elorai</span>
+        </div>
+        <p class="mt-4 text-sm leading-relaxed max-w-sm">
+          Automatización de WhatsApp con inteligencia artificial para negocios que venden
+          conversando. Conexión oficial con Meta, cobros verificados y métricas que sirven
+          para decidir.
+        </p>
+      </div>
+
+      <div>
+        <p class="text-sm font-extrabold text-white uppercase tracking-wider">Producto</p>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="#conexion" class="footer-link">Conexión</a></li>
+          <li><a href="#caracteristicas" class="footer-link">Características</a></li>
+          <li><a href="#como-funciona" class="footer-link">Cómo funciona</a></li>
+          <li><a href="#roi" class="footer-link">Métricas y ROI</a></li>
+          <li><a href="#precios" class="footer-link">Precios</a></li>
+          <li><a href="dashboard.html?demo=1" class="footer-link">Ver el panel</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="text-sm font-extrabold text-white uppercase tracking-wider">Soporte</p>
+        <ul class="mt-4 space-y-2.5">
+          <li><a href="mailto:eloraibot@gmail.com" class="footer-link"><i class="fa-regular fa-envelope mr-1.5"></i>eloraibot@gmail.com</a></li>
+          <li><a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener" class="footer-link"><i class="fa-brands fa-whatsapp mr-1.5"></i>WhatsApp</a></li>
+          <li><a href="https://www.youtube.com/@EloraiBot" target="_blank" rel="noopener" class="footer-link"><i class="fa-brands fa-youtube mr-1.5"></i>Tutoriales</a></li>
+          <li><a href="privacidad.html" class="footer-link">Política de privacidad</a></li>
+          <li><a href="terminos.html" class="footer-link">Términos y condiciones</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-12 pt-6 border-t border-white/10 text-sm text-center">
+      © <span id="footer-year">2026</span> Elorai · Todos los derechos reservados
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════════════════ MODAL DE LOGIN ═══════════════════════ -->
+<div id="login-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="login-title">
+  <div class="modal-card !max-w-sm">
+    <div class="modal-head justify-center relative">
+      <button type="button" data-close-login aria-label="Cerrar"
+        class="absolute right-4 top-4 text-white/80 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      <div class="text-center py-2">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-white/20 flex items-center justify-center">
+          <img src="assets/img/elorai-logo-negative.svg" alt="" class="w-11 h-11" />
+        </div>
+        <h3 id="login-title" class="mt-3 text-lg font-extrabold">Bienvenido de vuelta</h3>
+        <p class="text-sm text-white/85">Entra a tu panel de Elorai</p>
+      </div>
+    </div>
+
+    <div class="modal-body text-center">
+      <a href="/auth/google?next=%2Fdashboard.html" id="login-google" class="btn btn-gradient w-full !py-3">
+        <i class="fa-brands fa-google"></i> Continuar con Google
+      </a>
+
+      <div class="flex items-center gap-3 my-5">
+        <span class="h-px flex-1 bg-accent-100"></span>
+        <span class="text-xs font-bold text-ink/35 uppercase tracking-widest">o</span>
+        <span class="h-px flex-1 bg-accent-100"></span>
+      </div>
+
+      <a href="dashboard.html?demo=1" class="text-sm font-semibold text-accent-600 hover:text-accent-700">
+        Ver el panel de demostración
+      </a>
+      <p class="mt-5 text-xs text-ink/65">
+        ¿Todavía no tienes cuenta?
+        <a href="#" id="signup-link" class="font-semibold text-accent-600 hover:text-accent-700">Regístrate gratis</a>
+      </p>
     </div>
   </div>
 </div>
 
-<script src="assets/js/mock.js"></script>
-<script src="assets/js/core.js"></script>
-<script src="assets/js/dashboard.js"></script>
-<script src="assets/js/connect.js"></script>
-<script src="assets/js/chat.js"></script>
-<script src="assets/js/reports.js"></script>
-<script src="assets/js/automation.js"></script>
-<script src="assets/js/settings.js"></script>
-<script src="assets/js/app.js"></script>
+<script src="assets/js/session.js?v=2"></script>
+<script src="assets/js/landing.js?v=2"></script>
 </body>
 </html>

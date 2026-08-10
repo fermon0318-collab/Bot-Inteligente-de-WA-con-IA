@@ -1,0 +1,5 @@
+/* Entrada para compilar Tailwind en producción.
+   Ver deploy/README.md § "Compilar Tailwind". */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

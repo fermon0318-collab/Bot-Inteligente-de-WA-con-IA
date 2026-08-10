@@ -1,11 +1,15 @@
 /* ============================================================================
-   ApolAI — Pagos y Acceso, Configurar IA, Tutoriales y FAQ
+   Elorai — Pagos y Acceso, Configurar IA, Tutoriales y FAQ
    ========================================================================== */
 
 (function (App) {
   'use strict';
 
   const { qs, qsa, el } = App;
+
+  // Arranca vacío; cargarPagos() lo llena al entrar a la sección.
+  App.PAY_RULES = [];
+  App.PAY_QUICK = [];
 
   /* ========================================================================
      Pagos y acceso
@@ -104,6 +108,19 @@
     });
   }
 
+  async function cargarPagos() {
+    const d = await App.session.api('/payments');
+    qs('#pay-msg-ok').value = d.messageOk;
+    qs('#pay-msg-bad').value = d.messageInvalid;
+    qs('#pay-postflow').value = d.postFlowId || '';
+    App.PAY_RULES.length = 0;
+    App.PAY_RULES.push(...d.rules.map((r) => ({ ...r, files: r.files || [] })));
+    App.PAY_QUICK.length = 0;
+    App.PAY_QUICK.push(...d.quickReplies);
+    renderPayRules();
+    renderQuickReplies();
+  }
+
   function initPayments() {
     renderPayRules();
     renderQuickReplies();
@@ -126,8 +143,22 @@
       if (badQuick) { App.toast('Hay respuestas rápidas incompletas', 'err'); return; }
 
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(800);
-        App.toast('Configuración de pagos guardada', 'ok');
+        try {
+          await App.session.api('/payments', {
+            method: 'PUT',
+            body: {
+              messageOk: qs('#pay-msg-ok').value,
+              messageInvalid: qs('#pay-msg-bad').value,
+              postFlowId: qs('#pay-postflow').value || null,
+              rules: App.PAY_RULES,
+              quickReplies: App.PAY_QUICK,
+            },
+          });
+          await cargarPagos();
+          App.toast('Configuración de pagos guardada', 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -135,6 +166,20 @@
   /* ========================================================================
      Configurar IA
      ===================================================================== */
+  async function cargarIa() {
+    const { ai } = await App.session.api('/settings');
+    qs('#ai-enabled').checked = ai.enabled;
+    qs('#ai-model').value = ai.model;
+    qs('#ai-delay').value = ai.delaySeconds;
+    qs('#ai-delay-value').textContent = ai.delaySeconds;
+    qs('#ai-daily-limit').value = ai.dailyLimit;
+    qs('#ai-prompt').value = ai.prompt;
+    qs('#ai-key').value = '';
+    qs('#ai-key').placeholder = ai.hasKey ? ai.keyMask : 'sk-…';
+    qs('#ai-prompt-chars').textContent = App.num(ai.prompt.length);
+    qs('#ai-enabled-label').textContent = ai.enabled ? 'IA activada' : 'IA desactivada';
+  }
+
   function initAiConfig() {
     const model = qs('#ai-model');
     App.AI_MODELS.forEach((m) => model.appendChild(el('option', { value: m.id, text: m.label })));
@@ -154,7 +199,6 @@
     const enabled = qs('#ai-enabled');
     enabled.addEventListener('change', () => {
       qs('#ai-enabled-label').textContent = enabled.checked ? 'IA activada' : 'IA desactivada';
-      App.toast(enabled.checked ? 'IA activada' : 'IA desactivada: el bot solo seguirá flujos', enabled.checked ? 'ok' : 'warn');
     });
 
     qs('#ai-load-example').addEventListener('click', async () => {
@@ -170,16 +214,29 @@
     });
 
     qs('#ai-save').addEventListener('click', (ev) => {
-      const ok = App.validate([
-        { input: '#ai-key', test: (v) => v.length >= 8, message: 'La API Key parece incompleta.' },
-      ]);
-      if (!ok) { App.toast('Revisa tu API Key', 'err'); return; }
+      const key = qs('#ai-key').value.trim();
       if (prompt.value.trim().length < 40) {
         App.toast('El prompt base es demasiado corto para dar buenos resultados', 'warn');
       }
       App.withBusy(ev.currentTarget, async () => {
-        await App.fakeRequest(850);
-        App.toast(`IA configurada · ${model.options[model.selectedIndex].text.split('—')[0].trim()}`, 'ok');
+        try {
+          await App.session.api('/settings/ai', {
+            method: 'PUT',
+            body: {
+              enabled: enabled.checked,
+              model: model.value,
+              delaySeconds: Number(delay.value),
+              dailyLimit: Number(qs('#ai-daily-limit').value),
+              prompt: prompt.value,
+              ...(key ? { apiKey: key } : {}),
+            },
+          });
+          qs('#ai-key').value = '';
+          await cargarIa();
+          App.toast(`IA configurada · ${model.options[model.selectedIndex].text.split('—')[0].trim()}`, 'ok');
+        } catch (err) {
+          App.toast(err.message, 'err');
+        }
       }, 'Guardando…');
     });
   }
@@ -222,6 +279,22 @@
   /* ========================================================================
      FAQ
      ===================================================================== */
+  /* Convierte los marcadores [ASI] del texto en chips visibles, construyendo
+     nodos en lugar de inyectar HTML. */
+  function withPlaceholders(text) {
+    const frag = document.createDocumentFragment();
+    const re = /\[[A-Z0-9_]+\]/g;
+    let last = 0;
+    let match;
+    while ((match = re.exec(text)) !== null) {
+      if (match.index > last) frag.appendChild(document.createTextNode(text.slice(last, match.index)));
+      frag.appendChild(el('span', { class: 'ph', title: 'Pendiente de completar', text: match[0] }));
+      last = match.index + match[0].length;
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    return frag;
+  }
+
   function renderFaq(filter = '') {
     const list = qs('#faq-list');
     const term = filter.trim().toLowerCase();
@@ -232,7 +305,14 @@
     qs('#faq-empty').classList.toggle('hidden', items.length > 0);
 
     items.forEach((f, i) => {
-      const answer = el('div', { class: 'faq-a' }, el('div', { class: 'faq-a-inner', text: f.a }));
+      const inner = el('div', { class: 'faq-a-inner' }, el('p', {}, withPlaceholders(f.a)));
+      if (f.link) {
+        inner.appendChild(el('a', {
+          class: 'inline-flex items-center gap-1.5 mt-3 text-sm font-bold text-accent-600 hover:text-accent-700',
+          href: f.link.href,
+        }, [el('i', { class: 'fa-solid fa-arrow-up-right-from-square text-xs' }), el('span', { text: f.link.label })]));
+      }
+      const answer = el('div', { class: 'faq-a' }, inner);
       const btn = el('button', {
         type: 'button', class: 'faq-q', 'aria-expanded': 'false', id: `faq-q-${i}`,
       }, [
@@ -279,4 +359,7 @@
     },
   };
 
-})(window.ApolAI);
+  App.onView('payments', () => cargarPagos().catch((e) => App.toast(e.message, 'err')));
+  App.onView('ai-config', () => cargarIa().catch((e) => App.toast(e.message, 'err')));
+
+})(window.Elorai);

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Términos y Condiciones · Elorai</title>
+<meta name="description" content="Condiciones de uso del servicio Elorai: planes, facturación, uso aceptable, cumplimiento de las políticas de Meta y responsabilidades de cada parte." />
+<meta name="theme-color" content="#4F46E5" />
+<meta name="robots" content="index, follow" />
+
+<link rel="icon" type="image/svg+xml" href="assets/img/elorai-logo.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+<link rel="stylesheet" href="assets/css/tailwind.css" />
+
+<link rel="stylesheet" href="assets/css/elorai.css" />
+<link rel="stylesheet" href="assets/css/landing.css" />
+<link rel="stylesheet" href="assets/css/legal.css" />
+</head>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  BORRADOR — NO ES ASESORÍA LEGAL                                        ║
+  ║                                                                          ║
+  ║  Plantilla redactada a partir del funcionamiento real de Elorai. Debe    ║
+  ║  revisarla un abogado antes de publicarla: las cláusulas de limitación   ║
+  ║  de responsabilidad y de jurisdicción tienen límites distintos en cada   ║
+  ║  país, y varias no son oponibles frente a consumidores.                  ║
+  ║                                                                          ║
+  ║  Marcadores a completar:                                                 ║
+  ║    [RAZON_SOCIAL] · [DOMICILIO_FISCAL] · [PAIS_JURISDICCION]             ║
+  ║    [CIUDAD_TRIBUNALES] · [SOPORTE_EMAIL] · [WHATSAPP_NUMBER]             ║
+  ║    [FECHA_VIGENCIA] · [PRECIO_MENSUAL] · [PRECIO_ANUAL]                  ║
+  ║    [PLAZO_REEMBOLSO] · [LIMITE_CONVERSACIONES_REEMBOLSO]                 ║
+  ║    [DIAS_PREAVISO_PRECIO] · [DIAS_RETENCION] · [SLA_DISPONIBILIDAD]      ║
+  ║                                                                          ║
+  ║  Los plazos de reembolso deben coincidir con lo que dice el FAQ del      ║
+  ║  panel (dashboard.html) para no contradecirse entre superficies.         ║
+  ║                                                                          ║
+  ║  Antes de publicar, elimina también el bloque .legal-draft del cuerpo.   ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
+-->
+
+<body class="antialiased text-ink">
+
+<!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+<header id="navbar" class="fixed top-0 inset-x-0 z-50">
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 lg:h-[4.5rem]">
+      <a href="index.html" class="flex items-center gap-2.5 shrink-0">
+        <img src="assets/img/elorai-logo.svg" alt="Elorai" class="w-10 h-10" />
+        <span class="text-xl font-extrabold brand-text tracking-tight">Elorai</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="nav-link-top hidden sm:inline-block">
+          <i class="fa-solid fa-arrow-left mr-1"></i>Volver al inicio
+        </a>
+        <a href="privacidad.html" class="nav-link-top hidden sm:inline-block">Privacidad</a>
+        <a href="dashboard.html" class="btn btn-gradient">
+          <i class="fa-solid fa-right-to-bracket"></i> Ingresar
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══════════════════════ ENCABEZADO ═══════════════════════ -->
+<section class="legal-hero">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <span class="section-eyebrow mb-4"><i class="fa-solid fa-file-contract"></i>Legal</span>
+    <h1 class="text-3xl lg:text-5xl font-extrabold tracking-tight">Términos y Condiciones</h1>
+    <p class="mt-4 text-ink/60 max-w-2xl leading-relaxed">
+      Las reglas del servicio: qué te damos, qué esperamos de ti y qué pasa si algo sale mal.
+    </p>
+    <p class="mt-4 text-sm text-ink/45 font-semibold">
+      Última actualización: <span class="ph">[FECHA_VIGENCIA]</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CONTENIDO ═══════════════════════ -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+  <div class="grid lg:grid-cols-[16rem_1fr] gap-10">
+
+    <aside class="hidden lg:block">
+      <nav class="legal-toc" aria-label="Índice del documento">
+        <p>Contenido</p>
+        <a href="#aceptacion">1 · Aceptación</a>
+        <a href="#servicio">2 · Qué es Elorai</a>
+        <a href="#cuenta">3 · Tu cuenta</a>
+        <a href="#planes">4 · Planes y facturación</a>
+        <a href="#reembolsos">5 · Prueba y reembolsos</a>
+        <a href="#uso-aceptable">6 · Uso aceptable</a>
+        <a href="#meta">7 · Políticas de Meta</a>
+        <a href="#ia">8 · Uso de la IA</a>
+        <a href="#tus-datos">9 · Tus datos y contenidos</a>
+        <a href="#disponibilidad">10 · Disponibilidad y soporte</a>
+        <a href="#propiedad">11 · Propiedad intelectual</a>
+        <a href="#garantias">12 · Garantías</a>
+        <a href="#responsabilidad">13 · Limitación de responsabilidad</a>
+        <a href="#terminacion">14 · Suspensión y baja</a>
+        <a href="#cambios">15 · Cambios en los términos</a>
+        <a href="#ley">16 · Ley aplicable</a>
+        <a href="#contacto">17 · Contacto</a>
+      </nav>
+    </aside>
+
+    <article class="prose-legal max-w-3xl">
+
+      <!-- ELIMINAR ESTE BLOQUE ANTES DE PUBLICAR -->
+      <div class="legal-draft mb-10">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          <strong>Borrador pendiente de revisión legal.</strong> Varias cláusulas —limitación de
+          responsabilidad, jurisdicción, renuncias— tienen límites distintos en cada país y
+          algunas no son oponibles frente a consumidores. Complétalo, revísalo con un abogado y
+          elimina este aviso antes de publicar.
+        </div>
+      </div>
+
+      <section id="aceptacion">
+        <h2><span class="n">1</span>Aceptación de estos términos</h2>
+        <p>
+          Estos términos regulan el uso de Elorai, servicio prestado por
+          <span class="ph">[RAZON_SOCIAL]</span>, con domicilio en
+          <span class="ph">[DOMICILIO_FISCAL]</span>.
+        </p>
+        <p>
+          Al crear una cuenta, contratar un plan o usar el servicio, aceptas estos términos y
+          nuestra <a href="privacidad.html">Política de Privacidad</a>. Si contratas en nombre de
+          una empresa, declaras tener facultades para obligarla.
+        </p>
+        <p>Si no estás de acuerdo con alguna parte, no uses el servicio.</p>
+      </section>
+
+      <section id="servicio">
+        <h2><span class="n">2</span>Qué es Elorai</h2>
+        <p>
+          Elorai es una plataforma que conecta tu número de WhatsApp Business con la API oficial
+          de Meta y te permite automatizar la atención y la venta: responder con inteligencia
+          artificial, ejecutar flujos de conversación, verificar comprobantes de pago, hacer
+          remarketing y medir el rendimiento de tus campañas publicitarias.
+        </p>
+        <div class="legal-note">
+          Elorai <strong>no es</strong> un producto de Meta ni está afiliado a Meta Platforms.
+          WhatsApp es una marca registrada de Meta Platforms, Inc. Usamos su API pública en los
+          términos que Meta establece, y tu relación con Meta se rige por los acuerdos que tengas
+          directamente con ella.
+        </div>
+        <p>
+          Tampoco somos una entidad de pago: no procesamos ni custodiamos los cobros de tus
+          clientes. Lo que hacemos es <strong>leer el comprobante que tu cliente envía</strong> y
+          compararlo con las reglas que tú configuras. La decisión final sobre si un pago es
+          válido es tuya.
+        </p>
+      </section>
+
+      <section id="cuenta">
+        <h2><span class="n">3</span>Tu cuenta</h2>
+        <ul>
+          <li>Debes ser mayor de edad y tener capacidad legal para contratar.</li>
+          <li>La información que nos facilites debe ser veraz y estar actualizada.</li>
+          <li>Eres responsable de la confidencialidad de tus credenciales y de toda actividad realizada desde tu cuenta.</li>
+          <li>Debes avisarnos de inmediato si detectas un acceso no autorizado.</li>
+          <li>El número de WhatsApp que conectes debe ser tuyo o estar bajo tu control legítimo, y debe cumplir los requisitos de alta de WhatsApp Cloud API.</li>
+        </ul>
+      </section>
+
+      <section id="planes">
+        <h2><span class="n">4</span>Planes, precios y facturación</h2>
+        <ul>
+          <li><strong>Plan mensual</strong>: <span class="ph">[PRECIO_MENSUAL]</span>, se renueva automáticamente cada mes.</li>
+          <li><strong>Plan anual</strong>: <span class="ph">[PRECIO_ANUAL]</span>, se renueva automáticamente cada doce meses.</li>
+        </ul>
+        <p>
+          Los precios se indican en la moneda señalada en el proceso de contratación y no
+          incluyen los impuestos que correspondan según tu jurisdicción.
+        </p>
+        <h3>Renovación y cancelación</h3>
+        <p>
+          La suscripción se renueva de forma automática salvo que la canceles antes de la fecha
+          de renovación. Puedes cancelarla en cualquier momento; el servicio seguirá activo hasta
+          el final del periodo ya pagado y no se cobrará el siguiente.
+        </p>
+        <h3>Cambios de precio</h3>
+        <p>
+          Podemos modificar los precios avisándote con al menos
+          <span class="ph">[DIAS_PREAVISO_PRECIO]</span> días de antelación. El nuevo precio se
+          aplicará a partir de la siguiente renovación. Si no lo aceptas, puedes cancelar antes de
+          esa fecha.
+        </p>
+        <h3>Impago</h3>
+        <p>
+          Si un cobro no se completa, te avisaremos y podremos suspender el servicio hasta
+          regularizar la situación. Tus datos se conservarán durante el periodo indicado en la
+          Política de Privacidad antes de cualquier eliminación.
+        </p>
+        <h3>Costes de terceros</h3>
+        <p>
+          El precio de Elorai <strong>no incluye</strong> lo que Meta te cobre por las
+          conversaciones de WhatsApp Cloud API, ni el consumo del proveedor de inteligencia
+          artificial cuya API Key configures. Esos costes los facturan directamente esos
+          proveedores y son a tu cargo.
+        </p>
+      </section>
+
+      <section id="reembolsos">
+        <h2><span class="n">5</span>Prueba y reembolsos</h2>
+        <p>
+          Dispones de <span class="ph">[PLAZO_REEMBOLSO]</span> días desde la contratación
+          inicial para solicitar el reembolso íntegro, siempre que no hayas superado
+          <span class="ph">[LIMITE_CONVERSACIONES_REEMBOLSO]</span> conversaciones procesadas.
+        </p>
+        <p>
+          La solicitud se hace escribiendo a
+          <a href="mailto:[SOPORTE_EMAIL]"><span class="ph">[SOPORTE_EMAIL]</span></a> y el importe
+          se devuelve por el mismo medio de pago. Transcurrido ese plazo, las cuotas ya abonadas
+          no son reembolsables, sin perjuicio de los derechos que te reconozca la normativa de
+          consumo aplicable.
+        </p>
+      </section>
+
+      <section id="uso-aceptable">
+        <h2><span class="n">6</span>Uso aceptable</h2>
+        <p>Al usar Elorai te comprometes a <strong>no</strong>:</p>
+        <ul>
+          <li>Enviar mensajes no solicitados de forma masiva a personas que no te han dado su consentimiento ni han iniciado contacto contigo.</li>
+          <li>Comprar, alquilar o usar bases de datos de números de terceros.</li>
+          <li>Promocionar productos o servicios ilegales, ni contenido que infrinja derechos de terceros.</li>
+          <li>Suplantar la identidad de otra persona, empresa o marca.</li>
+          <li>Usar el servicio para estafas, phishing, difusión de malware o cualquier fin fraudulento.</li>
+          <li>Intentar vulnerar la seguridad del servicio, hacer ingeniería inversa o acceder a datos de otros clientes.</li>
+          <li>Revender o sublicenciar el acceso sin nuestra autorización expresa por escrito.</li>
+          <li>Configurar la IA para que afirme ser una persona humana cuando el usuario pregunte directamente si habla con un sistema automatizado.</li>
+        </ul>
+        <div class="legal-note">
+          El envío masivo no consentido es, además de una infracción de estos términos, la vía más
+          rápida para que Meta degrade la calidad de tu número y termine bloqueándolo. Ninguna
+          herramienta puede protegerte de esa consecuencia.
+        </div>
+      </section>
+
+      <section id="meta">
+        <h2><span class="n">7</span>Cumplimiento de las políticas de Meta</h2>
+        <p>
+          El uso de WhatsApp Cloud API está sujeto a las políticas de Meta, que pueden cambiar sin
+          previo aviso y que prevalecen sobre cualquier funcionalidad de Elorai. Es
+          responsabilidad tuya conocerlas y cumplirlas, en particular en materia de plantillas
+          aprobadas, ventana de atención de 24 horas y contenido permitido.
+        </p>
+        <p>
+          <strong>No respondemos</strong> de las decisiones que Meta tome sobre tu número o tu
+          cuenta comercial, incluidas la degradación de calidad, la limitación de mensajería, la
+          suspensión o la baja definitiva, aunque afecten por completo a tu capacidad de usar el
+          servicio.
+        </p>
+      </section>
+
+      <section id="ia">
+        <h2><span class="n">8</span>Uso de la inteligencia artificial</h2>
+        <p>
+          Las respuestas se generan con modelos de lenguaje a partir del prompt base que tú
+          escribes. Esta tecnología puede producir respuestas incorrectas, incompletas o
+          inapropiadas pese a las instrucciones que configures.
+        </p>
+        <ul>
+          <li>Eres responsable del contenido del prompt y de las respuestas que tu bot emita.</li>
+          <li>Debes revisar periódicamente las conversaciones y ajustar la configuración.</li>
+          <li>No debes delegar en la IA decisiones con consecuencias legales, médicas o financieras significativas sin supervisión humana.</li>
+          <li>El panel te permite desactivar la IA por conversación o de forma global en cualquier momento.</li>
+        </ul>
+      </section>
+
+      <section id="tus-datos">
+        <h2><span class="n">9</span>Tus datos y contenidos</h2>
+        <p>
+          Los datos que introduces y los que genera tu operación —conversaciones, contactos,
+          archivos, flujos y prompts— <strong>siguen siendo tuyos</strong>. Nos concedes
+          únicamente la licencia necesaria para alojarlos y procesarlos con el fin de prestarte
+          el servicio.
+        </p>
+        <p>
+          Puedes exportarlos en cualquier momento desde el panel. Tras la baja los conservaremos
+          durante <span class="ph">[DIAS_RETENCION]</span> días para permitirte recuperarlos, y
+          después los eliminaremos.
+        </p>
+        <p>
+          Garantizas que cuentas con la base legal necesaria para tratar los datos de las personas
+          que conversan con tu bot y que cumples la normativa de protección de datos aplicable.
+        </p>
+      </section>
+
+      <section id="disponibilidad">
+        <h2><span class="n">10</span>Disponibilidad y soporte</h2>
+        <p>
+          Trabajamos para mantener el servicio disponible de forma continua, con un objetivo de
+          <span class="ph">[SLA_DISPONIBILIDAD]</span> de disponibilidad mensual, excluidas las
+          ventanas de mantenimiento programado, que anunciaremos con antelación.
+        </p>
+        <p>
+          El servicio depende de infraestructura de terceros —Meta, el proveedor de IA, el
+          proveedor de alojamiento— y de tu propia conexión. Las interrupciones causadas por esos
+          terceros quedan fuera de nuestro control.
+        </p>
+        <p>
+          El soporte se presta por correo y WhatsApp en horario laboral. El plan anual incluye
+          prioridad en la cola de atención.
+        </p>
+      </section>
+
+      <section id="propiedad">
+        <h2><span class="n">11</span>Propiedad intelectual</h2>
+        <p>
+          El software, la marca Elorai, el logotipo, la documentación y el diseño de la
+          plataforma son titularidad de <span class="ph">[RAZON_SOCIAL]</span>. Estos términos no
+          te transfieren ningún derecho sobre ellos más allá del uso del servicio durante la
+          vigencia de tu suscripción.
+        </p>
+        <p>
+          Las plantillas de flujos y los materiales que te proporcionemos puedes usarlos y
+          adaptarlos libremente dentro de tu propia operación.
+        </p>
+      </section>
+
+      <section id="garantias">
+        <h2><span class="n">12</span>Garantías</h2>
+        <p>
+          El servicio se presta «tal cual» y «según disponibilidad». Dentro de lo permitido por la
+          ley, no garantizamos que el servicio esté libre de errores ni que satisfaga expectativas
+          concretas.
+        </p>
+        <p>
+          <strong>No garantizamos resultados comerciales.</strong> Cualquier cifra que aparezca en
+          nuestro material de marketing es ilustrativa y depende por completo de tu producto, tu
+          mercado, tu inversión publicitaria y tu propia gestión.
+        </p>
+      </section>
+
+      <section id="responsabilidad">
+        <h2><span class="n">13</span>Limitación de responsabilidad</h2>
+        <p>
+          En la medida en que lo permita la legislación aplicable, nuestra responsabilidad total
+          frente a ti por cualquier reclamación derivada del servicio se limita al importe que nos
+          hayas abonado en los doce meses anteriores al hecho que la origine.
+        </p>
+        <p>No respondemos de:</p>
+        <ul>
+          <li>Lucro cesante, pérdida de oportunidades comerciales o daños indirectos.</li>
+          <li>Decisiones de Meta sobre tu número o tu cuenta comercial.</li>
+          <li>Fallos, cambios de precio o interrupciones de proveedores externos.</li>
+          <li>El contenido que tu bot emita, incluidas las respuestas generadas por IA.</li>
+          <li>Pagos que valides incorrectamente por una configuración errónea de tus reglas de acceso.</li>
+        </ul>
+        <div class="legal-note">
+          Nada en esta cláusula excluye la responsabilidad por dolo, culpa grave, daños personales
+          o cualquier otro supuesto que la ley no permita limitar. Si eres consumidor, conservas
+          íntegros los derechos que te reconozca la normativa de consumo.
+        </div>
+      </section>
+
+      <section id="terminacion">
+        <h2><span class="n">14</span>Suspensión y baja</h2>
+        <p>
+          Puedes darte de baja cuando quieras desde el panel o escribiéndonos. Podemos suspender o
+          cancelar tu cuenta si incumples estos términos, si tu uso pone en riesgo la
+          infraestructura o a otros clientes, o si existe una obligación legal que nos lo exija.
+        </p>
+        <p>
+          Salvo en casos graves o de requerimiento legal, te avisaremos antes de suspender el
+          servicio y te daremos ocasión de corregir la situación. En todo caso podrás exportar tus
+          datos conforme a la cláusula 9.
+        </p>
+      </section>
+
+      <section id="cambios">
+        <h2><span class="n">15</span>Cambios en estos términos</h2>
+        <p>
+          Podemos actualizar estos términos. Publicaremos la versión vigente en esta página con su
+          fecha, y si el cambio es sustancial te avisaremos por correo con antelación razonable.
+          Seguir usando el servicio después de la entrada en vigor implica su aceptación; si no
+          los aceptas, puedes cancelar la suscripción.
+        </p>
+      </section>
+
+      <section id="ley">
+        <h2><span class="n">16</span>Ley aplicable y jurisdicción</h2>
+        <p>
+          Estos términos se rigen por la legislación de
+          <span class="ph">[PAIS_JURISDICCION]</span>. Para cualquier controversia, las partes se
+          someten a los tribunales de <span class="ph">[CIUDAD_TRIBUNALES]</span>, salvo que la
+          normativa de consumo aplicable disponga otro fuero.
+        </p>
+        <p>
+          Antes de acudir a los tribunales, nos comprometemos a intentar resolver de buena fe
+          cualquier desacuerdo por escrito.
+        </p>
+        <p>
+          Si alguna cláusula resultara nula o inaplicable, el resto seguirá plenamente vigente.
+        </p>
+      </section>
+
+      <section id="contacto">
+        <h2><span class="n">17</span>Contacto</h2>
+        <ul>
+          <li>Correo: <a href="mailto:[SOPORTE_EMAIL]"><span class="ph">[SOPORTE_EMAIL]</span></a></li>
+          <li>WhatsApp: <a href="https://wa.me/[WHATSAPP_NUMBER]" target="_blank" rel="noopener"><span class="ph">[WHATSAPP_NUMBER]</span></a></li>
+          <li>Dirección: <span class="ph">[DOMICILIO_FISCAL]</span></li>
+        </ul>
+      </section>
+
+    </article>
+  </div>
+</main>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer class="bg-ink text-white/70">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <img src="assets/img/elorai-logo.svg" alt="" class="w-9 h-9" />
+        <span class="text-lg font-extrabold text-white">Elorai</span>
+      </a>
+      <div class="flex flex-wrap items-center justify-center gap-5">
+        <a href="index.html" class="footer-link">Inicio</a>
+        <a href="privacidad.html" class="footer-link">Política de privacidad</a>
+        <a href="mailto:[SOPORTE_EMAIL]" class="footer-link">Soporte</a>
+      </div>
+    </div>
+    <div class="mt-8 pt-6 border-t border-white/10 text-sm text-center">
+      © <span id="footer-year">2026</span> Elorai · Todos los derechos reservados
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/session.js"></script>
+<script src="assets/js/legal.js"></script>
+</body>
+</html>

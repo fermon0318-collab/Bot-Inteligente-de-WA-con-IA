@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#4F46E5" />
+<title>Elorai · Completa tu cuenta</title>
+
+<link rel="icon" type="image/svg+xml" href="assets/img/elorai-logo.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link rel="stylesheet" href="assets/css/tailwind.css?v=2" />
+<link rel="stylesheet" href="assets/css/elorai.css?v=2" />
+<style>
+  /* Letra >=16px en los campos: por debajo de eso, iOS Safari hace zoom
+     automático al enfocar y descoloca el formulario. Se acota a esta página
+     (no al panel, donde .input/.select se usan en tablas densas). */
+  #onboarding-form .input, #onboarding-form .select { font-size: 1rem; }
+</style>
+</head>
+<body class="antialiased" style="background: radial-gradient(circle at top, #ede9fe, #f5f3ff 55%, #ffffff);">
+
+<div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+<div class="min-h-screen flex items-center justify-center px-4 py-10 lg:py-6">
+  <div class="w-full max-w-6xl lg:grid lg:grid-cols-2 lg:gap-16 lg:items-center">
+
+    <!-- Columna izquierda: solo en escritorio -->
+    <div class="hidden lg:block">
+      <div class="flex items-center gap-2.5">
+        <img src="assets/img/elorai-logo.svg" alt="" class="w-10 h-10" />
+        <span class="text-xl font-extrabold text-ink">Elorai</span>
+      </div>
+      <h1 class="mt-8 text-4xl xl:text-5xl font-extrabold tracking-tight text-ink leading-tight">
+        Automatiza tu WhatsApp con <span class="brand-text">inteligencia artificial</span>
+      </h1>
+      <p class="mt-5 text-lg text-ink/60 leading-relaxed max-w-md">
+        Responde a tus clientes, agenda tus citas y no pierdas ninguna venta — todo desde un solo panel.
+      </p>
+    </div>
+
+    <!-- Columna derecha: el formulario -->
+    <div class="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
+    <div class="card p-6 sm:p-8">
+      <div class="text-center">
+        <img src="assets/img/elorai-logo.svg" alt="Elorai" class="w-14 h-14 mx-auto mb-3 lg:hidden" />
+        <h1 class="text-2xl font-extrabold text-ink">Completa tu cuenta</h1>
+        <p class="mt-2 text-sm sm:text-base font-bold brand-text">¡No te quedes con la duda! Prueba 7 días gratis</p>
+        <p class="mt-2 text-sm text-ink/55" id="welcome-line">Ya iniciaste sesión con Google — solo faltan estos datos de tu negocio.</p>
+      </div>
+
+      <form id="onboarding-form" class="mt-6 space-y-4" novalidate>
+
+        <div>
+          <label class="label" for="ob-business-type">¿Qué tipo de negocio tienes?</label>
+          <select id="ob-business-type" class="select" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+            <option value="agencia_marketing">Agencia de Marketing</option>
+            <option value="barberia">Barbería</option>
+            <option value="baile_danza">Baile / Danza</option>
+            <option value="clases">Clases</option>
+            <option value="clinica">Clínica / Consultorio Médico</option>
+            <option value="crossfit">Crossfit</option>
+            <option value="ecommerce">Ecommerce / Tienda Online</option>
+            <option value="educacion">Educación / Cursos</option>
+            <option value="electroestimulacion">Electroestimulación</option>
+            <option value="entrenamiento_funcional">Entrenamiento Funcional</option>
+            <option value="estetica">Centro de Estética</option>
+            <option value="estilista_independiente">Estilista Independiente</option>
+            <option value="freelancer">Freelancer / Independiente</option>
+            <option value="gimnasio">Gimnasio / Centro Deportivo</option>
+            <option value="inmobiliaria">Inmobiliaria</option>
+            <option value="kinesiologo_fisioterapia">Kinesiólogo / Fisioterapeuta</option>
+            <option value="maquillaje">Maquillaje</option>
+            <option value="medicina_alternativa">Medicina Alternativa</option>
+            <option value="odontologia">Odontología</option>
+            <option value="peluqueria">Peluquería</option>
+            <option value="personal_trainer">Personal Trainer</option>
+            <option value="pilates">Pilates</option>
+            <option value="podologia">Podología</option>
+            <option value="productos_digitales">Productos Digitales</option>
+            <option value="psicologia">Psicología</option>
+            <option value="quiropractico">Quiropráctico</option>
+            <option value="restaurante">Restaurante / Comida</option>
+            <option value="salon_belleza">Salón de Belleza</option>
+            <option value="salon_cejas_pestanas">Salón de Cejas y Pestañas</option>
+            <option value="salon_manicura_pedicura">Salón de Manicura y Pedicura</option>
+            <option value="servicios_profesionales">Servicios Profesionales (abogados, contadores)</option>
+            <option value="spa">Spa</option>
+            <option value="veterinaria">Veterinaria</option>
+            <option value="yoga_meditacion">Yoga / Meditación</option>
+            <option value="otro">Otro</option>
+          </select>
+          <p class="error-msg" data-error-for="ob-business-type">Elige el tipo de negocio.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-team-size">¿Cuántas personas atienden en tu negocio?</label>
+          <select id="ob-team-size" class="select" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+            <option value="independiente">Soy independiente</option>
+            <option value="2">2</option>
+            <option value="3-5">3-5</option>
+            <option value="6-15">6-15</option>
+            <option value="16+">16+</option>
+          </select>
+          <p class="error-msg" data-error-for="ob-team-size">Indica cuántas personas atienden en tu negocio.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-name">Nombre y apellido</label>
+          <input id="ob-name" class="input" placeholder="Ingresa tu nombre y apellido" required />
+          <p class="error-msg" data-error-for="ob-name">Escribe tu nombre y apellido.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-email">Email</label>
+          <input id="ob-email" class="input" type="email" disabled />
+          <p class="hint">Es el correo de tu cuenta de Google — no se puede cambiar aquí.</p>
+        </div>
+
+        <div>
+          <label class="label" for="ob-phone">Teléfono</label>
+          <div class="flex gap-2">
+            <select id="ob-phone-country" class="select !w-auto flex-none" style="min-width: 6.5rem;" aria-label="País del teléfono"></select>
+            <input id="ob-phone" class="input flex-1" placeholder="321 1234567" inputmode="numeric" required />
+          </div>
+          <p class="error-msg" data-error-for="ob-phone">Escribe un teléfono válido para el país seleccionado.</p>
+        </div>
+
+        <button id="ob-submit" type="submit" class="btn btn-gradient w-full !py-3 !text-base mt-2">
+          Prueba Gratis <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+
+      <!-- Paso 2: tarjeta para el trial de 7 días. Solo se muestra si el
+           proveedor de cobros activo es Wompi; el JS lo revela con .open. -->
+      <form id="card-form" class="mt-6 space-y-4 hidden" novalidate>
+        <div class="text-center">
+          <h2 class="text-xl font-extrabold text-ink">Un último paso</h2>
+          <p class="mt-2 text-sm text-ink/55">
+            Registra tu tarjeta para activar los 7 días gratis. No se te cobra nada hoy —
+            <span id="card-price-line">el primer cobro será al terminar el trial</span>.
+          </p>
+        </div>
+
+        <div>
+          <label class="label" for="card-number">Número de tarjeta</label>
+          <input id="card-number" class="input" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" required />
+          <p class="error-msg" data-error-for="card-number">Escribe un número de tarjeta válido.</p>
+        </div>
+
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="label" for="card-exp">Vencimiento (MM/AA)</label>
+            <input id="card-exp" class="input" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA" required />
+            <p class="error-msg" data-error-for="card-exp">Usa el formato MM/AA.</p>
+          </div>
+          <div class="w-28">
+            <label class="label" for="card-cvc">CVC</label>
+            <input id="card-cvc" class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="123" required />
+            <p class="error-msg" data-error-for="card-cvc">Escribe el código de seguridad.</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="label" for="card-holder">Nombre en la tarjeta</label>
+          <input id="card-holder" class="input" autocomplete="cc-name" placeholder="Como aparece en la tarjeta" required />
+          <p class="error-msg" data-error-for="card-holder">Escribe el nombre del titular.</p>
+        </div>
+
+        <label class="flex items-start gap-2 text-xs text-ink/55">
+          <input id="card-accept" type="checkbox" class="mt-0.5" required />
+          <span>Acepto los <a id="card-accept-link" href="#" target="_blank" class="brand-text font-semibold">términos de uso de datos de Wompi</a> para procesar el pago.</span>
+        </label>
+
+        <button id="card-submit" type="submit" class="btn btn-gradient w-full !py-3 !text-base mt-2">
+          Activar prueba gratis <i class="fa-solid fa-lock"></i>
+        </button>
+        <p class="text-center text-xs text-ink/40">Pago procesado de forma segura por Wompi. Elorai nunca guarda tu tarjeta.</p>
+      </form>
+    </div>
+
+    <p class="text-center text-xs text-ink/40 mt-5">
+      <a href="/auth/logout" class="hover:text-ink/60 font-semibold">¿No eres tú? Cierra sesión</a>
+    </p>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/js/session.js?v=2"></script>
+<script src="assets/js/catalogs.js?v=2"></script>
+<script src="assets/js/core.js?v=2"></script>
+<script src="assets/js/onboarding.js?v=2"></script>
+</body>
+</html>

@@ -389,6 +389,16 @@ async function handleConnectionUpdate(session, { connection, lastDisconnect, qr 
   });
 
   const timer = setTimeout(() => {
+    // Hay que quitar el marcador de esta reconexión ANTES de llamar a
+    // connect(): connect() trata cualquier entrada con `reconnectTimer` como
+    // "ya hay un intento en vuelo" y se retira sin hacer nada. Sin esto la
+    // reconexión nunca llegaba a abrir el socket — y justo después de escanear
+    // el QR WhatsApp SIEMPRE cierra con 515 (restartRequired) y exige
+    // reconectar, así que el teléfono quedaba vinculándose para siempre.
+    const actual = sessions.get(accountId);
+    if (actual?.reconnectTimer === timer) sessions.delete(accountId);
+    else if (actual) return; // un connect()/disconnect() manual ya se hizo cargo
+
     connect(accountId)
       .then(() => {
         const s = sessions.get(accountId);
